@@ -33,6 +33,7 @@ class BINARYNINJAUIAPI TokenizedTextViewHistoryEntry : public HistoryEntry
 	void setCursorLine(size_t line) { m_cursorLine = line; }
 	void setHighlightTokenState(const HighlightTokenState& state) { m_highlight = state; }
 
+	virtual QString getDescription() const override;
 	virtual Json::Value serialize() const override;
 	virtual bool deserialize(const Json::Value& value) override;
 };

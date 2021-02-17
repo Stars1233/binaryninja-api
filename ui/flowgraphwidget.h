@@ -63,6 +63,7 @@ class BINARYNINJAUIAPI FlowGraphHistoryEntry : public HistoryEntry
 	void setCurrentAddress(uint64_t a) { m_addr = a; }
 	void setHighlightTokenState(const HighlightTokenState& state) { m_highlight = state; }
 
+	virtual QString getDescription() const override;
 	virtual Json::Value serialize() const override;
 	virtual bool deserialize(const Json::Value& value) override;
 };

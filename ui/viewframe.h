@@ -85,6 +85,8 @@ class BINARYNINJAUIAPI HistoryEntry : public BinaryNinja::RefCountObject
 	QString getViewType() const { return m_viewType; }
 	void setViewType(const QString& type) { m_viewType = type; }
 
+	virtual QString getDescription() const;
+
 	/*!
 	    Serialize to json representation
 	    \return Json representation of history entry. In the Python api, this must be a dict.
@@ -392,12 +394,6 @@ class BINARYNINJAUIAPI ViewFrame : public QWidget
 	bool gestureEvent(QGestureEvent* event);
 
 	void setView(QWidget* view);
-	/*!
-	    Load one history entry from json representation
-	    \param json Json rep of history entry
-	    \return Entry, if successful, else nullptr
-	 */
-	BinaryNinja::Ref<HistoryEntry> deserializeHistoryEntry(const Json::Value& json);
 
 	bool tryMainSymbolsNavigation();
 
@@ -464,6 +460,14 @@ class BINARYNINJAUIAPI ViewFrame : public QWidget
 
 	void updateFonts();
 	void updateTheme();
+	std::vector<BinaryNinja::Ref<HistoryEntry>> getBackHistory();
+	std::vector<BinaryNinja::Ref<HistoryEntry>> getForwardHistory();
+	/*!
+		Load one history entry from json representation
+		\param json Json rep of history entry
+		\return Entry, if successful, else nullptr
+	 */
+	BinaryNinja::Ref<HistoryEntry> deserializeHistoryEntry(const Json::Value& json);
 	void addHistoryEntry();
 	/*!
 	    Parse history entries from the raw data associated with a BinaryView, loading them into the back/forward

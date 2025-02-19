@@ -42,6 +42,7 @@ void ObjCActivity::AdjustCallType(Ref<AnalysisContext> ctx)
     const auto func = ctx->GetFunction();
 	const auto arch = func->GetArchitecture();
 	const auto bv = func->GetView();
+	const auto baseAddr = bv->GetStart();
 
 	const auto llil = ctx->GetLowLevelILFunction();
 	if (!llil) {
@@ -52,9 +53,9 @@ void ObjCActivity::AdjustCallType(Ref<AnalysisContext> ctx)
 		return;
 	}
 
-	const auto rewriteIfEligible = [bv, ssa](size_t insnIndex) {
+	const auto rewriteIfEligible = [bv, ssa, baseAddr](size_t insnIndex) {
 		auto insn = ssa->GetInstruction(insnIndex);
-		if (insn.operation != LLIL_CALL_SSA)
+		if (insn.operation != LLIL_CALL_SSA && insn.operation != LLIL_TAILCALL_SSA)
 			return;
 
 		enum class MessageSendType {
@@ -64,7 +65,7 @@ void ObjCActivity::AdjustCallType(Ref<AnalysisContext> ctx)
 
 		MessageSendType messageSendType = MessageSendType::Normal;
 		// Filter out calls that aren't to `objc_msgSend`, `objc_msgSendSuper`, or `objc_msgSendSuper2`.
-		auto callExpr = insn.GetDestExpr<LLIL_CALL_SSA>();
+		auto callExpr = insn.GetDestExpr();
 		if (auto symbol = bv->GetSymbolByAddress(callExpr.GetValue().value))
 		{
 			std::string_view symbolName = symbol->GetRawNameRef();
@@ -76,7 +77,7 @@ void ObjCActivity::AdjustCallType(Ref<AnalysisContext> ctx)
 			 	return;
 		}
 
-		const auto params = insn.GetParameterExprs<LLIL_CALL_SSA>();
+		const auto params = insn.GetParameterExprs();
 		// The second parameter passed to the objc_msgSend call is the address of
 		// either the selector reference or the method's name, which in both cases
 		// is dereferenced to retrieve a selector.
@@ -95,13 +96,33 @@ void ObjCActivity::AdjustCallType(Ref<AnalysisContext> ctx)
 			const auto selectorRegister = params[0].GetParameterExprs<LLIL_SEPARATE_PARAM_LIST_SSA>()[1].GetSourceSSARegister<LLIL_REG_SSA>();
 			rawSelector = ssa->GetSSARegisterValue(selectorRegister).value;
 		}
-		if (!rawSelector || !bv->IsValidOffset(rawSelector))
+
+		// Skip if we don't have a
+		if (!rawSelector || rawSelector < baseAddr)
 			return;
 
+		std::string selector;
+		if (bv->IsValidOffset(rawSelector)) {
+			BinaryReader reader(bv);
+			reader.Seek(rawSelector);
+			selector = reader.ReadCString(500);
+		} else {
+			// Look for the `sel_` symbols that ObjCProcessor adds to represent selectors
+			// whose backing regions have not yet been loaded into the view.
+			constexpr std::string_view SelectorPrefix = "sel_";
+
+			auto symbol = bv->GetSymbolByAddress(rawSelector);
+			if (!symbol)
+				return;
+
+			std::string_view name = symbol->GetRawNameRef();
+			if (name.find(SelectorPrefix) != 0)
+				return;
+
+			selector = name.substr(SelectorPrefix.length());
+		}
+
 		// -- Do callsite override
-		auto reader = BinaryReader(bv);
-		reader.Seek(rawSelector);
-		auto selector = reader.ReadCString(500);
 		auto additionalArgumentCount = std::count(selector.begin(), selector.end(), ':');
 
 		auto retType = bv->GetTypeByName({ "id" });

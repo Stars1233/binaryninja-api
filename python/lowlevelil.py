@@ -983,6 +983,10 @@ class LowLevelILInstruction(BaseILInstruction):
 	def flags(self) -> Optional['architecture.FlagWriteTypeName']:
 		return self.function.arch.get_flag_write_type_name(architecture.FlagWriteTypeIndex(self.instr.flags))
 
+	@property
+	def raw_flags(self) -> int:
+		return self.instr.flags
+
 	def _get_reg(self, operand_index: int) -> ILRegister:
 		return ILRegister(self.function.arch, architecture.RegisterIndex(self.instr.operands[operand_index]))
 
@@ -3779,7 +3783,7 @@ class LowLevelILFunction:
 
 	def expr(
 	    self, operation, a: ExpressionIndex = 0, b: ExpressionIndex = 0, c: ExpressionIndex = 0, d: ExpressionIndex = 0, size: int = 0,
-	    flags: Optional[Union['architecture.FlagWriteTypeName', 'architecture.FlagType', 'architecture.FlagIndex']] = None,
+	    flags: Optional[Union['architecture.FlagWriteTypeName', 'architecture.FlagType', 'architecture.FlagIndex', int]] = None,
 	    source_location: Optional['ILSourceLocation'] = None
 	) -> ExpressionIndex:
 		_flags = architecture.FlagIndex(0)
@@ -3848,7 +3852,15 @@ class LowLevelILFunction:
 		:param LowLevelILInstruction original: the original IL Instruction you want to copy
 		:return: The index of the newly copied expression
 		"""
-		return self.expr(original.operation, original.raw_operands[0], original.raw_operands[1], original.raw_operands[2], original.raw_operands[3], original.size, original.flags)
+		return self.expr(
+			original.operation,
+			original.raw_operands[0],
+			original.raw_operands[1],
+			original.raw_operands[2],
+			original.raw_operands[3],
+			original.size,
+			original.raw_flags
+		)
 
 	def replace_expr(self, original: InstructionOrExpression, new: InstructionOrExpression) -> None:
 		"""

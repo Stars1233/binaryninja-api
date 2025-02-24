@@ -46,7 +46,7 @@ from .interaction import show_graph_report
 from .commonil import (
     BaseILInstruction, Tailcall, Syscall, Localcall, Comparison, Signed, UnaryOperation, BinaryOperation, SSA, Phi,
     Loop, ControlFlow, Memory, Constant, Arithmetic, DoublePrecision, Terminal, FloatingPoint, Intrinsic, Return,
-    VariableInstruction, SSAVariableInstruction, SetVar
+    VariableInstruction, SSAVariableInstruction, SetVar, ILSourceLocation
 )
 from . import deprecation
 
@@ -2851,14 +2851,29 @@ class HighLevelILFunction:
 
 	def expr(
 	    self, operation: Union[str, HighLevelILOperation], a: int = 0, b: int = 0, c: int = 0, d: int = 0, e: int = 0,
-	    size: int = 0
+	    size: int = 0,
+	    source_location: Optional['ILSourceLocation'] = None
 	) -> ExpressionIndex:
 		if isinstance(operation, str):
 			operation_value = HighLevelILOperation[operation]
 		else:
 			assert isinstance(operation, HighLevelILOperation)
 			operation_value = operation.value
-		return ExpressionIndex(core.BNHighLevelILAddExpr(self.handle, operation_value, size, a, b, c, d, e))
+		if source_location is not None:
+			return ExpressionIndex(core.BNHighLevelILAddExprWithLocation(
+				self.handle,
+				operation_value,
+				source_location.address,
+				source_location.source_operand,
+				size,
+				a,
+				b,
+				c,
+				d,
+				e
+			))
+		else:
+			return ExpressionIndex(core.BNHighLevelILAddExpr(self.handle, operation_value, size, a, b, c, d, e))
 
 	def get_expr_count(self) -> int:
 		"""

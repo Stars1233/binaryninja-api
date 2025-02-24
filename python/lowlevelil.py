@@ -40,7 +40,7 @@ from .interaction import show_graph_report
 from .commonil import (
     BaseILInstruction, Constant, BinaryOperation, Tailcall, UnaryOperation, Comparison, SSA, Phi, FloatingPoint,
     ControlFlow, Terminal, Syscall, Localcall, StackOperation, Return, Signed, Arithmetic, Carry, DoublePrecision,
-    Memory, Load, Store, RegisterStack, SetReg, Intrinsic
+    Memory, Load, Store, RegisterStack, SetReg, Intrinsic, ILSourceLocation
 )
 
 ExpressionIndex = NewType('ExpressionIndex', int)
@@ -3779,7 +3779,8 @@ class LowLevelILFunction:
 
 	def expr(
 	    self, operation, a: ExpressionIndex = 0, b: ExpressionIndex = 0, c: ExpressionIndex = 0, d: ExpressionIndex = 0, size: int = 0,
-	    flags: Optional[Union['architecture.FlagWriteTypeName', 'architecture.FlagType', 'architecture.FlagIndex']] = None
+	    flags: Optional[Union['architecture.FlagWriteTypeName', 'architecture.FlagType', 'architecture.FlagIndex']] = None,
+	    source_location: Optional['ILSourceLocation'] = None
 	) -> ExpressionIndex:
 		_flags = architecture.FlagIndex(0)
 		if isinstance(operation, str):
@@ -3796,7 +3797,21 @@ class LowLevelILFunction:
 			_flags = architecture.FlagIndex(0)
 		else:
 			assert False, "flags type unsupported"
-		return ExpressionIndex(core.BNLowLevelILAddExpr(self.handle, operation, size, _flags, a, b, c, d))
+		if source_location is not None:
+			return ExpressionIndex(core.BNLowLevelILAddExprWithLocation(
+				self.handle,
+				source_location.address,
+				source_location.source_operand,
+				operation,
+				size,
+				_flags,
+				a,
+				b,
+				c,
+				d
+			))
+		else:
+			return ExpressionIndex(core.BNLowLevelILAddExpr(self.handle, operation, size, _flags, a, b, c, d))
 
 	def get_expr_count(self) -> int:
 		"""

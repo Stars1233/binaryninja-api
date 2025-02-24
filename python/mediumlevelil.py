@@ -42,7 +42,8 @@ from .interaction import show_graph_report
 from .commonil import (
     BaseILInstruction, Constant, BinaryOperation, UnaryOperation, Comparison, SSA, Phi, FloatingPoint, ControlFlow,
     Terminal, Call, Localcall, Syscall, Tailcall, Return, Signed, Arithmetic, Carry, DoublePrecision, Memory, Load,
-    Store, RegisterStack, SetVar, Intrinsic, VariableInstruction, SSAVariableInstruction, AliasedVariableInstruction
+    Store, RegisterStack, SetVar, Intrinsic, VariableInstruction, SSAVariableInstruction, AliasedVariableInstruction,
+    ILSourceLocation
 )
 
 TokenList = List['function.InstructionTextToken']
@@ -3494,14 +3495,29 @@ class MediumLevelILFunction:
 
 	def expr(
 	    self, operation: MediumLevelILOperation, a: int = 0, b: int = 0, c: int = 0, d: int = 0, e: int = 0,
-	    size: int = 0
+	    size: int = 0,
+	    source_location: Optional['ILSourceLocation'] = None
 	) -> ExpressionIndex:
 		_operation = operation
 		if isinstance(operation, str):
 			_operation = MediumLevelILOperation[operation]
 		elif isinstance(operation, MediumLevelILOperation):
 			_operation = operation.value
-		return ExpressionIndex(core.BNMediumLevelILAddExpr(self.handle, _operation, size, a, b, c, d, e))
+		if source_location is not None:
+			return ExpressionIndex(core.BNMediumLevelILAddExprWithLocation(
+				self.handle,
+				_operation,
+				source_location.address,
+				source_location.source_operand,
+				size,
+				a,
+				b,
+				c,
+				d,
+				e
+			))
+		else:
+			return ExpressionIndex(core.BNMediumLevelILAddExpr(self.handle, _operation, size, a, b, c, d, e))
 
 	def get_expr_count(self) -> int:
 		"""

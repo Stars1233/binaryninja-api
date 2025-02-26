@@ -226,6 +226,52 @@ public:
 	}
 };
 
+#ifdef ULTIMATE_EDITION
+class LinuxCSkyV1Platform : public Platform
+{
+public:
+	LinuxCSkyV1Platform(Architecture* arch, const std::string& name) : Platform(arch, name)
+	{
+		Ref<CallingConvention> cc;
+
+		cc = arch->GetCallingConventionByName("default");
+		if (cc)
+		{
+			RegisterDefaultCallingConvention(cc);
+			RegisterCdeclCallingConvention(cc);
+			RegisterFastcallCallingConvention(cc);
+			RegisterStdcallCallingConvention(cc);
+		}
+
+		cc = arch->GetCallingConventionByName("syscall");
+		if (cc)
+			SetSystemCallConvention(cc);
+	}
+};
+
+class LinuxCSkyV2Platform : public Platform
+{
+public:
+	LinuxCSkyV2Platform(Architecture* arch, const std::string& name) : Platform(arch, name)
+	{
+		Ref<CallingConvention> cc;
+
+		cc = arch->GetCallingConventionByName("default");
+		if (cc)
+		{
+			RegisterDefaultCallingConvention(cc);
+			RegisterCdeclCallingConvention(cc);
+			RegisterFastcallCallingConvention(cc);
+			RegisterStdcallCallingConvention(cc);
+		}
+
+		cc = arch->GetCallingConventionByName("syscall");
+		if (cc)
+			SetSystemCallConvention(cc);
+	}
+};
+#endif
+
 
 extern "C"
 {
@@ -240,7 +286,9 @@ extern "C"
 		AddOptionalPluginDependency("arch_mips");
 		AddOptionalPluginDependency("arch_ppc");
 		AddOptionalPluginDependency("arch_riscv");
-		AddOptionalPluginDependency("arch_msp430");
+#ifdef ULTIMATE_EDITION
+		AddOptionalPluginDependency("arch_csky");
+#endif
 		AddOptionalPluginDependency("view_elf");
 	}
 #endif
@@ -410,6 +458,32 @@ extern "C"
 			BinaryViewType::RegisterPlatform("ELF", 0, rv64, platform);
 			BinaryViewType::RegisterPlatform("ELF", 3, rv64, platform);
 		}
+
+#ifdef ULTIMATE_EDITION
+		Ref<Architecture> cskyv1 = Architecture::GetByName("csky_le_v1");
+		if (cskyv1)
+		{
+			Ref<Platform> platform;
+
+			platform = new LinuxCSkyV1Platform(cskyv1, "linux-csky_le_v1");
+			Platform::Register("linux", platform);
+			// Linux binaries sometimes have an OS identifier of zero, even though 3 is the correct one
+			BinaryViewType::RegisterPlatform("ELF", 0, cskyv1, platform);
+			BinaryViewType::RegisterPlatform("ELF", 3, cskyv1, platform);
+		}
+
+		Ref<Architecture> cskyv2 = Architecture::GetByName("csky_le");
+		if (cskyv2)
+		{
+			Ref<Platform> platform;
+
+			platform = new LinuxCSkyV2Platform(cskyv2, "linux-csky_le");
+			Platform::Register("linux", platform);
+			// Linux binaries sometimes have an OS identifier of zero, even though 3 is the correct one
+			BinaryViewType::RegisterPlatform("ELF", 0, cskyv2, platform);
+			BinaryViewType::RegisterPlatform("ELF", 3, cskyv2, platform);
+		}
+#endif
 
 		return true;
 	}

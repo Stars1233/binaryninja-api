@@ -1116,69 +1116,74 @@ bool ElfView::Init()
 				{
 				case ELF_STT_OBJECT:
 				case ELF_STT_NOTYPE:
-					if (entry.section != ELF_SHN_UNDEF)
-						DefineElfSymbol(DataSymbol, entry.name, gotEntry, true, entry.binding, 4, Type::PointerType(
-							GetDefaultPlatform()->GetArchitecture(), Type::VoidType())->WithConfidence(BN_FULL_CONFIDENCE));
-					else
+				{
+					bool relocationExists = false;
+					for (auto& reloc : relocs)
 					{
-						bool relocationExists = false;
-						for (auto& reloc : relocs)
+						if (reloc.offset == gotEntry)
 						{
-							if (reloc.offset == gotEntry)
-							{
-								relocationExists = true;
-								break;
-							}
+							relocationExists = true;
+							break;
 						}
-						if (!relocationExists)
-						{
-							int relocType = m_arch->GetAddressSize() == 4 ? 126 /* R_MIPS_COPY */ : 125 /* R_MIPS64_COPY */;
-							relocs.push_back(ELFRelocEntry(gotEntry, i, relocType, 0, 0, false));
-						}
-						DefineElfSymbol(ImportAddressSymbol, entry.name, gotEntry, true, entry.binding, entry.size);
 					}
-					break;
-				case ELF_STT_FUNC:
+					if (!relocationExists)
+					{
+						int relocType = m_arch->GetAddressSize() == 4 ? 126 /* R_MIPS_COPY */ : 125 /* R_MIPS64_COPY */;
+						relocs.push_back(ELFRelocEntry(gotEntry, i, relocType, 0, 0, false));
+					}
 					if (entry.section != ELF_SHN_UNDEF)
+					{
+						DefineElfSymbol(DataSymbol, entry.name, gotEntry, true, entry.binding, 4,
+							Type::PointerType(GetDefaultPlatform()->GetArchitecture(),
+								Type::VoidType())->WithConfidence(BN_FULL_CONFIDENCE));
+					}
+					else
+						DefineElfSymbol(ImportAddressSymbol, entry.name, gotEntry, true, entry.binding, entry.size);
+					break;
+				}
+				case ELF_STT_FUNC:
+				{
+					bool relocationExists = false;
+					for (auto& reloc : relocs)
+					{
+						if (reloc.offset == gotEntry)
+						{
+							relocationExists = true;
+							break;
+						}
+					}
+					if (!relocationExists)
+					{
+						int relocType = m_arch->GetAddressSize() == 4 ? 127 /*R_MIPS_JUMP_SLOT*/ : 125 /* R_MIPS64_COPY */;
+						relocs.push_back(ELFRelocEntry(gotEntry, i, relocType, 0, 0, false));
+					}
+					if (entry.section != ELF_SHN_UNDEF)
+					{
 						DefineElfSymbol(DataSymbol, entry.name, gotEntry, true, entry.binding, 4,
 							Type::PointerType(GetDefaultPlatform()->GetArchitecture(),
 								Type::FunctionType(Type::IntegerType(GetDefaultPlatform()->GetArchitecture()->GetAddressSize(), true),
 									GetDefaultPlatform()->GetDefaultCallingConvention(), vector<FunctionParameter>())->WithConfidence(0)));
+					}
 					else
-					{
-						bool relocationExists = false;
-						for (auto& reloc : relocs)
-						{
-							if (reloc.offset == gotEntry)
-							{
-								relocationExists = true;
-								break;
-							}
-						}
-						if (!relocationExists)
-						{
-							int relocType = m_arch->GetAddressSize() == 4 ? 127 /*R_MIPS_JUMP_SLOT*/ : 125 /* R_MIPS64_COPY */;
-							relocs.push_back(ELFRelocEntry(gotEntry, i, relocType, 0, 0, false));
-						}
 						DefineElfSymbol(ImportAddressSymbol, entry.name, gotEntry, true, entry.binding, entry.size);
-						// TODO for now create associated PLT entry if it exists. At some point we could extend the detection in RecognizeELFPLTEntries in arch_mips.
-						Ref<Symbol> sym = GetSymbolByAddress(gotEntry);
-						if (entry.value && sym && (sym->GetType() == ImportAddressSymbol))
+					// TODO for now create associated PLT entry if it exists. At some point we could extend the detection in RecognizeELFPLTEntries in arch_mips.
+					Ref<Symbol> sym = GetSymbolByAddress(gotEntry);
+					if (entry.value && sym && (sym->GetType() == ImportAddressSymbol))
+					{
+						uint64_t adjustedAddress = entry.value + imageBaseAdjustment;
+						Ref<Platform> targetPlatform = platform->GetAssociatedPlatformByAddress(adjustedAddress);
+						Ref<Function> func = AddFunctionForAnalysis(targetPlatform, adjustedAddress);
+						if (func)
 						{
-							uint64_t adjustedAddress = entry.value + imageBaseAdjustment;
-							Ref<Platform> targetPlatform = platform->GetAssociatedPlatformByAddress(adjustedAddress);
-							Ref<Function> func = AddFunctionForAnalysis(targetPlatform, adjustedAddress);
-							if (func)
-							{
-								Ref<Symbol> funcSym = new Symbol(ImportedFunctionSymbol,
-										sym->GetShortName(), sym->GetFullName(), sym->GetRawName(),
-										adjustedAddress, NoBinding, sym->GetNameSpace(), sym->GetOrdinal());
-								DefineAutoSymbol(funcSym);
-								func->ApplyImportedTypes(funcSym);
-							}
+							Ref<Symbol> funcSym = new Symbol(ImportedFunctionSymbol,
+									sym->GetShortName(), sym->GetFullName(), sym->GetRawName(),
+									adjustedAddress, NoBinding, sym->GetNameSpace(), sym->GetOrdinal());
+							DefineAutoSymbol(funcSym);
+							func->ApplyImportedTypes(funcSym);
 						}
 					}
 					break;
+				}
 				default:
 					m_logger->LogDebug("ELF symbol type of %d not handled.", entry.type);
 					break;

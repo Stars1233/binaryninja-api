@@ -1128,7 +1128,7 @@ bool ElfView::Init()
 					}
 					if (!relocationExists)
 					{
-						int relocType = m_arch->GetAddressSize() == 4 ? 126 /* R_MIPS_COPY */ : 125 /* R_MIPS64_COPY */;
+						int relocType = m_addressSize == 4 ? 126 /* R_MIPS_COPY */ : 125 /* R_MIPS64_COPY */;
 						relocs.push_back(ELFRelocEntry(gotEntry, i, relocType, 0, 0, false));
 					}
 					if (entry.section != ELF_SHN_UNDEF)
@@ -1154,7 +1154,7 @@ bool ElfView::Init()
 					}
 					if (!relocationExists)
 					{
-						int relocType = m_arch->GetAddressSize() == 4 ? 127 /*R_MIPS_JUMP_SLOT*/ : 125 /* R_MIPS64_COPY */;
+						int relocType = m_addressSize == 4 ? 127 /*R_MIPS_JUMP_SLOT*/ : 125 /* R_MIPS64_COPY */;
 						relocs.push_back(ELFRelocEntry(gotEntry, i, relocType, 0, 0, false));
 					}
 					if (entry.section != ELF_SHN_UNDEF)
@@ -1701,6 +1701,29 @@ bool ElfView::Init()
 				stringstream ss;
 				ss << ".got_recovered_" << std::hex << s.first;
 				AddAutoSection(ss.str(), s.first, s.second, ReadOnlyDataSectionSemantics);
+			}
+		}
+
+		// Perform fixup processing on the local GOT entries if the view is relocatable.
+		if (m_relocatable)
+		{
+			uint64_t lastLocalGotEntry = gotStart + (localMipsSyms - 1) * (m_elf32 ? 4 : 8);
+			for (auto gotEntry : m_gotEntryLocations)
+			{
+				if (gotEntry > lastLocalGotEntry)
+					break;
+
+				virtualReader.Seek(gotEntry);
+				auto target = virtualReader.ReadPointer();
+				if (!target)
+					continue;
+
+				BNRelocationInfo relocInfo;
+				memset(&relocInfo, 0, sizeof(BNRelocationInfo));
+				relocInfo.address = gotEntry;
+				relocInfo.size = m_addressSize;
+				relocInfo.nativeType = m_addressSize == 4 ? 127 /*R_MIPS_JUMP_SLOT*/ : 125 /* R_MIPS64_COPY */;
+				DefineRelocation(m_arch, relocInfo, target + baseAddress, relocInfo.address);
 			}
 		}
 	}
@@ -2398,8 +2421,8 @@ bool ElfView::Init()
 		memset(&relocInfo, 0, sizeof(BNRelocationInfo));
 		relocInfo.base = gotStart;
 		relocInfo.address = gotStart;
-		relocInfo.size = m_arch->GetAddressSize();
-		relocInfo.nativeType = m_arch->GetAddressSize() == 4 ? 2 /* R_MIPS_32 */ : 18 /* R_MIPS_64 */;
+		relocInfo.size = m_addressSize;
+		relocInfo.nativeType = m_addressSize == 4 ? 2 /* R_MIPS_32 */ : 18 /* R_MIPS_64 */;
 
 		DefineRelocation(m_arch, relocInfo, symbol, relocInfo.address);
 	}

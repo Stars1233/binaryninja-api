@@ -650,7 +650,7 @@ bool ElfView::Init()
 		vector<string> readWriteDataSectionNames = {".data", ".bss"};
 		vector<string> readOnlyDataSectionNames = {".rodata", ".dynamic", ".dynsym", ".dynstr", ".ehframe",
 			".ctors", ".dtors", ".got", ".got2", ".data.rel.ro", ".gnu.hash"};
-		if ((m_elfSections[i].flags & ELF_SHF_EXECINSTR) ||  In(sectionNames[i], readOnlyCodeSectionNames))
+		if ((m_elfSections[i].flags & ELF_SHF_EXECINSTR) || In(sectionNames[i], readOnlyCodeSectionNames))
 			semantics = ReadOnlyCodeSectionSemantics;
 		else if (!(m_elfSections[i].flags & ELF_SHF_WRITE) || In(sectionNames[i], readOnlyDataSectionNames))
 			semantics = ReadOnlyDataSectionSemantics;
@@ -1693,8 +1693,7 @@ bool ElfView::Init()
 
 			for (auto& s : gotSectionsToCreate)
 			{
-				// Don't try creating a section if it starts in an already-created
-				// section.
+				// Don't try creating a section if it starts in an already-created section.
 				if (GetSectionsAt(s.first).size() > 0)
 					continue;
 
@@ -2376,8 +2375,8 @@ bool ElfView::Init()
 		DefineAutoSymbol(new Symbol(DataSymbol, "__elf_rela_table", m_relocaSection.offset, NoBinding));
 	}
 
-	// In 32-bit mips with .got, add .extern symbol "RTL_Resolve"
-	if (gotStart && In(m_arch->GetName(), {"mips32", "mipsel32", "mips64", "nanomips"}))
+	// Create resolver symbol for MIPS load files containing a global offset table
+	if (gotStart && (m_arch->GetName().find("mips") != std::string::npos))
 	{
 		const char *name = "RTL_Resolve";
 

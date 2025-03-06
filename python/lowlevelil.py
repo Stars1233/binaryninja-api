@@ -4219,31 +4219,31 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FLOAT_CONST, struct.unpack("Q", struct.pack("d", value))[0], size=8, source_location=loc)
 
-	def flag(self, reg: 'architecture.FlagName', loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+	def flag(self, flag: 'architecture.FlagName', loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""
 		``flag`` returns a flag expression for the given flag name.
 
-		:param architecture.FlagName reg: name of the flag expression to retrieve
+		:param architecture.FlagName flag: name of the flag expression to retrieve
 		:param ILSourceLocation loc: location of returned expression
 		:return: A flag expression of given flag name
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(LowLevelILOperation.LLIL_FLAG, self.arch.get_flag_by_name(reg), source_location=loc)
+		return self.expr(LowLevelILOperation.LLIL_FLAG, self.arch.get_flag_by_name(flag), source_location=loc)
 
 	def flag_bit(
-	    self, size: int, reg: 'architecture.FlagName', bit: int, loc: Optional['ILSourceLocation'] = None
+	    self, size: int, flag: 'architecture.FlagName', bit: int, loc: Optional['ILSourceLocation'] = None
 	) -> ExpressionIndex:
 		"""
-		``flag_bit`` sets the flag named ``reg`` and size ``size`` to the constant integer value ``bit``
+		``flag_bit`` sets the flag named ``flag`` and size ``size`` to the constant integer value ``bit``
 
 		:param int size: the size of the flag
-		:param str reg: flag value
+		:param str flag: flag value
 		:param int bit: integer value to set the bit to
 		:param ILSourceLocation loc: location of returned expression
-		:return: A constant expression of given value and size ``FLAG.reg = bit``
+		:return: A constant expression of given value and size ``FLAG.flag = bit``
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(LowLevelILOperation.LLIL_FLAG_BIT, self.arch.get_flag_by_name(reg), bit, size=size, source_location=loc)
+		return self.expr(LowLevelILOperation.LLIL_FLAG_BIT, self.arch.get_flag_by_name(flag), bit, size=size, source_location=loc)
 
 	def add(
 	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: Optional['architecture.FlagType'] = None,

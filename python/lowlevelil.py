@@ -5584,7 +5584,7 @@ class LowLevelILFunction:
 		:rtype: ExpressionIndex
 		"""
 		label_list = (ctypes.POINTER(core.BNLowLevelILLabel) * len(labels))()
-		value_list = (ctypes.POINTER(ctypes.c_ulonglong) * len(labels))()
+		value_list = (ctypes.c_ulonglong * len(labels))()
 		for i, (key, value) in enumerate(labels.items()):
 			value_list[i] = key
 			label_list[i] = value.handle

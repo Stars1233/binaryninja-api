@@ -3164,7 +3164,8 @@ extern "C"
 		ExceedFunctionUpdateCountSkipReason,
 		NewAutoFunctionAnalysisSuppressedReason,
 		BasicAnalysisSkipReason,
-		IntermediateAnalysisSkipReason
+		IntermediateAnalysisSkipReason,
+		AnalysisPipelineSuspendedReason
 	} BNAnalysisSkipReason;
 
 	typedef enum BNSettingsScope

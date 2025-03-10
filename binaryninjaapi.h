@@ -5224,9 +5224,9 @@ namespace BinaryNinja {
 		*/
 		void UpdateAnalysis();
 
-		/*! Abort the currently running analysis
+		/*! Abort analysis and suspend the workflow machine
 
-			This method should be considered non-recoverable and generally only used when shutdown is imminent after stopping.
+			Stops analysis and transitions the workflow machine to the Suspend state. This operation is recoverable, and the workflow machine can be re-enabled via the WorkflowMachine Enable API.
 		*/
 		void AbortAnalysis();
 
@@ -10057,6 +10057,22 @@ namespace BinaryNinja {
 	public:
 		WorkflowMachine(Ref<BinaryView> view);
 		WorkflowMachine(Ref<Function> function);
+
+		/*! Enable the workflow machine
+
+			Re-enables the workflow machine if it is in the Suspend state.
+			\return true if the command is accepted, false otherwise.
+		*/
+		bool Enable();
+
+		/*! Disable the workflow machine
+
+			Disables analysis and suspends the workflow machine, equivalent to AbortAnalysis.
+			This operation is recoverable and the workflow machine can be re-enabled via the Enable API.
+			\return true if the command is accepted, false otherwise.
+		*/
+		bool Disable();
+
 
 		std::optional<bool> QueryOverride(const std::string& activity);
 		bool SetOverride(const std::string& activity, bool enable);

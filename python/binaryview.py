@@ -4931,9 +4931,8 @@ class BinaryView:
 
 	def abort_analysis(self) -> None:
 		"""
-		``abort_analysis`` will abort the currently running analysis.
-
-		.. warning:: This method should be considered non-recoverable and generally only used when shutdown is imminent after stopping.
+		``abort_analysis`` aborts analysis and suspends the workflow machine. This operation is recoverable, and the workflow machine
+		can be re-enabled via the ``enable`` API on WorkflowMachine.
 
 		:rtype: None
 		"""

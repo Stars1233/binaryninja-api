@@ -10,7 +10,7 @@ namespace BinaryNinja {
 
 	public:
 		void Read(void* dest, size_t len) override;
-		std::string ReadCString() override;
+		std::string ReadCString(size_t maxLength = -1) override;
 		uint8_t Read8() override;
 		uint16_t Read16() override;
 		uint32_t Read32() override;

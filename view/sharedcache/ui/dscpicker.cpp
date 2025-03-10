@@ -6,37 +6,56 @@
 #include <sharedcacheapi.h>
 #include "progresstask.h"
 
-#include <utility>
-
 using namespace BinaryNinja;
+using namespace SharedCacheAPI;
 
 void DisplayDSCPicker(UIContext* ctx, Ref<BinaryView> dscView)
 {
-	BackgroundThread::create(ctx ? ctx->mainWindow() : nullptr)->thenBackground(
-		[dscView=dscView](QVariant var) {
-			QStringList entries;
-			Ref<SharedCacheAPI::SharedCache> cache = new SharedCacheAPI::SharedCache(dscView);
+	static auto getImageNames = [dscView](QVariant var) {
+		auto controller = SharedCacheController::GetController(*dscView);
+		if (!controller)
+			return QStringList();
 
-			for (const auto& img : cache->GetAvailableImages())
-			  entries.push_back(QString::fromStdString(img));
+		QStringList entries = {};
+		for (const auto& img : controller->GetImages())
+			entries.push_back(QString::fromStdString(img.name));
+		return entries;
+	};
 
-			return entries;
-		})->thenMainThread([ctx](QVariant var){
-			QStringList entries = var.toStringList();
+	static auto getChosenImage = [ctx](QVariant var) {
+		QStringList entries = var.toStringList();
 
-			auto choiceDialog = new MetadataChoiceDialog(ctx ? ctx->mainWindow() : nullptr, "Pick Image", "Select", entries);
-			choiceDialog->AddWidthRequiredByItem(ctx, 300);
-			choiceDialog->AddHeightRequiredByItem(ctx, 150);
-			choiceDialog->exec();
+		auto choiceDialog = new MetadataChoiceDialog(ctx ? ctx->mainWindow() : nullptr, "Pick Image", "Select", entries);
+		choiceDialog->AddWidthRequiredByItem(ctx, 300);
+		choiceDialog->AddHeightRequiredByItem(ctx, 150);
+		choiceDialog->exec();
 
-			if (choiceDialog->GetChosenEntry().has_value())
-				return QVariant(QString::fromStdString(entries.at((qsizetype)choiceDialog->GetChosenEntry().value().idx).toStdString()));
-			else
-				return QVariant("");
-		})->thenBackground([dscView=dscView](QVariant var){
-			if (var.toString().isEmpty())
-				return;
-			Ref<SharedCacheAPI::SharedCache> cache = new SharedCacheAPI::SharedCache(dscView);
-			cache->LoadImageWithInstallName(var.toString().toStdString());
-		})->start();
+		if (!choiceDialog->GetChosenEntry().has_value())
+			return QVariant("");
+
+		return QVariant(QString::fromStdString(entries.at((qsizetype)choiceDialog->GetChosenEntry().value().idx).toStdString()));
+	};
+
+	static auto loadSelectedImage = [dscView](QVariant var) {
+		auto selectedImageName = var.toString().toStdString();
+		if (selectedImageName.empty())
+			return;
+
+		if (auto controller = SharedCacheController::GetController(*dscView))
+		{
+			if (const auto selectedImage = controller->GetImageWithName( selectedImageName))
+			{
+				controller->ApplyImage(*dscView, *selectedImage);
+				dscView->AddAnalysisOption("linearsweep");
+				dscView->UpdateAnalysis();
+			}
+		}
+	};
+
+
+	BackgroundThread::create(ctx ? ctx->mainWindow() : nullptr)
+		->thenBackground([](QVariant var){ return getImageNames(var); })
+		->thenMainThread([](QVariant var){ return getChosenImage(var); })
+		->thenBackground([](QVariant var){ return loadSelectedImage(var); })
+		->start();
 }

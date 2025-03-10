@@ -11,9 +11,9 @@ void MachoObjCReader::Read(void* dest, size_t len)
 	m_reader.Read(dest, len);
 }
 
-std::string MachoObjCReader::ReadCString()
+std::string MachoObjCReader::ReadCString(size_t maxLength)
 {
-	return m_reader.ReadCString();
+	return m_reader.ReadCString(maxLength);
 }
 
 uint8_t MachoObjCReader::Read8()

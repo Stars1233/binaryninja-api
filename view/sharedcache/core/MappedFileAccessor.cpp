@@ -1,0 +1,101 @@
+#include "MappedFileAccessor.h"
+
+
+std::shared_ptr<MappedFileAccessor> MappedFileAccessor::Open(const std::string& filePath)
+{
+	auto file = MappedFile::OpenFile(filePath);
+	if (!file.has_value())
+		return nullptr;
+	if (file->Map() != MapStatus::Success)
+		return nullptr;
+	return std::make_shared<MappedFileAccessor>(std::move(*file));
+}
+
+// TODO: Will obviously not work on 32bit binaries, need to make WritePointer64 and 32 equiv.
+void MappedFileAccessor::WritePointer(size_t address, size_t pointer)
+{
+	m_dirty = true;
+	*reinterpret_cast<size_t*>(&m_file._mmap[address]) = pointer;
+}
+
+std::string MappedFileAccessor::ReadNullTermString(size_t address, size_t maxLength) const
+{
+	if (address > Length())
+		return "";
+	auto start = m_file._mmap + address;
+	auto endLen = (maxLength > 0) ? maxLength : m_file.len;
+	auto end = start + endLen;
+	auto nul = std::find(start, end, 0);
+	return {start, nul};
+}
+
+uint8_t MappedFileAccessor::ReadUInt8(size_t address)
+{
+	return Read<uint8_t>(address);
+}
+
+int8_t MappedFileAccessor::ReadInt8(size_t address)
+{
+	return Read<int8_t>(address);
+}
+
+uint16_t MappedFileAccessor::ReadUInt16(size_t address)
+{
+	return Read<uint16_t>(address);
+}
+
+int16_t MappedFileAccessor::ReadInt16(size_t address)
+{
+	return Read<int16_t>(address);
+}
+
+
+uint32_t MappedFileAccessor::ReadUInt32(size_t address)
+{
+	return Read<uint32_t>(address);
+}
+
+int32_t MappedFileAccessor::ReadInt32(size_t address)
+{
+	return Read<int32_t>(address);
+}
+
+uint64_t MappedFileAccessor::ReadUInt64(size_t address)
+{
+	return Read<uint64_t>(address);
+}
+
+int64_t MappedFileAccessor::ReadInt64(size_t address)
+{
+	return Read<int64_t>(address);
+}
+
+BinaryNinja::DataBuffer MappedFileAccessor::ReadBuffer(size_t addr, size_t length)
+{
+	if (addr + length > Length())
+		throw UnmappedAccessException(addr + length, Length());
+	return {&m_file._mmap[addr], length};
+}
+
+std::pair<const uint8_t*, const uint8_t*> MappedFileAccessor::ReadSpan(size_t addr, size_t length)
+{
+	if (addr + length > Length())
+		throw UnmappedAccessException(addr + length, Length());
+	const uint8_t* data = &m_file._mmap[addr];
+	return {data, data + length};
+}
+
+void MappedFileAccessor::Read(void* dest, size_t addr, size_t length) const
+{
+	if (addr + length > Length())
+		throw UnmappedAccessException(addr + length, Length());
+	memcpy(dest, &m_file._mmap[addr], length);
+}
+
+template <typename T>
+T MappedFileAccessor::Read(size_t address)
+{
+	T result;
+	Read(&result, address, sizeof(T));
+	return result;
+}

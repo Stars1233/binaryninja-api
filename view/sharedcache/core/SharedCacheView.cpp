@@ -1,82 +1,208 @@
-//
-// Created by kat on 5/23/23.
-//
-
-/*
- * If you're here looking for the code to load caches, out of luck.
- *
- * The VIEW_NAME is essentially a blank slate that only knows how to deserialize and reserialize itself
- * 	based on some metadata encoded in it.
- *
- * The actual controller logic that does _all_ of the image loading is invoked via API -> SharedCache.cpp
- *
- * */
-
-#include "DSCView.h"
-#include "view/macho/machoview.h"
-#include "SharedCache.h"
+#include "SharedCacheView.h"
+#include <regex>
+#include "SharedCacheController.h"
+#include "FileAccessorCache.h"
+#include "MappedFileAccessor.h"
 
 using namespace BinaryNinja;
+using namespace BinaryNinja::DSC;
 
+SharedCacheViewType::SharedCacheViewType() : BinaryViewType(VIEW_NAME, VIEW_NAME) {}
 
-DSCView::DSCView(const std::string& typeName, BinaryView* data, bool parseOnly) :
+// We register all our one-shot stuff here, such as the object destructor.
+void SharedCacheViewType::Register()
+{
+	auto fdLimit = AdjustFileDescriptorLimit();
+	LogDebug("Shared Cache processing initialized with a max file descriptor limit of %lld", fdLimit);
+
+	// Adjust the global accessor cache to the fdlimit.
+	FileAccessorCache::Global().SetCacheSize(fdLimit);
+
+	// TODO: Register object destructor to clear accessor cache
+	RegisterSharedCacheControllerDestructor();
+
+	static SharedCacheViewType type;
+	BinaryViewType::Register(&type);
+}
+
+Ref<BinaryView> SharedCacheViewType::Create(BinaryView* data)
+{
+	return new SharedCacheView(VIEW_NAME, data, false);
+}
+
+Ref<Settings> SharedCacheViewType::GetLoadSettingsForData(BinaryView* data)
+{
+	Ref<BinaryView> viewRef = Parse(data);
+	if (!viewRef || !viewRef->Init())
+	{
+		LogWarn("Failed to initialize view of type '%s'. Generating default load settings.", GetName().c_str());
+		viewRef = data;
+	}
+
+	Ref<Settings> settings = GetDefaultLoadSettingsForData(viewRef);
+
+	// specify default load settings that can be overridden
+	std::vector<std::string> overrides = {"loader.imageBase", "loader.platform"};
+	settings->UpdateProperty("loader.imageBase", "message", "Note: File indicates image is not relocatable.");
+
+	for (const auto& override : overrides)
+	{
+		if (settings->Contains(override))
+			settings->UpdateProperty(override, "readOnly", false);
+	}
+
+	Ref<Settings> programSettings = Settings::Instance();
+	programSettings->Set("analysis.workflows.functionWorkflow", "core.function.sharedCache", viewRef);
+
+	settings->RegisterSetting("loader.dsc.processCFStrings",
+		R"({
+		"title" : "Process CFString Metadata",
+		"type" : "boolean",
+		"default" : true,
+		"description" : "Processes CoreFoundation strings, applying string values from encoded metadata"
+		})");
+
+	settings->RegisterSetting("loader.dsc.autoLoadPattern",
+		R"({
+		"title" : "Image Auto-Load Regex Pattern",
+		"type" : "string",
+		"default" : ".*libsystem_c.dylib",
+		"description" : "A regex pattern to auto load matching images at the end of view init, defaults to the system_c image only."
+		})");
+
+	settings->RegisterSetting("loader.dsc.processObjC",
+		R"({
+		"title" : "Process Objective-C Metadata",
+		"type" : "boolean",
+		"default" : true,
+		"description" : "Processes Objective-C metadata, applying class and method names from encoded metadata"
+		})");
+
+	settings->RegisterSetting("loader.dsc.regionFilter",
+	R"({
+		"title" : "Region Regex Filter",
+		"type" : "string",
+		"default" : "LINKEDIT",
+		"description" : "Regex filter for region names to skip loading, by default this filters out the link edit region which is not necessary to be applied to the view."
+		})");
+
+	settings->RegisterSetting("loader.dsc.autoLoadObjCStubRequirements",
+		R"({
+		"title" : "Auto-Load Objective-C Stub Requirements",
+		"type" : "boolean",
+		"default" : true,
+		"description" : "Automatically loads segments required for inlining Objective-C stubs. Recommended you keep this on."
+		})");
+
+	settings->RegisterSetting("loader.dsc.autoLoadStubsAndDyldData",
+		R"({
+		"title" : "Auto-Load Stub Islands",
+		"type" : "boolean",
+		"default" : true,
+		"description" : "Automatically loads stub and dylddata regions that contain just branches and pointers. These are required for resolving stub names, and performance impact is minimal. Recommended you keep this on."
+		})");
+
+	settings->RegisterSetting("loader.dsc.processFunctionStarts",
+		R"({
+			"title" : "Process Mach-O Function Starts Tables",
+			"type" : "boolean",
+			"default" : true,
+			"description" : "Add function starts sourced from the Function Starts tables to the core for analysis."
+			})");
+
+	// Merge existing load settings if they exist. This allows for the selection of a specific object file from a Mach-O
+	// Universal file. The 'Universal' BinaryViewType generates a schema with 'loader.universal.architectures'. This
+	// schema contains an appropriate 'Mach-O' load schema for selecting a specific object file. The embedded schema
+	// contains 'loader.macho.universalImageOffset'.
+	Ref<Settings> loadSettings = viewRef->GetLoadSettings(GetName());
+	if (loadSettings && !loadSettings->IsEmpty())
+		settings->DeserializeSchema(loadSettings->SerializeSchema());
+
+	return settings;
+}
+
+Ref<BinaryView> SharedCacheViewType::Parse(BinaryView* data)
+{
+	return new SharedCacheView(VIEW_NAME, data, true);
+}
+
+bool SharedCacheViewType::IsTypeValidForData(BinaryView* data)
+{
+	if (!data)
+		return false;
+
+	DataBuffer sig = data->ReadBuffer(data->GetStart(), 4);
+	if (sig.GetLength() != 4)
+		return false;
+
+	const char* magic = (char*)sig.GetData();
+	if (strncmp(magic, "dyld", 4) == 0)
+		return true;
+
+	return false;
+}
+
+SharedCacheView::SharedCacheView(const std::string& typeName, BinaryView* data, bool parseOnly) :
 	BinaryView(typeName, data->GetFile(), data), m_parseOnly(parseOnly)
 {
 	CreateLogger("SharedCache");
 	CreateLogger("SharedCache.ObjC");
 }
 
-DSCView::~DSCView()
+enum DSCPlatform
 {
-}
-
-enum DSCPlatform {
 	DSCPlatformMacOS = 1,
 	DSCPlatformiOS = 2,
 	DSCPlatformTVOS = 3,
 	DSCPlatformWatchOS = 4,
-	DSCPlatformBridgeOS = 5,			// T1/T2 APL1023/T8012, this is your touchbar/touchid in intel macs. Similar to watchOS.
+	DSCPlatformBridgeOS = 5,  // T1/T2 APL1023/T8012, this is your touchbar/touchid in intel macs. Similar to watchOS.
 	// DSCPlatformMacCatalyst = 6,
 	DSCPlatformiOSSimulator = 7,
 	DSCPlatformTVOSSimulator = 8,
 	DSCPlatformWatchOSSimulator = 9,
-	DSCPlatformVisionOS = 11,			// Apple Vision Pro
-	DSCPlatformVisionOSSimulator = 12	// Apple Vision Pro Simulator
+	DSCPlatformVisionOS = 11,          // Apple Vision Pro
+	DSCPlatformVisionOSSimulator = 12  // Apple Vision Pro Simulator
 };
 
-bool DSCView::Init()
+bool SharedCacheView::Init()
 {
 	std::string os;
 	std::string arch;
+
+	auto logger = new Logger("SharedCacheView", GetFile()->GetSessionId());
 
 	uint32_t platform;
 	GetParentView()->Read(&platform, 0xd8, 4);
 	char magic[17];
 	GetParentView()->Read(&magic, 0, 16);
 	magic[16] = 0;
+
+	// TODO: Do we want to add any warnings about platform support here?
+	// TODO: Do we still consider macos experimental?
 	switch (platform)
 	{
-		case DSCPlatformMacOS:
-		case DSCPlatformTVOS:
-		case DSCPlatformTVOSSimulator:
-			os = "mac";
-			break;
-		case DSCPlatformiOS:
-		case DSCPlatformiOSSimulator:
-		case DSCPlatformVisionOS:
-		case DSCPlatformVisionOSSimulator:
-			os = "ios";
-			break;
-		// armv7 or slide info v1 (unsupported)
-		case DSCPlatformWatchOS:
-		case DSCPlatformWatchOSSimulator:
-		case DSCPlatformBridgeOS:
-		default:
-			LogError("Unknown platform: %d", platform);
-			return false;
+	case DSCPlatformMacOS:
+	case DSCPlatformTVOS:
+	case DSCPlatformTVOSSimulator:
+		os = "mac";
+		break;
+	case DSCPlatformiOS:
+	case DSCPlatformiOSSimulator:
+	case DSCPlatformVisionOS:
+	case DSCPlatformVisionOSSimulator:
+		os = "ios";
+		break;
+	// armv7 or slide info v1 (unsupported)
+	case DSCPlatformWatchOS:
+	case DSCPlatformWatchOSSimulator:
+	case DSCPlatformBridgeOS:
+	default:
+		logger->LogError("Unknown platform: %d", platform);
+		return false;
 	}
 
-	if (std::string(magic) == "dyld_v1   arm64" || std::string(magic) == "dyld_v1  arm64e" || std::string(magic) == "dyld_v1arm64_32")
+	if (std::string(magic) == "dyld_v1   arm64" || std::string(magic) == "dyld_v1  arm64e"
+		|| std::string(magic) == "dyld_v1arm64_32")
 	{
 		arch = "aarch64";
 	}
@@ -86,24 +212,38 @@ bool DSCView::Init()
 	}
 	else
 	{
-		LogError("Unknown magic: %s", magic);
+		logger->LogError("Unknown magic: %s", magic);
 		return false;
 	}
 
 	SetDefaultPlatform(Platform::GetByName(os + "-" + arch));
 	SetDefaultArchitecture(Architecture::GetByName(arch));
 
+	Ref<Settings> settings = GetLoadSettings(GetTypeName());
+
+	if (!settings)
+	{
+		Ref<Settings> programSettings = Settings::Instance();
+		programSettings->Set("analysis.workflows.functionWorkflow", "core.function.sharedCache", this);
+	}
+
+	if (m_parseOnly)
+		return true;
+
 	QualifiedNameAndType headerType;
 	std::string err;
 
-	ParseTypeString("\n"
+	ParseTypeString(
+		"\n"
 		"\tstruct dyld_cache_header\n"
 		"\t{\n"
 		"\t\tchar magic[16];\t\t\t\t\t // e.g. \"dyld_v0    i386\"\n"
 		"\t\tuint32_t mappingOffset;\t\t\t // file offset to first dyld_cache_mapping_info\n"
 		"\t\tuint32_t mappingCount;\t\t\t // number of dyld_cache_mapping_info entries\n"
-		"\t\tuint32_t imagesOffsetOld;\t\t // UNUSED: moved to imagesOffset to prevent older dsc_extarctors from crashing\n"
-		"\t\tuint32_t imagesCountOld;\t\t // UNUSED: moved to imagesCount to prevent older dsc_extarctors from crashing\n"
+		"\t\tuint32_t imagesOffsetOld;\t\t // UNUSED: moved to imagesOffset to prevent older dsc_extarctors from "
+	    "crashing\n"
+		"\t\tuint32_t imagesCountOld;\t\t // UNUSED: moved to imagesCount to prevent older dsc_extarctors from "
+	    "crashing\n"
 		"\t\tuint64_t dyldBaseAddress;\t\t // base address of dyld when cache was built\n"
 		"\t\tuint64_t codeSignatureOffset;\t // file offset of code signature blob\n"
 		"\t\tuint64_t codeSignatureSize;\t\t // size of code signature blob (zero means to end of file)\n"
@@ -120,7 +260,8 @@ bool DSCView::Init()
 		"\t\tuint64_t imagesTextOffset;\t\t // file offset to first dyld_cache_image_text_info\n"
 		"\t\tuint64_t imagesTextCount;\t\t // number of dyld_cache_image_text_info entries\n"
 		"\t\tuint64_t patchInfoAddr;\t\t\t // (unslid) address of dyld_cache_patch_info\n"
-		"\t\tuint64_t patchInfoSize;\t // Size of all of the patch information pointed to via the dyld_cache_patch_info\n"
+		"\t\tuint64_t patchInfoSize;\t // Size of all of the patch information pointed to via the "
+	    "dyld_cache_patch_info\n"
 		"\t\tuint64_t otherImageGroupAddrUnused;\t // unused\n"
 		"\t\tuint64_t otherImageGroupSizeUnused;\t // unused\n"
 		"\t\tuint64_t progClosuresAddr;\t\t\t // (unslid) address of list of program launch closures\n"
@@ -129,10 +270,12 @@ bool DSCView::Init()
 		"\t\tuint64_t progClosuresTrieSize;\t\t // size of trie of indexes into program launch closures\n"
 		"\t\tuint32_t platform;\t\t\t\t\t // platform number (macOS=1, etc)\n"
 		"\t\tuint32_t formatVersion : 8,\t\t\t // dyld3::closure::kFormatVersion\n"
-		"\t\t\tdylibsExpectedOnDisk : 1,  // dyld should expect the dylib exists on disk and to compare inode/mtime to see if cache is valid\n"
+		"\t\t\tdylibsExpectedOnDisk : 1,  // dyld should expect the dylib exists on disk and to compare inode/mtime to "
+	    "see if cache is valid\n"
 		"\t\t\tsimulator : 1,\t\t\t   // for simulator of specified platform\n"
 		"\t\t\tlocallyBuiltCache : 1,\t   // 0 for B&I built cache, 1 for locally built cache\n"
-		"\t\t\tbuiltFromChainedFixups : 1,\t // some dylib in cache was built using chained fixups, so patch tables must be used for overrides\n"
+		"\t\t\tbuiltFromChainedFixups : 1,\t // some dylib in cache was built using chained fixups, so patch tables "
+	    "must be used for overrides\n"
 		"\t\t\tpadding : 20;\t\t\t\t // TBD\n"
 		"\t\tuint64_t sharedRegionStart;\t\t // base load address of cache if not slid\n"
 		"\t\tuint64_t sharedRegionSize;\t\t // overall size required to map the cache and all subCaches, if any\n"
@@ -141,9 +284,11 @@ bool DSCView::Init()
 		"\t\tuint64_t dylibsImageArraySize;\t // size of ImageArray for dylibs in this cache\n"
 		"\t\tuint64_t dylibsTrieAddr;\t\t // (unslid) address of trie of indexes of all cached dylibs\n"
 		"\t\tuint64_t dylibsTrieSize;\t\t // size of trie of cached dylib paths\n"
-		"\t\tuint64_t otherImageArrayAddr;\t // (unslid) address of ImageArray for dylibs and bundles with dlopen closures\n"
+		"\t\tuint64_t otherImageArrayAddr;\t // (unslid) address of ImageArray for dylibs and bundles with dlopen "
+	    "closures\n"
 		"\t\tuint64_t otherImageArraySize;\t // size of ImageArray for dylibs and bundles with dlopen closures\n"
-		"\t\tuint64_t otherTrieAddr;\t // (unslid) address of trie of indexes of all dylibs and bundles with dlopen closures\n"
+		"\t\tuint64_t otherTrieAddr;\t // (unslid) address of trie of indexes of all dylibs and bundles with dlopen "
+	    "closures\n"
 		"\t\tuint64_t otherTrieSize;\t // size of trie of dylibs and bundles with dlopen closures\n"
 		"\t\tuint32_t mappingWithSlideOffset;\t\t // file offset to first dyld_cache_mapping_and_slide_info\n"
 		"\t\tuint32_t mappingWithSlideCount;\t\t\t // number of dyld_cache_mapping_and_slide_info entries\n"
@@ -160,47 +305,35 @@ bool DSCView::Init()
 		"\t\tuint64_t swiftOptsSize;\t\t\t// size of Swift optimizations header\n"
 		"\t\tuint32_t subCacheArrayOffset;\t// file offset to first dyld_subcache_entry\n"
 		"\t\tuint32_t subCacheArrayCount;\t// number of subCache entries\n"
-		"\t\tuint8_t symbolFileUUID[16];\t\t// unique value for the shared cache file containing unmapped local symbols\n"
-		"\t\tuint64_t rosettaReadOnlyAddr;\t// (unslid) address of the start of where Rosetta can add read-only/executable data\n"
+		"\t\tuint8_t symbolFileUUID[16];\t\t// unique value for the shared cache file containing unmapped local "
+	    "symbols\n"
+		"\t\tuint64_t rosettaReadOnlyAddr;\t// (unslid) address of the start of where Rosetta can add "
+	    "read-only/executable data\n"
 		"\t\tuint64_t rosettaReadOnlySize;\t// maximum size of the Rosetta read-only/executable region\n"
-		"\t\tuint64_t rosettaReadWriteAddr;\t// (unslid) address of the start of where Rosetta can add read-write data\n"
+		"\t\tuint64_t rosettaReadWriteAddr;\t// (unslid) address of the start of where Rosetta can add read-write "
+	    "data\n"
 		"\t\tuint64_t rosettaReadWriteSize;\t// maximum size of the Rosetta read-write region\n"
 		"\t\tuint32_t imagesOffset;\t\t\t// file offset to first dyld_cache_image_info\n"
 		"\t\tuint32_t imagesCount;\t\t\t// number of dyld_cache_image_info entries\n"
-		"\t\tuint32_t cacheSubType;           // 0 for development, 1 for production, when cacheType is multi-cache(2)\n"
+		"\t\tuint32_t cacheSubType;           // 0 for development, 1 for production, when cacheType is "
+	    "multi-cache(2)\n"
 		"\t\tuint64_t objcOptsOffset;         // VM offset from cache_header* to ObjC optimizations header\n"
 		"\t\tuint64_t objcOptsSize;           // size of ObjC optimizations header\n"
-		"\t\tuint64_t cacheAtlasOffset;       // VM offset from cache_header* to embedded cache atlas for process introspection\n"
+		"\t\tuint64_t cacheAtlasOffset;       // VM offset from cache_header* to embedded cache atlas for process "
+	    "introspection\n"
 		"\t\tuint64_t cacheAtlasSize;         // size of embedded cache atlas\n"
-		"\t\tuint64_t dynamicDataOffset;      // VM offset from cache_header* to the location of dyld_cache_dynamic_data_header\n"
+		"\t\tuint64_t dynamicDataOffset;      // VM offset from cache_header* to the location of "
+	    "dyld_cache_dynamic_data_header\n"
 		"\t\tuint64_t dynamicDataMaxSize;     // maximum size of space reserved from dynamic data\n"
 		"\t\tuint32_t tproMappingsOffset;     // file offset to first dyld_cache_tpro_mapping_info\n"
 		"\t\tuint32_t tproMappingsCount;      // number of dyld_cache_tpro_mapping_info entries\n"
-		"\t};", headerType, err);
+		"\t};",
+		headerType, err);
 
 	if (!err.empty() || !headerType.type)
 	{
-		LogError("Failed to parse header type: %s", err.c_str());
+		logger->LogError("Failed to parse header type: %s", err.c_str());
 		return false;
-	}
-
-	Ref<Settings> settings = GetLoadSettings(GetTypeName());
-
-	if (!settings)
-	{
-		Ref<Settings> programSettings = Settings::Instance();
-		programSettings->Set("analysis.workflows.functionWorkflow", "core.function.dsc", this);
-	}
-
-	if (m_parseOnly)
-		return true;
-
-	// Check the metadata version if there is one, so we can alert the user to why they have no loaded images.
-	// TODO: Once the view is able to be exited early we should offer to close the view if the user does not want to upgrade.
-	auto metadataVersion = SharedCacheCore::SharedCacheMetadata::ViewMetadataVersion(GetParentView());
-	if (metadataVersion.has_value() && metadataVersion.value() != METADATA_VERSION)
-	{
-		ShowMessageBox("Invalid Shared Cache Metadata!", "The BNDB shared cache metadata was created with a different version of the Shared Cache view, to continue the metadata has to be recreated. You will need to add your images back again.");
 	}
 
 	// Add Mach-O file header type info
@@ -335,17 +468,17 @@ bool DSCView::Init()
 	cmdTypeBuilder.AddMemberWithValue("LC_RPATH", LC_RPATH);  //                 (0x1c | LC_REQ_DYLD)
 	cmdTypeBuilder.AddMemberWithValue("LC_CODE_SIGNATURE", LC_CODE_SIGNATURE);
 	cmdTypeBuilder.AddMemberWithValue("LC_SEGMENT_SPLIT_INFO", LC_SEGMENT_SPLIT_INFO);
-	cmdTypeBuilder.AddMemberWithValue("LC_REEXPORT_DYLIB", LC_REEXPORT_DYLIB);	//        (0x1f | LC_REQ_DYLD)
+	cmdTypeBuilder.AddMemberWithValue("LC_REEXPORT_DYLIB", LC_REEXPORT_DYLIB);  //        (0x1f | LC_REQ_DYLD)
 	cmdTypeBuilder.AddMemberWithValue("LC_LAZY_LOAD_DYLIB", LC_LAZY_LOAD_DYLIB);
 	cmdTypeBuilder.AddMemberWithValue("LC_ENCRYPTION_INFO", LC_ENCRYPTION_INFO);
 	cmdTypeBuilder.AddMemberWithValue("LC_DYLD_INFO", LC_DYLD_INFO);
-	cmdTypeBuilder.AddMemberWithValue("LC_DYLD_INFO_ONLY", LC_DYLD_INFO_ONLY);		  //        (0x22 | LC_REQ_DYLD)
+	cmdTypeBuilder.AddMemberWithValue("LC_DYLD_INFO_ONLY", LC_DYLD_INFO_ONLY);        //        (0x22 | LC_REQ_DYLD)
 	cmdTypeBuilder.AddMemberWithValue("LC_LOAD_UPWARD_DYLIB", LC_LOAD_UPWARD_DYLIB);  //     (0x23 | LC_REQ_DYLD)
 	cmdTypeBuilder.AddMemberWithValue("LC_VERSION_MIN_MACOSX", LC_VERSION_MIN_MACOSX);
 	cmdTypeBuilder.AddMemberWithValue("LC_VERSION_MIN_IPHONEOS", LC_VERSION_MIN_IPHONEOS);
 	cmdTypeBuilder.AddMemberWithValue("LC_FUNCTION_STARTS", LC_FUNCTION_STARTS);
 	cmdTypeBuilder.AddMemberWithValue("LC_DYLD_ENVIRONMENT", LC_DYLD_ENVIRONMENT);
-	cmdTypeBuilder.AddMemberWithValue("LC_MAIN", LC_MAIN);	//                  (0x28 | LC_REQ_DYLD)
+	cmdTypeBuilder.AddMemberWithValue("LC_MAIN", LC_MAIN);  //                  (0x28 | LC_REQ_DYLD)
 	cmdTypeBuilder.AddMemberWithValue("LC_DATA_IN_CODE", LC_DATA_IN_CODE);
 	cmdTypeBuilder.AddMemberWithValue("LC_SOURCE_VERSION", LC_SOURCE_VERSION);
 	cmdTypeBuilder.AddMemberWithValue("LC_DYLIB_CODE_SIGN_DRS", LC_DYLIB_CODE_SIGN_DRS);
@@ -622,14 +755,14 @@ bool DSCView::Init()
 	GetParentView()->Read(&basePointer, 16, 4);
 	if (basePointer == 0)
 	{
-		LogError("Failed to read base pointer");
+		logger->LogError("Failed to read base pointer");
 		return false;
 	}
 	uint64_t primaryBase = 0;
 	GetParentView()->Read(&primaryBase, basePointer, 8);
 	if (primaryBase == 0)
 	{
-		LogError("Failed to read primary base at 0x%llx", basePointer);
+		logger->LogError("Failed to read primary base at 0x%llx", basePointer);
 		return false;
 	}
 
@@ -641,131 +774,81 @@ bool DSCView::Init()
 	AddAutoSegment(primaryBase, headerSize, 0, headerSize, SegmentReadable);
 	AddAutoSection("__dsc_header", primaryBase, headerSize, ReadOnlyDataSectionSemantics);
 	DefineType("dyld_cache_header", headerType.name, headerType.type);
-	DefineAutoSymbolAndVariableOrFunction(GetDefaultPlatform(), new Symbol(DataSymbol, "primary_cache_header", primaryBase), headerType.type);
+	DefineAutoSymbolAndVariableOrFunction(
+		GetDefaultPlatform(), new Symbol(DataSymbol, "primary_cache_header", primaryBase), headerType.type);
+
+	auto sharedCache = SharedCache(GetAddressSize());
+
+	{
+		// Add up all the cache entries using the cache processor.
+		// After this we should have all the mappings available as well.
+		CacheProcessor cacheProcessor = CacheProcessor(this);
+		auto startTime = std::chrono::high_resolution_clock::now();
+		if (!cacheProcessor.ProcessCache(sharedCache))
+		{
+			// Oh no, we failed to process the cache, this likely means the primary on-disk file was not able to be
+			// found.
+			// TODO: Prompt the user to select the primary cache file? We can still recover from here.
+			logger->LogError("Failed to process cache, likely missing cache files.");
+			// NOTE: An interaction handler headlessly could select yes to this, however for the purposes of this we will just let them continue by defualt.
+			if (IsUIEnabled() && ShowMessageBox("Continue opening", "This shared cache file was unable to be processed, would you like to open without shared cache information?", YesNoButtonSet, QuestionIcon) != YesButton)
+				return false;
+		}
+		auto endTime = std::chrono::high_resolution_clock::now();
+		std::chrono::duration<double> elapsed = endTime - startTime;
+		logger->LogInfo("Processing %zu entries took %.3f seconds", sharedCache.GetEntries().size(), elapsed.count());
+	}
+
+	{
+		// Write all the slide info pointers to the virtual memory.
+		// This should be done before any other work begins, as the backing data will be altered by this process.
+		auto startTime = std::chrono::high_resolution_clock::now();
+		for (const auto& [_, entry] : sharedCache.GetEntries())
+			sharedCache.ProcessEntrySlideInfo(entry);
+		auto endTime = std::chrono::high_resolution_clock::now();
+		std::chrono::duration<double> elapsed = endTime - startTime;
+		logger->LogInfo("Processing slide info took %.3f seconds", elapsed.count());
+	}
+
+	{
+		// Load up all images into the cache before adding extra regions.
+		// Currently, it is expected that a primary entry contain all relevant images, so we only check that one.
+		auto startTime = std::chrono::high_resolution_clock::now();
+		for (const auto& [_, entry] : sharedCache.GetEntries())
+			if (entry.GetType() == CacheEntryType::Primary)
+				sharedCache.ProcessEntryImages(entry);
+		auto endTime = std::chrono::high_resolution_clock::now();
+		std::chrono::duration<double> elapsed = endTime - startTime;
+		auto images = sharedCache.GetImages();
+		logger->LogInfo("Processing %zu images took %.3f seconds", images.size(), elapsed.count());
+		// Warn if we found no images, and provide the likely explanation
+		if (images.empty())
+			logger->LogWarn("Failed to process any images, likely missing cache files.");
+	}
+
+	{
+		// TODO: Run this up on a separate thread maybe and have callback notifications?
+		// Load up all the regions into the cache.
+		auto startTime = std::chrono::high_resolution_clock::now();
+		for (const auto& [_, entry] : sharedCache.GetEntries())
+			sharedCache.ProcessEntryRegions(entry);
+		auto endTime = std::chrono::high_resolution_clock::now();
+		std::chrono::duration<double> elapsed = endTime - startTime;
+		logger->LogInfo("Processing %zu regions took %.3f seconds", sharedCache.GetRegions().size(), elapsed.count());
+	}
+
+	auto cacheController = SharedCacheController::Initialize(*this, std::move(sharedCache));
+
+	// Users can adjust which images are loaded by default using the `loader.dsc.autoLoadPattern` setting.
+	std::string autoLoadPattern = ".*libsystem_c.dylib";
+	if (settings && settings->Contains("loader.dsc.autoLoadPattern"))
+		autoLoadPattern = settings->Get<std::string>("loader.dsc.autoLoadPattern", this);
+	logger->LogDebug("Loading images using pattern: %s", autoLoadPattern.c_str());
+
+	std::regex autoLoadRegex(autoLoadPattern);
+	for (const auto& [_, image] : cacheController->GetCache().GetImages())
+		if (std::regex_match(image.GetName(), autoLoadRegex))
+			cacheController->ApplyImage(*this, image);
 
 	return true;
-}
-
-
-DSCViewType::DSCViewType() : BinaryViewType(VIEW_NAME, VIEW_NAME)
-{
-}
-
-BinaryNinja::Ref<BinaryNinja::BinaryView> DSCViewType::Create(BinaryNinja::BinaryView* data)
-{
-	return new DSCView(VIEW_NAME, data, false);
-}
-
-
-Ref<Settings> DSCViewType::GetLoadSettingsForData(BinaryView* data)
-{
-	Ref<BinaryView> viewRef = Parse(data);
-	if (!viewRef || !viewRef->Init())
-	{
-		LogWarn("Failed to initialize view of type '%s'. Generating default load settings.", GetName().c_str());
-		viewRef = data;
-	}
-
-	Ref<Settings> settings = GetDefaultLoadSettingsForData(viewRef);
-
-	// specify default load settings that can be overridden
-	std::vector<std::string> overrides = {"loader.imageBase", "loader.platform"};
-	settings->UpdateProperty("loader.imageBase", "message", "Note: File indicates image is not relocatable.");
-
-	for (const auto& override : overrides)
-	{
-		if (settings->Contains(override))
-			settings->UpdateProperty(override, "readOnly", false);
-	}
-
-	Ref<Settings> programSettings = Settings::Instance();
-	programSettings->Set("analysis.workflows.functionWorkflow", "core.function.dsc", viewRef);
-
-	settings->RegisterSetting("loader.dsc.processCFStrings",
-		R"({
-		"title" : "Process CFString Metadata",
-		"type" : "boolean",
-		"default" : true,
-		"description" : "Processes CoreFoundation strings, applying string values from encoded metadata"
-		})");
-
-	settings->RegisterSetting("loader.dsc.autoLoadLibSystem",
-		R"({
-		"title" : "Auto-Load libSystem",
-		"type" : "boolean",
-		"default" : true,
-		"description" : "Whether to automatically load libsystem_c.dylib. This image contains frequently used noreturn symbols, and not loading it will result in frequently incorrect control flows."
-		})");
-
-	settings->RegisterSetting("loader.dsc.processObjC",
-		R"({
-		"title" : "Process Objective-C Metadata",
-		"type" : "boolean",
-		"default" : true,
-		"description" : "Processes Objective-C metadata, applying class and method names from encoded metadata"
-		})");
-
-	settings->RegisterSetting("loader.dsc.autoLoadObjCStubRequirements",
-		R"({
-		"title" : "Auto-Load Objective-C Stub Requirements",
-		"type" : "boolean",
-		"default" : true,
-		"description" : "Automatically loads segments required for inlining Objective-C stubs. Recommended you keep this on."
-		})");
-
-	settings->RegisterSetting("loader.dsc.autoLoadStubsAndDyldData",
-		R"({
-		"title" : "Auto-Load Stub Islands",
-		"type" : "boolean",
-		"default" : true,
-		"description" : "Automatically loads stub and dylddata regions that contain just branches and pointers. These are required for resolving stub names, and performance impact is minimal. Recommended you keep this on."
-		})");
-
-	settings->RegisterSetting("loader.dsc.allowLoadingLinkeditSegments",
-		R"({
-		"title" : "Allow Loading __LINKEDIT Segments",
-		"type" : "boolean",
-		"default" : false,
-		"description" : "Allow mapping __LINKEDIT segments. These are large regions of symbol data that are automatically processed by BinaryNinja without the need for mapping. On newer caches, __LINKEDIT for all images may end up merged and be >300MB in size. This will likely cause severe performance degradation with _zero_ benefit."
-		})");
-
-	settings->RegisterSetting("loader.dsc.processFunctionStarts",
-		R"({
-			"title" : "Process Mach-O Function Starts Tables",
-			"type" : "boolean",
-			"default" : true,
-			"description" : "Add function starts sourced from the Function Starts tables to the core for analysis."
-			})");
-
-	// Merge existing load settings if they exist. This allows for the selection of a specific object file from a Mach-O
-	// Universal file. The 'Universal' BinaryViewType generates a schema with 'loader.universal.architectures'. This
-	// schema contains an appropriate 'Mach-O' load schema for selecting a specific object file. The embedded schema
-	// contains 'loader.macho.universalImageOffset'.
-	Ref<Settings> loadSettings = viewRef->GetLoadSettings(GetName());
-	if (loadSettings && !loadSettings->IsEmpty())
-		settings->DeserializeSchema(loadSettings->SerializeSchema());
-
-	return settings;
-}
-
-
-BinaryNinja::Ref<BinaryNinja::BinaryView> DSCViewType::Parse(BinaryNinja::BinaryView* data)
-{
-	return new DSCView(VIEW_NAME, data, true);
-}
-
-bool DSCViewType::IsTypeValidForData(BinaryNinja::BinaryView* data)
-{
-	if (!data)
-		return false;
-
-	DataBuffer sig = data->ReadBuffer(data->GetStart(), 4);
-	if (sig.GetLength() != 4)
-		return false;
-
-	const char* magic = (char*)sig.GetData();
-	if (strncmp(magic, "dyld", 4) == 0)
-		return true;
-
-	return false;
 }

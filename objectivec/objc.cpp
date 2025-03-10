@@ -1509,12 +1509,22 @@ void ObjCProcessor::ProcessCFStrings(std::optional<std::string> imageName)
 					uint8_t* rawData = static_cast<uint8_t*>(data.GetData());
 					uint8_t* offsetAddress = rawData + bufferOff;
 					uint16_t c = *reinterpret_cast<uint16_t*>(offsetAddress);
-					if (c == 0x20)
+					if (c == 0x20) {
 						str.push_back('_');
-					else if (c < 0x80)
+					} else if (c == '\r') {
+						str.push_back('\\');
+						str.push_back('r');
+					} else if (c == '\n') {
+						str.push_back('\\');
+						str.push_back('n');
+					} else if (c == '\t') {
+						str.push_back('\\');
+						str.push_back('t');
+					} else if (c > 0x20 && c < 0x80) {
 						str.push_back(c);
-					else
+					} else {
 						str.push_back('?');
+					}
 				}
 				DefineObjCSymbol(
 					DataSymbol, Type::ArrayType(Type::WideCharType(2), size + 1), "ustr_" + str, strLoc, true);
@@ -1524,11 +1534,26 @@ void ObjCProcessor::ProcessCFStrings(std::optional<std::string> imageName)
 			else  // UTF8 / ASCII
 			{
 				reader->Seek(strLoc);
-				str = reader->ReadCString();
-				for (auto& c : str)
+				std::string rawStr = reader->ReadCString(size + 1);
+				str = "";
+				for (signed char c : rawStr)
 				{
-					if (c == ' ')
-						c = '_';
+					if (c == 0x20) {
+						str.push_back('_');
+					} else if (c == '\r') {
+						str.push_back('\\');
+						str.push_back('r');
+					} else if (c == '\n') {
+						str.push_back('\\');
+						str.push_back('n');
+					} else if (c == '\t') {
+						str.push_back('\\');
+						str.push_back('t');
+					} else if (c > 0x20 || c < 0) {
+						str.push_back(c);
+					} else {
+						str.push_back('?');
+					}
 				}
 				DefineObjCSymbol(DataSymbol, Type::ArrayType(Type::IntegerType(1, true), str.size() + 1), "cstr_" + str,
 					strLoc, true);

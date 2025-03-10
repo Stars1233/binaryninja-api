@@ -1,95 +1,98 @@
 #include "ObjC.h"
 
+#include "SharedCacheController.h"
+
 using namespace BinaryNinja;
 using namespace DSCObjC;
-using namespace SharedCacheCore;
 
-DSCObjCReader::DSCObjCReader(SharedCache* cache, size_t addressSize) :
-	m_reader(VMReader(cache->GetVMMap())), m_addressSize(addressSize)
-{
-}
+SharedCacheObjCReader::SharedCacheObjCReader(VirtualMemoryReader reader) : m_reader(reader) {}
 
-void DSCObjCReader::Read(void* dest, size_t len)
+void SharedCacheObjCReader::Read(void* dest, size_t len)
 {
 	m_reader.Read(dest, len);
 }
 
-std::string DSCObjCReader::ReadCString()
+std::string SharedCacheObjCReader::ReadCString(size_t maxLength)
 {
-	return m_reader.ReadCString(m_reader.GetOffset());
+	return m_reader.ReadCString(m_reader.GetOffset(), maxLength);
 }
 
-uint8_t DSCObjCReader::Read8()
+uint8_t SharedCacheObjCReader::Read8()
 {
-	return m_reader.Read8();
+	return m_reader.ReadUInt8();
 }
 
-uint16_t DSCObjCReader::Read16()
+uint16_t SharedCacheObjCReader::Read16()
 {
-	return m_reader.Read16();
+	return m_reader.ReadUInt16();
 }
 
-uint32_t DSCObjCReader::Read32()
+uint32_t SharedCacheObjCReader::Read32()
 {
-	return m_reader.Read32();
+	return m_reader.ReadUInt32();
 }
 
-uint64_t DSCObjCReader::Read64()
+uint64_t SharedCacheObjCReader::Read64()
 {
-	return m_reader.Read64();
+	return m_reader.ReadUInt64();
 }
 
-int8_t DSCObjCReader::ReadS8()
+int8_t SharedCacheObjCReader::ReadS8()
 {
-	return m_reader.ReadS8();
+	return m_reader.ReadInt8();
 }
 
-int16_t DSCObjCReader::ReadS16()
+int16_t SharedCacheObjCReader::ReadS16()
 {
-	return m_reader.ReadS16();
+	return m_reader.ReadInt16();
 }
 
-int32_t DSCObjCReader::ReadS32()
+int32_t SharedCacheObjCReader::ReadS32()
 {
-	return m_reader.ReadS32();
+	return m_reader.ReadInt32();
 }
 
-int64_t DSCObjCReader::ReadS64()
+int64_t SharedCacheObjCReader::ReadS64()
 {
-	return m_reader.ReadS64();
+	return m_reader.ReadInt64();
 }
 
-uint64_t DSCObjCReader::ReadPointer()
+uint64_t SharedCacheObjCReader::ReadPointer()
 {
 	return m_reader.ReadPointer();
 }
 
-uint64_t DSCObjCReader::GetOffset() const
+uint64_t SharedCacheObjCReader::GetOffset() const
 {
 	return m_reader.GetOffset();
 }
 
-void DSCObjCReader::Seek(uint64_t offset)
+void SharedCacheObjCReader::Seek(uint64_t offset)
 {
 	m_reader.Seek(offset);
 }
 
-void DSCObjCReader::SeekRelative(int64_t offset)
+void SharedCacheObjCReader::SeekRelative(int64_t offset)
 {
 	m_reader.SeekRelative(offset);
 }
 
-VMReader& DSCObjCReader::GetVMReader()
+VirtualMemoryReader& SharedCacheObjCReader::GetVMReader()
 {
 	return m_reader;
 }
 
-std::shared_ptr<ObjCReader> DSCObjCProcessor::GetReader()
+std::shared_ptr<ObjCReader> SharedCacheObjCProcessor::GetReader()
 {
-	return std::make_shared<DSCObjCReader>(m_cache, m_data->GetAddressSize());
+	const auto controller = DSC::SharedCacheController::FromView(*m_data);
+	// TODO: This should never happen.
+	if (!controller)
+		throw std::runtime_error("SharedCacheController not found for SharedCacheObjCProcessor::GetReader!");
+	auto reader = VirtualMemoryReader(controller->GetCache().GetVirtualMemory(), m_data->GetAddressSize());
+	return std::make_shared<SharedCacheObjCReader>(reader);
 }
 
-void DSCObjCProcessor::GetRelativeMethod(ObjCReader* reader, method_t& meth)
+void SharedCacheObjCProcessor::GetRelativeMethod(ObjCReader* reader, method_t& meth)
 {
 	if (m_customRelativeMethodSelectorBase.has_value())
 	{
@@ -103,14 +106,48 @@ void DSCObjCProcessor::GetRelativeMethod(ObjCReader* reader, method_t& meth)
 	}
 }
 
-uint64_t DSCObjCProcessor::GetObjCRelativeMethodBaseAddress(ObjCReader* reader)
+std::optional<ObjCOptimizationHeader> GetObjCOptimizationHeader(SharedCache& cache, VirtualMemoryReader& reader)
 {
-	auto objCRelativeMethodsBaseAddr = m_cache->GetObjCRelativeMethodBaseAddress(static_cast<DSCObjCReader*>(reader)->GetVMReader());
-	m_customRelativeMethodSelectorBase = objCRelativeMethodsBaseAddr;
-	return objCRelativeMethodsBaseAddr;
+	// Find the first primary entry and use that header to read the obj opt header.
+	// Don't ask me why this is done like this...
+	std::optional<dyld_cache_header> primaryCacheHeader = std::nullopt;
+	for (const auto& [_, entry] : cache.GetEntries())
+	{
+		if (entry.GetType() == CacheEntryType::Primary)
+		{
+			primaryCacheHeader = entry.GetHeader();
+			break;
+		}
+	}
+
+	// Check if we even have the obj opt stuff.
+	if (!primaryCacheHeader || !primaryCacheHeader->objcOptsOffset || !primaryCacheHeader->objcOptsSize)
+		return std::nullopt;
+
+	ObjCOptimizationHeader header = {};
+	// Ignoring `objcOptsSize` in favor of `sizeof(ObjCOptimizationHeader)` matches dyld's behavior.
+	// TODO: The base address is the lowest region, however is that going to be where the primary cache header resides?
+	reader.Read(&header, cache.GetBaseAddress() + primaryCacheHeader->objcOptsOffset, sizeof(ObjCOptimizationHeader));
+
+	return header;
 }
 
-DSCObjCProcessor::DSCObjCProcessor(BinaryView* data, SharedCache* cache, bool isBackedByDatabase) :
-	ObjCProcessor(data, "SharedCache.ObjC", isBackedByDatabase, true), m_cache(cache)
+uint64_t SharedCacheObjCProcessor::GetObjCRelativeMethodBaseAddress(ObjCReader* reader)
 {
+	// Try and retrieve the base address of the selector stuff.
+	if (const auto controller = DSC::SharedCacheController::FromView(*m_data))
+	{
+		auto baseAddress = controller->GetCache().GetBaseAddress();
+		auto dangerReader = dynamic_cast<SharedCacheObjCReader*>(reader)->GetVMReader();
+		if (const auto header = GetObjCOptimizationHeader(controller->GetCache(), dangerReader); header.has_value())
+		{
+			m_customRelativeMethodSelectorBase = baseAddress + header->relativeMethodSelectorBaseAddressOffset;
+		}
+	}
+
+	return m_customRelativeMethodSelectorBase.value_or(0);
 }
+
+SharedCacheObjCProcessor::SharedCacheObjCProcessor(BinaryView* data, bool isBackedByDatabase) :
+	ObjCProcessor(data, "SharedCache.ObjC", isBackedByDatabase, true)
+{}

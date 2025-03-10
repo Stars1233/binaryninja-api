@@ -166,7 +166,7 @@ namespace BinaryNinja {
 		    \throws Exception
 			\return the string
 		*/
-		virtual std::string ReadCString() = 0;
+		virtual std::string ReadCString(size_t maxLength = -1) = 0;
 
 		/*! Read a uint8_t from the current cursor position and advance the cursor by 1 byte
 

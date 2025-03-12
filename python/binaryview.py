@@ -3678,6 +3678,21 @@ class BinaryView:
 		finally:
 			core.BNFreeRelocationRanges(ranges)
 
+	def finalize_new_segments(self) -> bool:
+		"""
+		Performs "finalization" on segments added after initial Finalization (performed after an Init() has completed).
+
+		Finalizing a segment involves optimizing the relocation info stored in that segment, so if a segment is added
+			and relocations are defined for that segment by some automated process, this function should be called afterwards.
+
+		An example of this can be seen in the KernelCache plugin, in `KernelCache::LoadImageWithInstallName`.
+			After we load an image, map new segments, and define relocations for all of them, we call this function
+			to let core know it is now safe to finalize the new segments
+
+		:return: Whether finalization was successful
+		"""
+		return core.BNBinaryViewFinalizeNewSegments(self.handle)
+
 	def range_contains_relocation(self, addr: int, size: int) -> bool:
 		"""Checks if the specified range overlaps with a relocation"""
 		return core.BNRangeContainsRelocation(self.handle, addr, size)

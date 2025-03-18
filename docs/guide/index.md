@@ -2,16 +2,6 @@
 
 Welcome to the Binary Ninja User Guide. You'll notice two menus here. On the right is the table of contents for this main page of the user manual. On the left are links to larger topics that have their own pages, including:
 
-- [Plugins](plugins.md)
-- [Settings](settings.md)
-- [Projects](projects.md)
-- [Troubleshooting](troubleshooting.md)
-- [Objective-C](objectivec.md)
-- [Debugger](debugger/index.md)
-- [Migration Guide](migration/index.md)
-- [Types](types/index.md)
-[comment]: <> (When changing this list, make sure to update mkdocs.yml as well)
-
 ## Directories
 
 Binary Ninja stores information in two primary locations. The first is the binary path (wherever Binary Ninja is installed) and the second is the user folder for user-installed content.

@@ -2700,7 +2700,9 @@ void ElfView::ParseMiniDebugInfo()
 		return;
 	}
 
-	Ref<BinaryView> debugBv = Load(debugElf, false);
+	// Load debug bv at same address as this bv
+	string debugBvOptions = fmt::format("{{\"loader.imageBase\": {}}}", GetStart());
+	Ref<BinaryView> debugBv = Load(debugElf, false, debugBvOptions);
 	if (!debugBv)
 	{
 		m_logger->LogError("Invalid .gnu_debugdata contents: Failed to create BinaryView");
@@ -2712,7 +2714,7 @@ void ElfView::ParseMiniDebugInfo()
 		DefineElfSymbol(
 			symbol->GetType(),
 			symbol->GetRawName(),
-			GetStart() + symbol->GetAddress(),
+			symbol->GetAddress(),
 			false,
 			symbol->GetBinding()
 		);

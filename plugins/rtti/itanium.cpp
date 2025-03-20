@@ -10,16 +10,35 @@ using namespace BinaryNinja::RTTI::Itanium;
 
 constexpr const char *TYPE_SOURCE_ITANIUM = "rtti_itanium";
 
-TypeInfo::TypeInfo(BinaryView *view, uint64_t address)
+
+std::optional<TypeInfo> GetTypeInfo(BinaryView* view, uint64_t address)
 {
+    // TODO: We really need a valid offset range thing.
+    const auto typeInfoSize = view->GetAddressSize() * 2;
+    if (!view->IsValidOffset(address) || !view->IsValidOffset(address + typeInfoSize))
+        return std::nullopt;
     BinaryReader reader = BinaryReader(view);
     reader.Seek(address);
-    base = reader.ReadPointer();
+    auto base = reader.ReadPointer();
+    if (!view->IsValidOffset(base))
+        return std::nullopt;
     auto typeNameAddr = reader.ReadPointer();
     if (!view->IsValidOffset(typeNameAddr))
-        return;
+        return std::nullopt;
     reader.Seek(typeNameAddr);
-    type_name = reader.ReadCString(512);
+    auto type_name = reader.ReadCString(512);
+    return TypeInfo(base, type_name);
+}
+
+
+TypeInfo::TypeInfo(BinaryView *view, uint64_t address)
+{
+    auto typeInfo = GetTypeInfo(view, address);
+    // TODO: Throw an exception? No one should call this directly unless they are sure!
+    if (!typeInfo.has_value())
+        return;
+    base = typeInfo->base;
+    type_name = typeInfo->type_name;
 }
 
 
@@ -226,14 +245,13 @@ Ref<Type> VMIClassTypeInfoType(BinaryView *view, uint64_t baseCount)
 
 std::optional<TypeInfoVariant> ReadTypeInfoVariant(BinaryView *view, uint64_t objectAddr)
 {
-    auto typeInfo = TypeInfo(view, objectAddr);
-
-    if (!view->IsValidOffset(typeInfo.base))
+    auto typeInfo = GetTypeInfo(view, objectAddr);
+    if (!typeInfo.has_value())
         return std::nullopt;
     
     // TODO: What if there is no symbol?
     // If there is a symbol at objectAddr pointing to a symbol starting with "vtable for __cxxabiv1"
-    auto baseSym = view->GetSymbolByAddress(typeInfo.base);
+    auto baseSym = view->GetSymbolByAddress(typeInfo->base);
     if (baseSym == nullptr)
     {
         // Check relocation at objectAddr for symbol
@@ -252,7 +270,7 @@ std::optional<TypeInfoVariant> ReadTypeInfoVariant(BinaryView *view, uint64_t ob
     if (baseSym == nullptr)
     {
         // Verify first that we can even read a pointer sized value at the base.
-        if (!view->IsValidOffset(typeInfo.base + view->GetAddressSize()))
+        if (!view->IsValidOffset(typeInfo->base + view->GetAddressSize()))
             return std::nullopt;
         // We did not find a symbol for the base.
         // Last resort, try and deref to check for static linked c++ rt.
@@ -262,7 +280,7 @@ std::optional<TypeInfoVariant> ReadTypeInfoVariant(BinaryView *view, uint64_t ob
         // void *data_102bb4cb0 = __cxxabiv1::__class_type_info::~__class_type_info()
         // Because we are pointing at the start of the vtable, we can just deref again to get the symbol.
         BinaryReader reader = BinaryReader(view);
-        reader.Seek(typeInfo.base);
+        reader.Seek(typeInfo->base);
         uint64_t vftAddr = reader.ReadPointer();
         if (!view->IsValidOffset(vftAddr))
             return std::nullopt;

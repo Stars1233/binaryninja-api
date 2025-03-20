@@ -25,6 +25,7 @@ namespace BinaryNinja::RTTI::Itanium {
 		std::string type_name;
 
 		TypeInfo(BinaryView *view, uint64_t address);
+		TypeInfo(uint64_t base, std::string &type_name) : base(base), type_name(type_name) {};
 	};
 
 	struct FundamentalTypeInfo : TypeInfo {};

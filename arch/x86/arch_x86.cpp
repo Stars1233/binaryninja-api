@@ -4761,7 +4761,7 @@ static void InitX86Settings()
 {
 	Ref<Settings> settings = Settings::Instance();
 	settings->RegisterSetting("arch.x86.disassembly.syntax",
-			R"({
+			R"~({
 			"title" : "x86 Disassembly Syntax",
 			"type" : "string",
 			"default" : "BN_INTEL",
@@ -4769,31 +4769,31 @@ static void InitX86Settings()
 			"description" : "Specify disassembly syntax for the x86/x86_64 architectures.",
 			"enum" : ["BN_INTEL", "INTEL", "AT&T"],
 			"enumDescriptions" : [
-				"Sets the disassembly syntax to a simplified Intel format. (TBD) ",
-				"Sets the disassembly syntax to Intel format. (Destination on the left) ",
-				"Sets the disassembly syntax to AT&T format. (Destination on the right) "],
+				"Sets the disassembly syntax to a simplified Intel format.",
+				"Sets the disassembly syntax to Intel format. (Destination on the left)",
+				"Sets the disassembly syntax to AT&T format. (Destination on the right)"],
 			"ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
-			})");
+			})~");
 
 	settings->RegisterSetting("arch.x86.disassembly.separator",
-			R"({
+			R"~({
 			"title" : "x86 Disassembly Separator",
 			"type" : "string",
 			"default" : ", ",
 			"aliases" : ["arch.x86.disassemblySeperator", "arch.x86.disassemblySeparator"],
 			"description" : "Specify the token separator between operands.",
 			"ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
-			})");
+			})~");
 
 	settings->RegisterSetting("arch.x86.disassembly.lowercase",
-			R"({
+			R"~({
 			"title" : "x86 Disassembly Case",
 			"type" : "boolean",
 			"default" : true,
 			"aliases" : ["arch.x86.disassemblyLowercase"],
 			"description" : "Specify the case for opcodes, operands, and registers.",
 			"ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
-			})");
+			})~");
 }
 
 

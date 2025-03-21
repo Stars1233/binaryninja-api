@@ -10077,9 +10077,32 @@ namespace BinaryNinja {
 		Ref<BinaryView> m_view;
 		Ref<Function> m_function;
 
+		bool PostRequest(const std::string& command);
+
 	public:
 		WorkflowMachine(Ref<BinaryView> view);
 		WorkflowMachine(Ref<Function> function);
+
+		/*! Start the workflow WorkflowMachine
+			Starts the workflow machine for the given BinaryView or Function.
+			\return true if the command is accepted, false otherwise.
+		*/
+		bool Run();
+
+		/*! Halt the workflow machine
+
+			Halts analysis at a resumable point.
+			\return true if the command is accepted, false otherwise.
+		*/
+		bool Halt();
+
+		/*! Reset the workflow machine
+
+			Resets the workflow machine to its initial state.
+			\return true if the command is accepted, false otherwise.
+		*/
+		bool Reset();
+
 
 		/*! Enable the workflow machine
 
@@ -10096,6 +10119,19 @@ namespace BinaryNinja {
 		*/
 		bool Disable();
 
+		/*! Step the workflow machine
+
+			Steps the workflow machine through a single activity.
+			\return true if the command is accepted, false otherwise.
+		*/
+		bool Step();
+
+		/*! Get the current state of the workflow machine
+
+			Returns the current state of the workflow machine.
+			\return The current state of the workflow machine
+		*/
+		std::string GetState();
 
 		std::optional<bool> QueryOverride(const std::string& activity);
 		bool SetOverride(const std::string& activity, bool enable);

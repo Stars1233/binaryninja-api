@@ -29,6 +29,22 @@ string BaseAddressDetectionConfidenceToString(BNBaseAddressDetectionConfidence l
 }
 
 
+BaseAddressDetectionThread::BaseAddressDetectionThread(BaseAddressDetectionQtInputs* widgetInputs,
+	BinaryNinja::Ref<BinaryNinja::BinaryView> bv)
+{
+	m_inputs = widgetInputs;
+	m_view = bv;
+	m_baseDetection = new BinaryNinja::BaseAddressDetection(m_view);
+}
+
+
+BaseAddressDetectionThread::~BaseAddressDetectionThread()
+{
+	if (m_baseDetection)
+		delete m_baseDetection;
+}
+
+
 void BaseAddressDetectionThread::run()
 {
 	BaseAddressDetectionQtResults results;

@@ -3193,6 +3193,8 @@ public:
 			case R_MIPS_LO16:
 			case R_MIPS_CALL16:
 			case R_MIPS_GOT16:
+			case R_MIPS_HIGHER:
+			case R_MIPS_HIGHEST:
 				result = BN_NOCOERCE_EXTERN_PTR;
 				break;
 			default:

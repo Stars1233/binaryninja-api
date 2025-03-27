@@ -5210,7 +5210,7 @@ class MediumLevelILFunction:
 			return ExpressionIndex(core.BNMediumLevelILGoto(self.handle, label.handle))
 
 	def if_expr(
-		self, operand: ExpressionIndex, t: MediumLevelILLabel, f: MediumLevelILLabel, label: MediumLevelILLabel,
+		self, operand: ExpressionIndex, t: MediumLevelILLabel, f: MediumLevelILLabel,
 		loc: Optional['ILSourceLocation'] = None
 	) -> ExpressionIndex:
 		"""

@@ -10126,12 +10126,13 @@ namespace BinaryNinja {
 		*/
 		bool Step();
 
-		/*! Get the current state of the workflow machine
-
-			Returns the current state of the workflow machine.
-			\return The current state of the workflow machine
-		*/
+		// TODO: Add new BNWorkflowMachineStatus structure and cooresponding API
+		// BNWorkflowMachineStatus GetStatus();
+		// TODO remove the following APIs once the above is implemented
 		std::string GetState();
+		std::pair<bool, bool> GetLogStatus();
+
+		bool SetLogEnabled(bool enable, bool global = false);
 
 		std::optional<bool> QueryOverride(const std::string& activity);
 		bool SetOverride(const std::string& activity, bool enable);

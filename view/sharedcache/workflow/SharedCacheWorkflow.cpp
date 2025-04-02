@@ -171,8 +171,7 @@ void AnalyzeStubFunction(Ref<Function> func, Ref<MediumLevelILFunction> mlil, Sh
 			{
 				// First load the stub island, if we _do_ load the stub island stop and reanalyze for constant propagation.'
 				const auto islandPtr = expr.GetConstant<MLIL_CONST_PTR>();
-				auto loaded = loadTarget(islandPtr);
-				if (loaded)
+				if (loadTarget(islandPtr))
 					return;
 				// We have been promoted to the target pointer here!
 				const auto targetPtr = islandPtr;
@@ -190,7 +189,7 @@ void AnalyzeStubFunction(Ref<Function> func, Ref<MediumLevelILFunction> mlil, Sh
 		{
 		case MLIL_CONST_PTR:
 			// NOTE: This runs every single function update.
-				func->SetAutoInlinedDuringAnalysis(true);
+			func->SetAutoInlinedDuringAnalysis(true);
 			break;
 		default:
 			break;

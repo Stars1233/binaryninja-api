@@ -69,7 +69,7 @@ DSCRef<SharedCacheController> SharedCacheController::Initialize(BinaryView& view
 {
 	auto id = GetViewIdFromView(view);
 	std::unique_lock<std::shared_mutex> lock(GlobalControllersMutex);
-	auto logger = new Logger("SharedCacheController", view.GetFile()->GetSessionId());
+	auto logger = new Logger("SharedCache.Controller", view.GetFile()->GetSessionId());
 	DSCRef<SharedCacheController> dscView = new SharedCacheController(std::move(cache), logger);
 
 	// Pull the settings from the view.
@@ -215,6 +215,8 @@ bool SharedCacheController::ApplyImage(BinaryView& view, const CacheImage& image
 	}
 
 	m_loadedImages.insert(image.headerAddress);
+
+	m_logger->LogInfoF("Loaded image: '{}'", image.path);
 
 	// TODO: This needs to be done in a "database save" callback.
 	view.StoreMetadata(METADATA_KEY, GetMetadata());

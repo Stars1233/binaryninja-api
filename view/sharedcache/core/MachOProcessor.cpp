@@ -6,7 +6,7 @@ using namespace BinaryNinja;
 SharedCacheMachOProcessor::SharedCacheMachOProcessor(Ref<BinaryView> view, std::shared_ptr<VirtualMemory> vm)
 {
 	m_view = view;
-	m_logger = new Logger("SharedCacheMachOProcessor", view->GetFile()->GetSessionId());
+	m_logger = new Logger("SharedCache.MachOProcessor", view->GetFile()->GetSessionId());
 	m_vm = std::move(vm);
 
 	// Adjust processor settings.

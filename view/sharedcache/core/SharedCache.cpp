@@ -491,7 +491,7 @@ std::optional<CacheSymbol> SharedCache::GetSymbolWithName(const std::string& nam
 CacheProcessor::CacheProcessor(Ref<BinaryView> view)
 {
 	m_view = std::move(view);
-	m_logger = new Logger("CacheProcessor", m_view->GetFile()->GetSessionId());
+	m_logger = new Logger("SharedCache.Processor", m_view->GetFile()->GetSessionId());
 }
 
 bool CacheProcessor::ProcessCache(SharedCache& cache)
@@ -523,6 +523,7 @@ bool CacheProcessor::ProcessFileCache(SharedCache& cache)
 	catch (const std::exception& e)
 	{
 		// Just return false so the view init can continue.
+		m_logger->LogErrorF("Failed to load base entry {}... {}", baseFileName, e.what());
 		return false;
 	}
 
@@ -535,7 +536,7 @@ bool CacheProcessor::ProcessFileCache(SharedCache& cache)
 		auto currentFilePath = entry.path().string();
 		auto currentFileName = BaseFileName(currentFilePath);
 		// Skip our base file, obviously.
-		if (currentFilePath== baseFilePath)
+		if (currentFilePath == baseFilePath)
 			continue;
 		// Filter files that don't contain the base file name i.e. "dyld_shared_cache_arm64e"
 		if (currentFilePath.find(baseFileName) == std::string::npos)
@@ -559,7 +560,9 @@ bool CacheProcessor::ProcessFileCache(SharedCache& cache)
 			cache.AddEntry(std::move(*additionalEntry));
 		}
 		catch (const std::exception& e)
-		{}
+		{
+			m_logger->LogErrorF("Failed to load entry {}... {}", currentFileName, e.what());
+		}
 	}
 
 	return true;

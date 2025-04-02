@@ -18,15 +18,24 @@ void MappedFileAccessor::WritePointer(size_t address, size_t pointer)
 	*reinterpret_cast<size_t*>(&m_file._mmap[address]) = pointer;
 }
 
-std::string MappedFileAccessor::ReadNullTermString(size_t address, size_t maxLength) const
+std::string MappedFileAccessor::ReadNullTermString(size_t address, const size_t maxLength) const
 {
 	if (address > Length())
 		return "";
-	auto start = m_file._mmap + address;
-	auto endLen = (maxLength > 0) ? maxLength : m_file.len;
-	auto end = start + endLen;
-	auto nul = std::find(start, end, 0);
-	return {start, nul};
+	// If we are not given a maxLength (i.e. -1) than we will set the max address to the length of the file.
+	const size_t maxAddr = (maxLength != -1) ? std::min(address + maxLength, Length()) : Length();
+	// Read a null-terminated string manually to avoid errors related to string length on Linux.
+	std::string str;
+	str.reserve(140);
+	for (size_t currAddr = address; currAddr < maxAddr; ++currAddr)
+	{
+		char c = m_file._mmap[currAddr];
+		if (c == '\0')
+			break;
+		str += c;
+	}
+	str.shrink_to_fit();
+	return str;
 }
 
 uint8_t MappedFileAccessor::ReadUInt8(size_t address)

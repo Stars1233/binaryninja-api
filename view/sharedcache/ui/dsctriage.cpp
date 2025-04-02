@@ -104,7 +104,7 @@ DSCTriageView::DSCTriageView(QWidget* parent, BinaryViewRef data) : QWidget(pare
 		// Show the icon in the loaded column.
 		loadImageTable->setItemDelegateForColumn(1, new LoadedDelegate());
 
-		auto loadImageButton = new CustomStyleFlatPushButton();
+		auto loadImageButton = new QPushButton();
 		{
 			connect(loadImageButton, &QPushButton::clicked,
 				[loadImageTable, loadImagesWithAddr](bool) {
@@ -120,21 +120,13 @@ DSCTriageView::DSCTriageView(QWidget* parent, BinaryViewRef data) : QWidget(pare
 					loadImagesWithAddr(addresses);
 				});
 			loadImageButton->setText("Load Selected");
-
-			loadImageButton->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-			loadImageButton->setMinimumWidth(100);
-			loadImageButton->setMinimumHeight(30);
 		} // loadImageButton
 
-		auto refreshDataButton = new CustomStyleFlatPushButton();
+		auto refreshDataButton = new QPushButton();
 		{
 			// TODO: Might want to introduce a cooldown for this button (if we even keep it)
 			connect(refreshDataButton, &QPushButton::clicked, [this](bool) { RefreshData(); });
 			refreshDataButton->setText("Refresh");
-
-			refreshDataButton->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-			refreshDataButton->setMinimumWidth(100);
-			refreshDataButton->setMinimumHeight(30);
 		} // refreshDataButton
 
 		auto loadImageFilterEdit = new FilterEdit(loadImageTable);
@@ -192,7 +184,7 @@ DSCTriageView::DSCTriageView(QWidget* parent, BinaryViewRef data) : QWidget(pare
 			});
 		}
 
-		auto loadSymbolImageButton = new CustomStyleFlatPushButton();
+		auto loadSymbolImageButton = new QPushButton();
 		{
 			connect(loadSymbolImageButton, &QPushButton::clicked,
 				[this, loadImagesWithAddr](bool) {
@@ -203,10 +195,6 @@ DSCTriageView::DSCTriageView(QWidget* parent, BinaryViewRef data) : QWidget(pare
 					loadImagesWithAddr(addresses);
 				});
 			loadSymbolImageButton->setText("Load Image");
-
-			loadSymbolImageButton->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-			loadSymbolImageButton->setMinimumWidth(100);
-			loadSymbolImageButton->setMinimumHeight(30);
 		} // loadImageButton
 
 		// Shows the current selected rows image name.

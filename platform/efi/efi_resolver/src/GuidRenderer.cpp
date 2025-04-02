@@ -25,8 +25,9 @@ static string formatGuid(uint32_t data1, uint16_t data2, uint16_t data3, uint64_
 	return oss.str();
 }
 
-vector<DisassemblyTextLine> EfiGuidRenderer::GetLinesForData(BinaryView* bv, uint64_t address, Type*,
-															 const vector<InstructionTextToken>& prefix, size_t, vector<pair<Type*, size_t>>& context)
+vector<DisassemblyTextLine> EfiGuidRenderer::GetLinesForData(
+	BinaryView* bv, uint64_t address, Type*, const vector<InstructionTextToken>& prefix, size_t width,
+	vector<pair<Type*, size_t>>& context, const std::string& language)
 {
 	BinaryReader reader(bv);
 	reader.Seek(address);

@@ -19,6 +19,17 @@ SharedCacheMachOProcessor::SharedCacheMachOProcessor(Ref<BinaryView> view, std::
 
 void SharedCacheMachOProcessor::ApplyHeader(SharedCacheMachOHeader& header)
 {
+	auto typeLibraryFromName = [&](const std::string& name) -> Ref<TypeLibrary> {
+		// Check to see if we have already loaded the type library.
+		if (auto typeLib = m_view->GetTypeLibrary(name))
+			return typeLib;
+
+		auto typeLibs = m_view->GetDefaultPlatform()->GetTypeLibrariesByName(name);
+		if (!typeLibs.empty())
+			return typeLibs.front();
+		return nullptr;
+	};
+
 	// Add a section for the header itself.
 	std::string headerSection = fmt::format("{}::__macho_header", header.identifierPrefix);
 	// TODO: Support mach_header (non 64bit)
@@ -38,7 +49,8 @@ void SharedCacheMachOProcessor::ApplyHeader(SharedCacheMachOHeader& header)
 				m_view->AddFunctionForAnalysis(targetPlatform, func, false);
 		}
 
-		auto typeLib = m_view->GetTypeLibrary(header.installName);
+		// Pull the available type library for the image we are loading, so we can apply known types.
+		auto typeLib = typeLibraryFromName(header.installName);
 		m_view->BeginBulkModifySymbols();
 
 		// TODO: Why does this need to only happen in linkeditSegment?

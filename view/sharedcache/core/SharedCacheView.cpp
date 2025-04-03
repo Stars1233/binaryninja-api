@@ -848,10 +848,19 @@ bool SharedCacheView::Init()
 		autoLoadPattern = settings->Get<std::string>("loader.dsc.autoLoadPattern", this);
 	logger->LogDebug("Loading images using pattern: %s", autoLoadPattern.c_str());
 
-	std::regex autoLoadRegex(autoLoadPattern);
-	for (const auto& [_, image] : cacheController->GetCache().GetImages())
-		if (std::regex_match(image.GetName(), autoLoadRegex))
-			cacheController->ApplyImage(*this, image);
+	{
+		// Load all images that match the `autoLoadPattern`.
+		auto startTime = std::chrono::high_resolution_clock::now();
+		size_t loadedImages = 0;
+		std::regex autoLoadRegex(autoLoadPattern);
+		for (const auto& [_, image] : cacheController->GetCache().GetImages())
+			if (std::regex_match(image.GetName(), autoLoadRegex))
+				if (cacheController->ApplyImage(*this, image))
+					++loadedImages;
+		auto endTime = std::chrono::high_resolution_clock::now();
+		std::chrono::duration<double> elapsed = endTime - startTime;
+		logger->LogInfo("Automatically loading %zu images took %.3f seconds", loadedImages, elapsed.count());
+	}
 
 	return true;
 }

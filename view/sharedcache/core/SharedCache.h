@@ -134,9 +134,8 @@ class CacheEntry
 	// Mappings tell us _where_ to map the regions within the flat address space.
 	// Without this we wouldn't know where the entry is supposed to exist in the address space.
 	std::vector<dyld_cache_mapping_info> m_mappings {};
-	// TODO: We really should remove this methinks.
-	// TODO: Storing this here is basically useless? IDK
 	// Mapping of image path to image info, used within ProcessImagesAndRegions to add them to the cache.
+	// Also used to retrieve the image dependencies.
 	std::unordered_map<std::string, dyld_cache_image_info> m_images {};
 
 public:
@@ -221,7 +220,7 @@ public:
 	SharedCache &operator=(SharedCache &&) noexcept = default;
 
 	uint64_t GetBaseAddress() const { return m_baseAddress; }
-	std::shared_ptr<VirtualMemory> GetVirtualMemory() { return m_vm; }
+	std::shared_ptr<VirtualMemory> GetVirtualMemory() const { return m_vm; }
 	const std::unordered_map<CacheEntryId, CacheEntry>& GetEntries() const { return m_entries; }
 	const AddressRangeMap<CacheRegion>& GetRegions() const { return m_regions; }
 	const std::unordered_map<uint64_t, CacheImage>& GetImages() const { return m_images; }
@@ -245,7 +244,7 @@ public:
 
 	void ProcessEntryRegions(const CacheEntry& entry);
 
-	void ProcessEntrySlideInfo(const CacheEntry& entry);
+	void ProcessEntrySlideInfo(const CacheEntry& entry) const;
 
 	// Construct the named symbols lookup map for use with `GetSymbolWithName`.
 	void ProcessSymbols();

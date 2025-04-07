@@ -6,11 +6,11 @@
 
 SlideInfoProcessor::SlideInfoProcessor(uint64_t baseAddress)
 {
-	m_logger = new BinaryNinja::Logger("SlideInfoProcessor");
+	m_logger = new BinaryNinja::Logger("SlideInfo.Processor");
 	m_baseAddress = baseAddress;
 }
 
-void ApplySlideInfoV5(VirtualMemory& vm, const SlideMappingInfo& mapping)
+void ApplySlideInfoV5(MappedFileAccessor& accessor, const SlideMappingInfo& mapping)
 {
 	uint64_t pageStartsOffset = mapping.address + sizeof(dyld_cache_slide_info_v5);
 	uint64_t pageStartCount = mapping.slideInfoV5.page_starts_count;
@@ -19,7 +19,7 @@ void ApplySlideInfoV5(VirtualMemory& vm, const SlideMappingInfo& mapping)
 	auto cursor = pageStartsOffset;
 	for (size_t i = 0; i < pageStartCount; i++)
 	{
-		uint16_t delta = vm.ReadUInt16(cursor);
+		uint16_t delta = accessor.ReadUInt16(cursor);
 		cursor += sizeof(uint16_t);
 		if (delta == DYLD_CACHE_SLIDE_V5_PAGE_ATTR_NO_REBASE)
 			continue;
@@ -29,23 +29,23 @@ void ApplySlideInfoV5(VirtualMemory& vm, const SlideMappingInfo& mapping)
 		do
 		{
 			loc += delta * sizeof(dyld_cache_slide_pointer5);
-			dyld_cache_slide_pointer5 slideInfo = {vm.ReadUInt64(loc)};
+			dyld_cache_slide_pointer5 slideInfo = {accessor.ReadUInt64(loc)};
 			delta = slideInfo.regular.next;
 			if (slideInfo.auth.auth)
 			{
 				uint64_t value = mapping.slideInfoV5.value_add + slideInfo.auth.runtimeOffset;
-				vm.WritePointer(loc, value);
+				accessor.WritePointer(loc, value);
 			}
 			else
 			{
 				uint64_t value = mapping.slideInfoV5.value_add + slideInfo.regular.runtimeOffset;
-				vm.WritePointer(loc, value);
+				accessor.WritePointer(loc, value);
 			}
 		} while (delta != 0);
 	}
 }
 
-void ApplySlideInfoV3(VirtualMemory& vm, const SlideMappingInfo& mapping)
+void ApplySlideInfoV3(MappedFileAccessor& accessor, const SlideMappingInfo& mapping)
 {
 	uint64_t pageStartsOffset = mapping.address + sizeof(dyld_cache_slide_info_v3);
 	uint64_t pageStartCount = mapping.slideInfoV3.page_starts_count;
@@ -54,7 +54,7 @@ void ApplySlideInfoV3(VirtualMemory& vm, const SlideMappingInfo& mapping)
 	auto cursor = pageStartsOffset;
 	for (size_t i = 0; i < pageStartCount; i++)
 	{
-		uint16_t delta = vm.ReadUInt16(cursor);
+		uint16_t delta = accessor.ReadUInt16(cursor);
 		cursor += sizeof(uint16_t);
 		if (delta == DYLD_CACHE_SLIDE_V3_PAGE_ATTR_NO_REBASE)
 			continue;
@@ -64,14 +64,14 @@ void ApplySlideInfoV3(VirtualMemory& vm, const SlideMappingInfo& mapping)
 		do
 		{
 			loc += delta * sizeof(dyld_cache_slide_pointer3);
-			dyld_cache_slide_pointer3 slideInfo = {vm.ReadUInt64(loc)};
+			dyld_cache_slide_pointer3 slideInfo = {accessor.ReadUInt64(loc)};
 			delta = slideInfo.plain.offsetToNextPointer;
 
 			if (slideInfo.auth.authenticated)
 			{
 				uint64_t value = slideInfo.auth.offsetFromSharedCacheBase;
 				value += mapping.slideInfoV3.auth_value_add;
-				vm.WritePointer(loc, value);
+				accessor.WritePointer(loc, value);
 			}
 			else
 			{
@@ -79,13 +79,13 @@ void ApplySlideInfoV3(VirtualMemory& vm, const SlideMappingInfo& mapping)
 				uint64_t top8Bits = value51 & 0x0007F80000000000;
 				uint64_t bottom43Bits = value51 & 0x000007FFFFFFFFFF;
 				uint64_t value = (uint64_t)top8Bits << 13 | bottom43Bits;
-				vm.WritePointer(loc, value);
+				accessor.WritePointer(loc, value);
 			}
 		} while (delta != 0);
 	}
 }
 
-void ApplySlideInfoV2(VirtualMemory& vm, const SlideMappingInfo& mapping)
+void ApplySlideInfoV2(MappedFileAccessor& accessor, const SlideMappingInfo& mapping)
 {
 	auto rebaseChain = [&](const dyld_cache_slide_info_v2& slideInfo, uint64_t pageContent, uint16_t startOffset) {
 		// TODO: This is always zero?
@@ -103,7 +103,7 @@ void ApplySlideInfoV2(VirtualMemory& vm, const SlideMappingInfo& mapping)
 		while (delta != 0)
 		{
 			uint64_t loc = pageContent + pageOffset;
-			uintptr_t rawValue = vm.ReadUInt64(loc);
+			uintptr_t rawValue = accessor.ReadUInt64(loc);
 			delta = (uint32_t)((rawValue & deltaMask) >> deltaShift);
 			uintptr_t value = (rawValue & valueMask);
 			if (value != 0)
@@ -114,7 +114,7 @@ void ApplySlideInfoV2(VirtualMemory& vm, const SlideMappingInfo& mapping)
 				value += slideAmount;
 			}
 			pageOffset += delta;
-			vm.WritePointer(loc, value);
+			accessor.WritePointer(loc, value);
 		}
 	};
 
@@ -126,7 +126,7 @@ void ApplySlideInfoV2(VirtualMemory& vm, const SlideMappingInfo& mapping)
 	auto cursor = pageStartsOffset;
 	for (size_t i = 0; i < pageStartCount; i++)
 	{
-		uint16_t start = vm.ReadUInt16(cursor);
+		uint16_t start = accessor.ReadUInt16(cursor);
 		cursor += sizeof(uint16_t);
 		if (start == DYLD_CACHE_SLIDE_PAGE_ATTR_NO_REBASE)
 			continue;
@@ -138,7 +138,7 @@ void ApplySlideInfoV2(VirtualMemory& vm, const SlideMappingInfo& mapping)
 			do
 			{
 				uint64_t extraCursor = extrasOffset + (j * sizeof(uint16_t));
-				auto extra = vm.ReadUInt16(extraCursor);
+				auto extra = accessor.ReadUInt16(extraCursor);
 				uint16_t aStart = extra;
 				uint64_t page = mapping.mappingInfo.fileOffset + (pageSize * i);
 				uint16_t pageStartOffset = (aStart & 0x3FFF) * 4;
@@ -156,20 +156,15 @@ void ApplySlideInfoV2(VirtualMemory& vm, const SlideMappingInfo& mapping)
 	}
 }
 
-std::vector<SlideMappingInfo> SlideInfoProcessor::ReadEntryInfo(VirtualMemory& vm, const CacheEntry& entry) const
+std::vector<SlideMappingInfo> SlideInfoProcessor::ReadEntryInfo(const MappedFileAccessor& accessor, const CacheEntry& entry) const
 {
 	auto& baseHeader = entry.GetHeader();
 
 	// Handle legacy, single mapping slide info.
 	if (baseHeader.slideInfoOffsetUnused)
 	{
-		auto slideInfoAddress = entry.GetMappedAddress(baseHeader.slideInfoOffsetUnused);
-		if (!slideInfoAddress.has_value())
-		{
-			m_logger->LogError("Unmapped slide info address %llx", slideInfoAddress);
-			return {};
-		}
-		auto slideInfoVersion = vm.ReadUInt32(*slideInfoAddress);
+		auto slideInfoAddress = baseHeader.slideInfoOffsetUnused;
+		auto slideInfoVersion = accessor.ReadUInt32(slideInfoAddress);
 		if (slideInfoVersion != 2 && slideInfoVersion != 3)
 		{
 			m_logger->LogError("Unsupported slide info version %d", slideInfoVersion);
@@ -177,24 +172,15 @@ std::vector<SlideMappingInfo> SlideInfoProcessor::ReadEntryInfo(VirtualMemory& v
 		}
 
 		SlideMappingInfo singleMapping = {};
-		singleMapping.address = *slideInfoAddress;
-
-		auto mappingAddress = entry.GetMappedAddress(baseHeader.mappingOffset + sizeof(dyld_cache_mapping_info));
-		if (!mappingAddress.has_value())
-		{
-			m_logger->LogError("Unmapped mapping address %llx", mappingAddress);
-			return {};
-		}
-		vm.Read(&singleMapping.mappingInfo, *mappingAddress, sizeof(dyld_cache_mapping_info));
+		singleMapping.address = slideInfoAddress;
 		singleMapping.slideInfoVersion = slideInfoVersion;
-		if (singleMapping.slideInfoVersion == 2)
-			vm.Read(&singleMapping.slideInfoV2, *slideInfoAddress, sizeof(dyld_cache_slide_info_v2));
-		else if (singleMapping.slideInfoVersion == 3)
-			vm.Read(&singleMapping.slideInfoV3, *slideInfoAddress, sizeof(dyld_cache_slide_info_v3));
 
-		// Adjust the file offset to mapped, we are expecting the consumer to just take it in as mapped.
-		// if we did not make it mapped, then we would need to do all this weirdness in every consumer (each slide info version)
-		singleMapping.mappingInfo.fileOffset = *entry.GetMappedAddress(singleMapping.mappingInfo.fileOffset);
+		auto mappingAddress = baseHeader.mappingOffset + sizeof(dyld_cache_mapping_info);
+		accessor.Read(&singleMapping.mappingInfo, mappingAddress, sizeof(dyld_cache_mapping_info));
+		if (singleMapping.slideInfoVersion == 2)
+			accessor.Read(&singleMapping.slideInfoV2, slideInfoAddress, sizeof(dyld_cache_slide_info_v2));
+		else if (singleMapping.slideInfoVersion == 3)
+			accessor.Read(&singleMapping.slideInfoV3, slideInfoAddress, sizeof(dyld_cache_slide_info_v3));
 
 		return {singleMapping};
 	}
@@ -203,36 +189,29 @@ std::vector<SlideMappingInfo> SlideInfoProcessor::ReadEntryInfo(VirtualMemory& v
 	for (auto i = 0; i < baseHeader.mappingWithSlideCount; i++)
 	{
 		dyld_cache_mapping_and_slide_info mappingAndSlideInfo = {};
-		auto mappingAndSlideInfoAddress =
-			entry.GetMappedAddress(baseHeader.mappingWithSlideOffset + (i * sizeof(dyld_cache_mapping_and_slide_info)));
-		if (!mappingAndSlideInfoAddress.has_value())
-		{
-			m_logger->LogError("Unmapped mapping and slide info address %llx", mappingAndSlideInfoAddress);
-			continue;
-		}
-
-		vm.Read(&mappingAndSlideInfo, *mappingAndSlideInfoAddress, sizeof(dyld_cache_mapping_and_slide_info));
+		auto mappingAndSlideInfoAddress = baseHeader.mappingWithSlideOffset + (i * sizeof(dyld_cache_mapping_and_slide_info));
+		accessor.Read(&mappingAndSlideInfo, mappingAndSlideInfoAddress, sizeof(dyld_cache_mapping_and_slide_info));
 		if (mappingAndSlideInfo.size == 0 || mappingAndSlideInfo.slideInfoFileOffset == 0)
 			continue;
 
 		SlideMappingInfo map = {};
-		map.address = *entry.GetMappedAddress(mappingAndSlideInfo.slideInfoFileOffset);
-		map.slideInfoVersion = vm.ReadUInt32(map.address);
+		map.address = mappingAndSlideInfo.slideInfoFileOffset;
+		map.slideInfoVersion = accessor.ReadUInt32(map.address);
 		map.mappingInfo.address = mappingAndSlideInfo.address;
 		map.mappingInfo.size = mappingAndSlideInfo.size;
-		map.mappingInfo.fileOffset = *entry.GetMappedAddress(mappingAndSlideInfo.fileOffset);
+		map.mappingInfo.fileOffset = mappingAndSlideInfo.fileOffset;
 		if (map.slideInfoVersion == 2)
 		{
-			vm.Read(&map.slideInfoV2, map.address, sizeof(dyld_cache_slide_info_v2));
+			accessor.Read(&map.slideInfoV2, map.address, sizeof(dyld_cache_slide_info_v2));
 		}
 		else if (map.slideInfoVersion == 3)
 		{
-			vm.Read(&map.slideInfoV3, map.address, sizeof(dyld_cache_slide_info_v3));
+			accessor.Read(&map.slideInfoV3, map.address, sizeof(dyld_cache_slide_info_v3));
 			map.slideInfoV3.auth_value_add = m_baseAddress;
 		}
 		else if (map.slideInfoVersion == 5)
 		{
-			vm.Read(&map.slideInfoV5, map.address, sizeof(dyld_cache_slide_info_v5));
+			accessor.Read(&map.slideInfoV5, map.address, sizeof(dyld_cache_slide_info_v5));
 			map.slideInfoV5.value_add = m_baseAddress;
 		}
 		else
@@ -251,21 +230,28 @@ std::vector<SlideMappingInfo> SlideInfoProcessor::ReadEntryInfo(VirtualMemory& v
 	return mappings;
 }
 
-void SlideInfoProcessor::ApplyMappings(VirtualMemory& vm, const std::vector<SlideMappingInfo>& mappings)
+void SlideInfoProcessor::ApplyMappings(MappedFileAccessor& accessor, const std::vector<SlideMappingInfo>& mappings) const
 {
+	// TODO: HACK: to prevent applying slide info twice we use check to see if the accessor has been written to
+	// TODO: prior to this function, because this is currently the ONLY place where writes happen this is safe
+	// TODO: but if we add more places that write to the accessor than we will need to likely need to be more specific
+	// TODO: and/or have the backing file accessor store some additional state.
+	if (accessor.IsDirty())
+		return;
+
 	// Apply the slide information to the mapped file.
 	for (const auto& mapping : mappings)
 	{
 		switch (mapping.slideInfoVersion)
 		{
 		case 2:
-			ApplySlideInfoV2(vm, mapping);
+			ApplySlideInfoV2(accessor, mapping);
 			break;
 		case 3:
-			ApplySlideInfoV3(vm, mapping);
+			ApplySlideInfoV3(accessor, mapping);
 			break;
 		case 5:
-			ApplySlideInfoV5(vm, mapping);
+			ApplySlideInfoV5(accessor, mapping);
 			break;
 		default:
 			m_logger->LogError(
@@ -275,16 +261,19 @@ void SlideInfoProcessor::ApplyMappings(VirtualMemory& vm, const std::vector<Slid
 	}
 }
 
-void SlideInfoProcessor::ProcessEntry(VirtualMemory& vm, const CacheEntry& entry)
+std::vector<SlideMappingInfo> SlideInfoProcessor::ProcessEntry(MappedFileAccessor& accessor, const CacheEntry& entry) const
 {
 	try
 	{
-		ApplyMappings(vm, ReadEntryInfo(vm, entry));
+		auto slideMappings = ReadEntryInfo(accessor, entry);
+		ApplyMappings(accessor, slideMappings);
+		return slideMappings;
 	}
 	catch (const std::exception& e)
 	{
 		// Just log an error, we technically can continue as if the slide info is not applied for a given entry it does
 		// not necessarily mean we cannot do analysis on others.
 		m_logger->LogError("Error processing slide info for entry `%s`: %s", entry.GetFileName().c_str(), e.what());
+		return {};
 	}
 }

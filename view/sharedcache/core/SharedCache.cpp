@@ -397,10 +397,42 @@ void SharedCache::ProcessEntryRegions(const CacheEntry& entry)
 	}
 }
 
-void SharedCache::ProcessEntrySlideInfo(const CacheEntry& entry)
+void SharedCache::ProcessEntrySlideInfo(const CacheEntry& entry) const
 {
 	auto slideInfoProcessor = SlideInfoProcessor(GetBaseAddress());
-	slideInfoProcessor.ProcessEntry(*m_vm, entry);
+
+	// This will be set for every associated `VirtualMemoryRegion` so that any accesses though the VM will be always be slid.
+	// NOTE: This MUST be called on the CacheEntry object owned by SharedCache, otherwise persistence through the `SharedCacheController` will not occur.
+	// NOTE: This will keep a copy of a processor in the `WeakFileAccessor` until that object is destroyed (likely view destruction).
+	// NOTE: This will keep a copy of the cache entry in the `WeakFileAccessor` until that object is destroyed (likely view destruction).
+	auto reviveCallback = [slideInfoProcessor, entry](MappedFileAccessor& revivedAccessor) {
+		slideInfoProcessor.ProcessEntry(revivedAccessor, entry);
+	};
+
+	// Use the current entry accessor, don't register the callback for this one as we want calls through the VM to be slid only.
+	// Actually process the slide info for this entry, everything else besides this is to support revived file accessors.
+	auto slideMappings = slideInfoProcessor.ProcessEntry(*entry.GetAccessor().lock(), entry);
+
+	// Register the revive callback for all virtual memory regions that have been slid.
+	// The reason we don't just set this on the entry accessor is that accessor is not consulted for anything really after
+	// this point, everything else will be going through the virtual memory, and because the callback is on the weak accessor
+	// reference and not the file accessor cache itself this matters.
+	auto vm = GetVirtualMemory();
+	for (const auto& mapping : slideMappings)
+	{
+		// Because the mapping address is a file offset for us to consult the virtual memory we must first call `GetMappedAddress`.
+		if (auto mappedMappingAddr = entry.GetMappedAddress(mapping.address))
+		{
+			if (auto vmRegion = vm->GetRegionAtAddress(*mappedMappingAddr))
+			{
+				// Ok we have the virtual memory region, lets register the callback on its accessor.
+				vmRegion->fileAccessor.RegisterReviveCallback(reviveCallback);
+				continue;
+			}
+		}
+
+		LogWarn("Failed to register revive callback for slide mapping %llx in entry '%s'", mapping.address, entry.GetFileName().c_str());
+	}
 }
 
 void SharedCache::ProcessSymbols()

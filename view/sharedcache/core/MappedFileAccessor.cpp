@@ -1,6 +1,5 @@
 #include "MappedFileAccessor.h"
 
-
 std::shared_ptr<MappedFileAccessor> MappedFileAccessor::Open(const std::string& filePath)
 {
 	auto file = MappedFile::OpenFile(filePath);
@@ -40,48 +39,48 @@ std::string MappedFileAccessor::ReadNullTermString(size_t address, const size_t 
 	return str;
 }
 
-uint8_t MappedFileAccessor::ReadUInt8(size_t address)
+uint8_t MappedFileAccessor::ReadUInt8(size_t address) const
 {
 	return Read<uint8_t>(address);
 }
 
-int8_t MappedFileAccessor::ReadInt8(size_t address)
+int8_t MappedFileAccessor::ReadInt8(size_t address) const
 {
 	return Read<int8_t>(address);
 }
 
-uint16_t MappedFileAccessor::ReadUInt16(size_t address)
+uint16_t MappedFileAccessor::ReadUInt16(size_t address) const
 {
 	return Read<uint16_t>(address);
 }
 
-int16_t MappedFileAccessor::ReadInt16(size_t address)
+int16_t MappedFileAccessor::ReadInt16(size_t address) const
 {
 	return Read<int16_t>(address);
 }
 
 
-uint32_t MappedFileAccessor::ReadUInt32(size_t address)
+uint32_t MappedFileAccessor::ReadUInt32(size_t address) const
 {
 	return Read<uint32_t>(address);
 }
 
-int32_t MappedFileAccessor::ReadInt32(size_t address)
+int32_t MappedFileAccessor::ReadInt32(size_t address) const
 {
 	return Read<int32_t>(address);
 }
 
-uint64_t MappedFileAccessor::ReadUInt64(size_t address)
+uint64_t MappedFileAccessor::ReadUInt64(size_t address) const
 {
 	return Read<uint64_t>(address);
 }
 
-int64_t MappedFileAccessor::ReadInt64(size_t address)
+int64_t MappedFileAccessor::ReadInt64(size_t address) const
 {
 	return Read<int64_t>(address);
 }
 
-BinaryNinja::DataBuffer MappedFileAccessor::ReadBuffer(size_t addr, size_t length)
+BinaryNinja::DataBuffer MappedFileAccessor::ReadBuffer(size_t addr, size_t length) const
 {
 	if (addr + length > Length())
 		throw UnmappedAccessException(addr + length, Length());
@@ -104,7 +103,7 @@ void MappedFileAccessor::Read(void* dest, size_t addr, size_t length) const
 }
 
 template <typename T>
-T MappedFileAccessor::Read(size_t address)
+T MappedFileAccessor::Read(size_t address) const
 {
 	T result;
 	Read(&result, address, sizeof(T));

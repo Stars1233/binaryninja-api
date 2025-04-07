@@ -32,7 +32,6 @@ FileAccessorCache& FileAccessorCache::Global()
 	return cache;
 }
 
-
 WeakFileAccessor FileAccessorCache::Open(const std::string& filePath)
 {
 	const auto id = GetCacheAccessorID(filePath);
@@ -51,7 +50,7 @@ WeakFileAccessor FileAccessorCache::Open(const std::string& filePath)
 	}
 
 	// Evict if we are going to go above the limit.
-	if (m_cache.size() >= m_cacheSize)
+	while (m_cache.size() >= m_cacheSize)
 		EvictLastUsed();
 
 	// Create a new file accessor and add it to the cache.
@@ -69,20 +68,6 @@ WeakFileAccessor FileAccessorCache::Open(const std::string& filePath)
 	return WeakFileAccessor(sharedAccessor, filePath);
 }
 
-void FileAccessorWriteLog::AddPointer(const size_t address, const size_t pointer)
-{
-	// TODO: A sharded map here would be better. see: rust dashmap
-	std::unique_lock<std::shared_mutex> lock(m_persistedMutex);
-	m_persistedPointers.emplace_back(address, pointer);
-}
-
-void FileAccessorWriteLog::ApplyWrites(MappedFileAccessor& accessor)
-{
-	std::shared_lock<std::shared_mutex> lock(m_persistedMutex);
-	for (const auto& [address, pointer] : m_persistedPointers)
-		accessor.WritePointer(address, pointer);
-}
-
 std::shared_ptr<MappedFileAccessor> WeakFileAccessor::lock()
 {
 	auto sharedPtr = m_weakPtr.lock();
@@ -93,20 +78,12 @@ std::shared_ptr<MappedFileAccessor> WeakFileAccessor::lock()
 		m_weakPtr = FileAccessorCache::Global().Open(m_filePath).m_weakPtr;
 		sharedPtr = m_weakPtr.lock();
 
-		// Apply any previously written pointers back.
-		if (sharedPtr)
-			m_writeLog->ApplyWrites(*sharedPtr);
+		// Call the function registered with `RegisterReviveCallback`.
+		// TODO: This races if two functions cannot acquire and revive the same file at the same time.
+		// TODO: This will be called twice.
+		if (m_reviveCallback.has_value())
+			(*m_reviveCallback)(*sharedPtr);
 	}
 
 	return sharedPtr;
-}
-
-void WeakFileAccessor::WritePointer(const size_t address, const size_t pointer)
-{
-	// Persist the pointer after the file accessor is revived.
-	m_writeLog->AddPointer(address, pointer);
-
-	// And then actually apply the written pointer...
-	if (auto sharedPtr = m_weakPtr.lock())
-		sharedPtr->WritePointer(address, pointer);
 }

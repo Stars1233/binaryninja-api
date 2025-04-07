@@ -70,23 +70,23 @@ public:
 
 	std::string ReadNullTermString(size_t address, size_t maxLength = -1) const;
 
-	uint8_t ReadUInt8(size_t address);
+	uint8_t ReadUInt8(size_t address) const;
 
-	int8_t ReadInt8(size_t address);
+	int8_t ReadInt8(size_t address) const;
 
-	uint16_t ReadUInt16(size_t address);
+	uint16_t ReadUInt16(size_t address) const;
 
-	int16_t ReadInt16(size_t address);
+	int16_t ReadInt16(size_t address) const;
 
-	uint32_t ReadUInt32(size_t address);
+	uint32_t ReadUInt32(size_t address) const;
 
-	int32_t ReadInt32(size_t address);
+	int32_t ReadInt32(size_t address) const;
 
-	uint64_t ReadUInt64(size_t address);
+	uint64_t ReadUInt64(size_t address) const;
 
-	int64_t ReadInt64(size_t address);
+	int64_t ReadInt64(size_t address) const;
 
-	BinaryNinja::DataBuffer ReadBuffer(size_t addr, size_t length);
+	BinaryNinja::DataBuffer ReadBuffer(size_t addr, size_t length) const;
 
 	// Returns a range of pointers within the mapped memory region corresponding to
 	// {addr, length}.
@@ -99,5 +99,5 @@ public:
 	void Read(void* dest, size_t addr, size_t length) const;
 
 	template <typename T>
-	T Read(size_t address);
+	T Read(size_t address) const;
 };

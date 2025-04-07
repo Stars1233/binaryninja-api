@@ -55,10 +55,7 @@ public:
 
 	bool IsAddressMapped(uint64_t address);
 
-	// TODO: Bulk pointer writes here would alleviate a lot of the time spent in the slide info processor.
-	// Write a pointer at a given address. This pointer will be persisted
-	// for a given `VirtualMemoryRegion` region, unlike using the MappedFileAccessor directly.
-	// The persistence is provided through the WeakFileAccessor itself and thus is unique to the construction.
+	// Write a pointer at a given address. This pointer is never persisted when a file accessor is closed.
 	void WritePointer(size_t address, size_t pointer);
 
 	std::string ReadCString(uint64_t address);

@@ -1,9 +1,5 @@
 #include "VirtualMemory.h"
 
-// TODO: Add back the ability to do relocations on this stuff.
-// TODO: ^ the above is currently handled only by the consumers of the VirtualMemory
-// TODO: however we might still want to have this be done here as well for persistence.
-
 void VirtualMemory::MapRegion(WeakFileAccessor fileAccessor, AddressRange mappedRange, uint64_t fileOffset)
 {
 	// Create a new VirtualMemoryRegion object
@@ -56,9 +52,7 @@ void VirtualMemory::WritePointer(size_t address, size_t pointer)
 	auto region = GetRegionAtAddress(address, offset);
 	if (!region.has_value())
 		throw UnmappedRegionException(address);
-	// Unique to the `VirtualMemory::WritePointer` we actually have an interface on the WeakFileAccessor to use.
-	// this is the mechanism for persisting our written pointers.
-	region->fileAccessor.WritePointer(offset, pointer);
+	region->fileAccessor.lock()->WritePointer(offset, pointer);
 }
 
 std::string VirtualMemory::ReadCString(uint64_t address)
@@ -277,7 +271,7 @@ uint8_t VirtualMemoryReader::ReadUInt8(uint64_t address)
 
 int8_t VirtualMemoryReader::ReadInt8()
 {
-	return ReadUInt8(m_cursor);
+	return ReadInt8(m_cursor);
 }
 
 int8_t VirtualMemoryReader::ReadInt8(uint64_t address)

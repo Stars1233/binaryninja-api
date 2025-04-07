@@ -37,48 +37,36 @@ public:
 	// Adjust the cache size limit.
 	// This will NOT evict current cache entries, as they are already available.
 	// Any subsequent call to `Open` will assume this cache size, evicting until the size is equal to the cache size.
-	void SetCacheSize(uint64_t size) { m_cacheSize = size; };
-};
+	void SetCacheSize(const uint64_t size) { m_cacheSize = size; };
 
-// Write log to be used in conjunction with `WeakFileAccessor` to re-apply written data to a "revived" file.
-struct FileAccessorWriteLog
-{
-	// To persist writes to a file accessor being revived (within the lock() function)
-	// we keep a list of writes that will be re-applied in the lock function.
-	std::shared_mutex m_persistedMutex;
-	std::vector<std::pair<size_t, uint64_t>> m_persistedPointers;
-
-	FileAccessorWriteLog() = default;
-
-	// Add the pointer to the persisted pointers.
-	void AddPointer(size_t address, size_t pointer);
-
-	// Apply all logged writes to the given accessor.
-	void ApplyWrites(MappedFileAccessor& accessor);
+	size_t GetCacheSize() const { return m_cacheSize; }
 };
 
 class WeakFileAccessor
 {
+	using ReviveCallback = std::function<void(MappedFileAccessor&)>;
+
 	// Weak pointer to the mapped file accessor, once this is expired we will re-open.
 	std::weak_ptr<MappedFileAccessor> m_weakPtr;
 	// File path for re-opening if needed
 	std::string m_filePath;
 
 	// Used to re-add writes once the file accessor is "revived".
-	std::shared_ptr<FileAccessorWriteLog> m_writeLog;
+	std::optional<ReviveCallback> m_reviveCallback;
 
 	// TODO: Store a weak_ptr/shared_ptr to FileAccessorCache? That way we dont access Global()
 	// TODO: Only need to do the above if we want multiple caches.
 
 public:
 	explicit WeakFileAccessor(std::weak_ptr<MappedFileAccessor> weakPtr, std::string filePath) :
-		m_weakPtr(std::move(weakPtr)), m_filePath(std::move(filePath)),
-		m_writeLog(std::make_shared<FileAccessorWriteLog>())
+		m_weakPtr(std::move(weakPtr)), m_filePath(std::move(filePath))
 	{}
 
-	std::shared_ptr<MappedFileAccessor> lock();
+	// Register the function to be called once the file accessor is revived, this is typically
+	// used to re-apply writes such as from slide info.
+	void RegisterReviveCallback(const ReviveCallback& callback) {
+		m_reviveCallback = callback;
+	}
 
-	// Persists the written pointer within this weak file accessor.
-	// This works as we expect the weak file accessor to be stored per virtual memory region.
-	void WritePointer(size_t address, size_t pointer);
+	std::shared_ptr<MappedFileAccessor> lock();
 };

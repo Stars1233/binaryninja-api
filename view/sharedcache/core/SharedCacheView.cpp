@@ -787,7 +787,8 @@ bool SharedCacheView::Init()
 		bool result = cacheProcessor.ProcessCache(sharedCache);
 		auto endTime = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<double> elapsed = endTime - startTime;
-		logger->LogInfo("Processing %zu entries took %.3f seconds", sharedCache.GetEntries().size(), elapsed.count());
+		auto entryCount = sharedCache.GetEntries().size();
+		logger->LogInfo("Processing %zu entries took %.3f seconds", entryCount, elapsed.count());
 
 		if (!result)
 		{
@@ -800,6 +801,10 @@ bool SharedCacheView::Init()
 			// Skip all the other shared cache stuff.
 			return true;
 		}
+
+		// If we can't store all of our files for this cache in the accessor cache we might run into issues, warn the user.
+		if (entryCount > FileAccessorCache::Global().GetCacheSize())
+			logger->LogWarn("Cache contains more entries than the allowed number of opened file handles, this may impact reliability.");
 	}
 
 	{

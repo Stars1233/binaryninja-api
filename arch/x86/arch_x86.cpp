@@ -464,7 +464,7 @@ void X86CommonArchitecture::SetInstructionInfoForInstruction(uint64_t addr, Inst
 	case XED_CATEGORY_UNCOND_BR:
 		if (xed_operand_name(xed_inst_operand(xed_decoded_inst_inst(xedd), 0)) == XED_OPERAND_RELBR)
 			result.AddBranch(UnconditionalBranch, abs_br);
-		else
+		else if (xedd_iClass != XED_ICLASS_XABORT)
 			result.AddBranch(UnresolvedBranch);
 		break;
 

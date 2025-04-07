@@ -203,6 +203,9 @@ class SharedCache
 	// Quickly lookup a symbol by name, populated by `FinalizeSymbols`.
 	// `m_namedSymbols` is modified in a worker thread spawned by view init so we must not get a symbol until its populated.
 	std::unordered_map<std::string, uint64_t> m_namedSymbols {};
+	// Used to guard `m_namedSymbols` as it's accessed on multiple threads.
+	// NOTE: Wrapped in unique_ptr to keep SharedCache movable.
+	std::unique_ptr<std::shared_mutex> m_namedSymMutex;
 
 	bool ProcessEntryImage(const std::string& path, const dyld_cache_image_info& info);
 
@@ -225,7 +228,6 @@ public:
 	const AddressRangeMap<CacheRegion>& GetRegions() const { return m_regions; }
 	const std::unordered_map<uint64_t, CacheImage>& GetImages() const { return m_images; }
 	const std::unordered_map<uint64_t, CacheSymbol>& GetSymbols() const { return m_symbols; }
-	const std::unordered_map<std::string, uint64_t>& GetNamedSymbols() const { return m_namedSymbols; }
 
 	void AddImage(CacheImage&& image);
 
@@ -266,7 +268,7 @@ public:
 
 	std::optional<CacheSymbol> GetSymbolAt(uint64_t address) const;
 
-	std::optional<CacheSymbol> GetSymbolWithName(const std::string& name) const;
+	std::optional<CacheSymbol> GetSymbolWithName(const std::string& name);
 };
 
 // This constructs a Cache, give it a file path, and it will add all relevant cache entries.

@@ -149,6 +149,7 @@ SharedCache::SharedCache(uint64_t addressSize)
 {
 	m_addressSize = addressSize;
 	m_vm = std::make_shared<VirtualMemory>();
+	m_namedSymMutex = std::make_unique<std::shared_mutex>();
 }
 
 
@@ -437,6 +438,7 @@ void SharedCache::ProcessEntrySlideInfo(const CacheEntry& entry) const
 
 void SharedCache::ProcessSymbols()
 {
+	std::unique_lock<std::shared_mutex> lock(*m_namedSymMutex);
 	// Populate the named symbols from the regular symbols map.
 	m_namedSymbols.reserve(m_symbols.size());
 	for (const auto& [address, symbol] : m_symbols)
@@ -520,8 +522,9 @@ std::optional<CacheSymbol> SharedCache::GetSymbolAt(uint64_t address) const
 	return it->second;
 }
 
-std::optional<CacheSymbol> SharedCache::GetSymbolWithName(const std::string& name) const
+std::optional<CacheSymbol> SharedCache::GetSymbolWithName(const std::string& name)
 {
+	std::shared_lock<std::shared_mutex> lock(*m_namedSymMutex);
 	const auto it = m_namedSymbols.find(name);
 	if (it == m_namedSymbols.end())
 		return std::nullopt;

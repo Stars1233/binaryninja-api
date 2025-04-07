@@ -29,7 +29,7 @@ std::vector<std::string> CacheImage::GetDependencies() const
 }
 
 CacheEntry::CacheEntry(std::string filePath, std::string fileName, CacheEntryType type, dyld_cache_header header,
-	std::vector<dyld_cache_mapping_info> mappings, std::unordered_map<std::string, dyld_cache_image_info> images)
+	std::vector<dyld_cache_mapping_info> mappings, std::vector<std::pair<std::string, dyld_cache_image_info>> images)
 {
 	m_filePath = std::move(filePath);
 	m_fileName = std::move(fileName);
@@ -88,14 +88,15 @@ std::optional<CacheEntry> CacheEntry::FromFile(const std::string& filePath, cons
 	}
 
 	// Gather all images for the entry.
-	std::unordered_map<std::string, dyld_cache_image_info> images;
+	std::vector<std::pair<std::string, dyld_cache_image_info>> images;
+	images.reserve(header.imagesCountOld ? header.imagesCountOld : header.imagesCount);
 	dyld_cache_image_info currentImg {};
 	for (size_t i = 0; i < header.imagesCount; i++)
 	{
 		file->Read(
 			&currentImg, header.imagesOffset + (i * sizeof(dyld_cache_image_info)), sizeof(dyld_cache_image_info));
 		auto imagePath = file->ReadNullTermString(currentImg.pathFileOffset);
-		images.insert_or_assign(imagePath, currentImg);
+		images.emplace_back(imagePath, currentImg);
 	}
 
 	// Handle old dyld format that uses old images field.
@@ -104,7 +105,7 @@ std::optional<CacheEntry> CacheEntry::FromFile(const std::string& filePath, cons
 		file->Read(
 			&currentImg, header.imagesOffsetOld + (i * sizeof(dyld_cache_image_info)), sizeof(dyld_cache_image_info));
 		auto imagePath = file->ReadNullTermString(currentImg.pathFileOffset);
-		images.insert_or_assign(imagePath, currentImg);
+		images.emplace_back(imagePath, currentImg);
 	}
 
 	// NOTE: I am not sure how the header type has changed over time but if apple is replacing fields with other ones
@@ -119,7 +120,7 @@ std::optional<CacheEntry> CacheEntry::FromFile(const std::string& filePath, cons
 		branchIslandImg.address = header.branchPoolsOffset + (i * sizeof(uint64_t));
 		// Mason: why such a long name for the image???
 		auto imageName = fmt::format("dyld_shared_cache_branch_islands_{}", i);
-		images.insert_or_assign(imageName, branchIslandImg);
+		images.emplace_back(imageName, branchIslandImg);
 	}
 
 	return CacheEntry(filePath, fileName, type, header, mappings, images);
@@ -151,12 +152,12 @@ SharedCache::SharedCache(uint64_t addressSize)
 }
 
 
-void SharedCache::AddImage(CacheImage image)
+void SharedCache::AddImage(CacheImage&& image)
 {
 	m_images.insert({image.headerAddress, std::move(image)});
 }
 
-void SharedCache::AddRegion(CacheRegion region)
+void SharedCache::AddRegion(CacheRegion&& region)
 {
 	// Handle overlapping regions here.
 	const auto regionRange = region.AsAddressRange();
@@ -203,8 +204,8 @@ void SharedCache::AddSymbol(CacheSymbol symbol)
 
 void SharedCache::AddSymbols(std::vector<CacheSymbol>&& symbols)
 {
-	for (auto&& symbol : symbols)
-		m_symbols.emplace(symbol.address, std::move(symbol));
+	for (auto& symbol : symbols)
+		m_symbols.insert({symbol.address, std::move(symbol)});
 }
 
 CacheEntryId SharedCache::AddEntry(CacheEntry entry)
@@ -281,9 +282,9 @@ bool SharedCache::ProcessEntryImage(const std::string& path, const dyld_cache_im
 				flags |= SegmentExecutable;
 		sectionRegion.flags = static_cast<BNSegmentFlag>(flags);
 
-		// Add the image section to the cache and also to the image region starts
-		AddRegion(sectionRegion);
 		image.regionStarts.push_back(sectionRegion.start);
+		// Add the image section to the cache and also to the image region starts
+		AddRegion(std::move(sectionRegion));
 	}
 
 	// Add the exported symbols to the available symbols.
@@ -291,8 +292,7 @@ bool SharedCache::ProcessEntryImage(const std::string& path, const dyld_cache_im
 	AddSymbols(std::move(exportSymbols));
 
 	// This is behind a shared pointer as the header itself is very large.
-	// TODO: Make this a unique pointer? I think the image should own the header at this point?
-	image.header = std::make_shared<SharedCacheMachOHeader>(*imageHeader);
+	image.header = std::make_shared<SharedCacheMachOHeader>(std::move(*imageHeader));
 
 	AddImage(std::move(image));
 	return true;

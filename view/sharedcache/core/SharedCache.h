@@ -136,11 +136,11 @@ class CacheEntry
 	std::vector<dyld_cache_mapping_info> m_mappings {};
 	// Mapping of image path to image info, used within ProcessImagesAndRegions to add them to the cache.
 	// Also used to retrieve the image dependencies.
-	std::unordered_map<std::string, dyld_cache_image_info> m_images {};
+	std::vector<std::pair<std::string, dyld_cache_image_info>> m_images {};
 
 public:
 	CacheEntry(std::string filePath, std::string fileName, CacheEntryType type, dyld_cache_header header,
-		std::vector<dyld_cache_mapping_info> mappings, std::unordered_map<std::string, dyld_cache_image_info> images);
+		std::vector<dyld_cache_mapping_info> mappings, std::vector<std::pair<std::string, dyld_cache_image_info>> images);
 
 	CacheEntry() = default;
 
@@ -173,7 +173,7 @@ public:
 	const std::string GetFileName() const { return m_fileName; }
 	const dyld_cache_header& GetHeader() const { return m_header; }
 	const std::vector<dyld_cache_mapping_info>& GetMappings() const { return m_mappings; }
-	const std::unordered_map<std::string, dyld_cache_image_info>& GetImages() const { return m_images; }
+	const std::vector<std::pair<std::string, dyld_cache_image_info>>& GetImages() const { return m_images; }
 };
 
 // The ID for a given CacheEntry, use this instead of passing a pointer around to avoid complexity :V
@@ -227,10 +227,10 @@ public:
 	const std::unordered_map<uint64_t, CacheSymbol>& GetSymbols() const { return m_symbols; }
 	const std::unordered_map<std::string, uint64_t>& GetNamedSymbols() const { return m_namedSymbols; }
 
-	void AddImage(CacheImage image);
+	void AddImage(CacheImage&& image);
 
 	// Add a region that may overlap with another.
-	void AddRegion(CacheRegion region);
+	void AddRegion(CacheRegion&& region);
 
 	void AddSymbol(CacheSymbol symbol);
 

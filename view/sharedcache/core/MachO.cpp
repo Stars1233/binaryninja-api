@@ -556,17 +556,17 @@ std::vector<CacheSymbol> SharedCacheMachOHeader::ReadSymbolTable(BinaryView& vie
 	return symbolList;
 }
 
-std::optional<CacheSymbol> SharedCacheMachOHeader::AddExportTerminalSymbol(
-	const std::string& symbolName, const uint8_t* current, const uint8_t* end) const
+bool SharedCacheMachOHeader::AddExportTerminalSymbol(
+	std::vector<CacheSymbol>& symbols, const std::string& symbolName, const uint8_t *current, const uint8_t *end) const
 {
 	uint64_t symbolFlags = readValidULEB128(current, end);
 	if (symbolFlags & EXPORT_SYMBOL_FLAGS_REEXPORT)
-		return std::nullopt;
+		return false;
 
 	uint64_t imageOffset = readValidULEB128(current, end);
 	uint64_t symbolAddress = textBase + imageOffset;
 	if (symbolName.empty() || symbolAddress == 0)
-		return std::nullopt;
+		return false;
 
 	// Tries to get the symbol type based off the section containing it.
 	auto sectionSymbolType = [&]() -> BNSymbolType {
@@ -595,13 +595,17 @@ std::optional<CacheSymbol> SharedCacheMachOHeader::AddExportTerminalSymbol(
 	{
 	case EXPORT_SYMBOL_FLAGS_KIND_REGULAR:
 	case EXPORT_SYMBOL_FLAGS_KIND_THREAD_LOCAL:
-		return CacheSymbol(sectionSymbolType(), symbolAddress, symbolName);
+		symbols.emplace_back(sectionSymbolType(), symbolAddress, symbolName);
+		break;
 	case EXPORT_SYMBOL_FLAGS_KIND_ABSOLUTE:
-		return CacheSymbol(DataSymbol, symbolAddress, symbolName);
+		symbols.emplace_back(DataSymbol, symbolAddress, symbolName);
+		break;
 	default:
 		LogWarn("Unhandled export symbol kind: %llx", symbolFlags & EXPORT_SYMBOL_FLAGS_KIND_MASK);
-		return std::nullopt;
+		return false;
 	}
+
+	return true;
 }
 
 // TODO: This is like 90% of the runtime.
@@ -616,12 +620,7 @@ bool SharedCacheMachOHeader::ProcessLinkEditTrie(std::vector<CacheSymbol>& symbo
 
 	// The terminal is an export symbol.
 	if (terminalSize != 0)
-	{
-		// Add the export symbol is applicable.
-		auto symbol = AddExportTerminalSymbol(currentText, current, end);
-		if (symbol.has_value())
-			symbols.push_back(*symbol);
-	}
+		AddExportTerminalSymbol(symbols, currentText, current, end);
 
 	// TODO: Make this look better
 	current = child;

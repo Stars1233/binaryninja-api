@@ -64,8 +64,9 @@ struct SharedCacheMachOHeader
 	// TODO: Replace view with address size?
 	std::vector<CacheSymbol> ReadSymbolTable(BinaryNinja::BinaryView& view, VirtualMemory& vm) const;
 
-	std::optional<CacheSymbol> AddExportTerminalSymbol(
-		const std::string& symbolName, const uint8_t* current, const uint8_t* end) const;
+	bool AddExportTerminalSymbol(
+		std::vector<CacheSymbol>& symbols, const std::string& symbolName, const uint8_t* current,
+		const uint8_t* end) const;
 
 	bool ProcessLinkEditTrie(std::vector<CacheSymbol>& symbols, const std::string& currentText, const uint8_t* begin,
 		const uint8_t* current, const uint8_t* end) const;

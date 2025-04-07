@@ -616,9 +616,11 @@ bool CacheProcessor::ProcessProjectCache(SharedCache& cache)
 	auto baseProjectFile = m_view->GetFile()->GetProjectFile();
 	std::string baseFilePath = baseProjectFile->GetPathOnDisk();
 	std::string baseFileName = baseProjectFile->GetName();
+	// This will point to the path on disk for original non-bndb file.
+	std::string originalFilePath = m_view->GetFile()->GetOriginalFilename();
 
 	// Remove the .bndb extension if present ("dyld_shared_cache_arm64e.bndb" => "dyld_shared_cache_arm64e)
-	// TODO: This is a little annoying, we need to do this because the file accessor we have is seperate
+	// TODO: This is a little annoying, we need to do this because the file accessor we have is separate
 	// TODO: from the view file accessor. If we either made it so that we can parse from the BNDB file accessor,
 	// TODO: or... something better than this.
 	if (baseFileName.find(".bndb") != std::string::npos)
@@ -629,10 +631,11 @@ bool CacheProcessor::ProcessProjectCache(SharedCache& cache)
 		{
 			auto projectFilePath = projectFile->GetPathOnDisk();
 			auto projectFileName = projectFile->GetName();
-			if (projectFileName == baseFileName)
+			if (projectFileName == baseFileName || projectFilePath == originalFilePath)
 			{
 				// Use the real file instead.
 				baseFilePath = projectFilePath;
+				baseFileName = projectFileName;
 				baseProjectFile = projectFile;
 				break;
 			}

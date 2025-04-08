@@ -2336,7 +2336,7 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 	if (parseCFStrings)
 	{
 		try {
-			m_objcProcessor->ProcessCFStrings(std::nullopt);
+			m_objcProcessor->ProcessCFStrings();
 		}
 		catch (std::exception& ex)
 		{
@@ -2348,7 +2348,7 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 	if (parseObjCStructs)
 	{
 		try {
-			m_objcProcessor->ProcessObjCData(std::nullopt);
+			m_objcProcessor->ProcessObjCData();
 		}
 		catch (std::exception& ex)
 		{

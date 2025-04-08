@@ -1119,28 +1119,21 @@ void ObjCProcessor::ApplyMethodTypes(Class& cls)
 	}
 }
 
-Ref<Section> ObjCProcessor::GetSectionForImage(std::optional<std::string> imageName, const char* sectionName)
+Ref<Section> ObjCProcessor::GetSectionWithName(const char* sectionName)
 {
-	if (imageName)
-	{
-		return m_data->GetSectionByName(*imageName + "::" + sectionName);
-	}
-	else
-	{
-		return m_data->GetSectionByName(sectionName);
-	}
+	return m_data->GetSectionByName(sectionName);
 }
 
-void ObjCProcessor::PostProcessObjCSections(ObjCReader* reader, std::optional<std::string> imageName)
+void ObjCProcessor::PostProcessObjCSections(ObjCReader* reader)
 {
 	auto ptrSize = m_data->GetAddressSize();
-	if (auto imageInfo = GetSectionForImage(imageName, "__objc_imageinfo"))
+	if (auto imageInfo = GetSectionWithName("__objc_imageinfo"))
 	{
 		auto start = imageInfo->GetStart();
 		auto type = Type::NamedType(m_data, m_typeNames.imageInfo);
 		m_data->DefineDataVariable(start, type);
 	}
-	if (auto selrefs = GetSectionForImage(imageName, "__objc_selrefs"))
+	if (auto selrefs = GetSectionWithName("__objc_selrefs"))
 	{
 		auto start = selrefs->GetStart();
 		auto end = selrefs->GetEnd();
@@ -1163,7 +1156,7 @@ void ObjCProcessor::PostProcessObjCSections(ObjCReader* reader, std::optional<st
 			DefineObjCSymbol(DataSymbol, type, "selRef_" + sel, i, true);
 		}
 	}
-	if (auto superRefs = GetSectionForImage(imageName, "__objc_classrefs"))
+	if (auto superRefs = GetSectionWithName("__objc_classrefs"))
 	{
 		auto start = superRefs->GetStart();
 		auto end = superRefs->GetEnd();
@@ -1181,7 +1174,7 @@ void ObjCProcessor::PostProcessObjCSections(ObjCReader* reader, std::optional<st
 			}
 		}
 	}
-	if (auto superRefs = GetSectionForImage(imageName, "__objc_superrefs"))
+	if (auto superRefs = GetSectionWithName("__objc_superrefs"))
 	{
 		auto start = superRefs->GetStart();
 		auto end = superRefs->GetEnd();
@@ -1199,7 +1192,7 @@ void ObjCProcessor::PostProcessObjCSections(ObjCReader* reader, std::optional<st
 			}
 		}
 	}
-	if (auto protoRefs = GetSectionForImage(imageName, "__objc_protorefs"))
+	if (auto protoRefs = GetSectionWithName("__objc_protorefs"))
 	{
 		auto start = protoRefs->GetStart();
 		auto end = protoRefs->GetEnd();
@@ -1217,7 +1210,7 @@ void ObjCProcessor::PostProcessObjCSections(ObjCReader* reader, std::optional<st
 			}
 		}
 	}
-	if (auto ivars = GetSectionForImage(imageName, "__objc_ivar"))
+	if (auto ivars = GetSectionWithName("__objc_ivar"))
 	{
 		auto start = ivars->GetStart();
 		auto end = ivars->GetEnd();
@@ -1258,7 +1251,7 @@ Ref<Symbol> ObjCProcessor::GetSymbol(uint64_t address)
 	return m_data->GetSymbolByAddress(address);
 }
 
-void ObjCProcessor::ProcessObjCData(std::optional<std::string> imageName)
+void ObjCProcessor::ProcessObjCData()
 {
 	m_symbolQueue = new SymbolQueue();
 	auto addrSize = m_data->GetAddressSize();
@@ -1426,26 +1419,26 @@ void ObjCProcessor::ProcessObjCData(std::optional<std::string> imageName)
 	m_typeNames.protocol = finalizeStructureBuilder(m_data, protocolBuilder, "objc_protocol_t").first;
 
 	m_data->BeginBulkModifySymbols();
-	if (auto classList = GetSectionForImage(imageName, "__objc_classlist"))
+	if (auto classList = GetSectionWithName("__objc_classlist"))
 		LoadClasses(reader.get(), classList);
-	if (auto nonLazyClassList = GetSectionForImage(imageName, "__objc_nlclslist"))
+	if (auto nonLazyClassList = GetSectionWithName("__objc_nlclslist"))
 		LoadClasses(reader.get(), nonLazyClassList);  // See: https://stackoverflow.com/a/15318325
 
 	GenerateClassTypes();
 	for (auto& [_, cls] : m_classes)
 		ApplyMethodTypes(cls);
 
-	if (auto catList = GetSectionForImage(imageName, "__objc_catlist"))  // Do this after loading class type data.
+	if (auto catList = GetSectionWithName("__objc_catlist"))  // Do this after loading class type data.
 		LoadCategories(reader.get(), catList);
-	if (auto nonLazyCatList = GetSectionForImage(imageName, "__objc_nlcatlist"))  // Do this after loading class type data.
+	if (auto nonLazyCatList = GetSectionWithName("__objc_nlcatlist"))  // Do this after loading class type data.
 		LoadCategories(reader.get(), nonLazyCatList);
 	for (auto& [_, cat] : m_categories)
 		ApplyMethodTypes(cat);
 
-	if (auto protoList = GetSectionForImage(imageName, "__objc_protolist"))
+	if (auto protoList = GetSectionWithName("__objc_protolist"))
 		LoadProtocols(reader.get(), protoList);
 
-	PostProcessObjCSections(reader.get(), imageName);
+	PostProcessObjCSections(reader.get());
 
 	auto id = m_data->BeginUndoActions();
 	m_symbolQueue->Process();
@@ -1460,7 +1453,7 @@ void ObjCProcessor::ProcessObjCData(std::optional<std::string> imageName)
 }
 
 
-void ObjCProcessor::ProcessCFStrings(std::optional<std::string> imageName)
+void ObjCProcessor::ProcessCFStrings()
 {
 	m_symbolQueue = new SymbolQueue();
 	uint64_t ptrSize = m_data->GetAddressSize();
@@ -1495,7 +1488,7 @@ void ObjCProcessor::ProcessCFStrings(std::optional<std::string> imageName)
 	m_typeNames.cfStringUTF16 = type.first;
 
 	auto reader = GetReader();
-	if (auto cfstrings = GetSectionForImage(imageName, "__cfstring"))
+	if (auto cfstrings = GetSectionWithName("__cfstring"))
 	{
 		auto start = cfstrings->GetStart();
 		auto end = cfstrings->GetEnd();

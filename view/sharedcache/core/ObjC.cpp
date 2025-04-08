@@ -170,6 +170,25 @@ Ref<Symbol> SharedCacheObjCProcessor::GetSymbol(uint64_t address)
 	return symbol;
 }
 
-SharedCacheObjCProcessor::SharedCacheObjCProcessor(BinaryView* data, bool isBackedByDatabase) :
-	ObjCProcessor(data, "SharedCache.ObjC", isBackedByDatabase, true)
-{}
+Ref<Section> SharedCacheObjCProcessor::GetSectionWithName(const char *sectionName)
+{
+	const auto controller = DSC::SharedCacheController::FromView(*m_data);
+	if (!controller)
+		return nullptr;
+
+	const auto image = controller->GetCache().GetImageAt(m_imageAddress);
+	if (!image)
+		return nullptr;
+
+	for (const auto& section : image->header->sectionNames)
+		if (section.find(sectionName) != std::string::npos)
+			return m_data->GetSectionByName(section);
+
+	return nullptr;
+}
+
+SharedCacheObjCProcessor::SharedCacheObjCProcessor(BinaryView *data, bool isBackedByDatabase, uint64_t imageAddress)
+	: ObjCProcessor(data, "SharedCache.ObjC", isBackedByDatabase, true)
+{
+	m_imageAddress = imageAddress;
+}

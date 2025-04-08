@@ -215,16 +215,14 @@ bool SharedCacheController::ApplyImage(BinaryView& view, const CacheImage& image
 		machoProcessor.ApplyHeader(*image.header);
 		view.SetFunctionAnalysisUpdateDisabled(prevDisabledState);
 
-		// TODO: Passing in an image name here is weird considering this is shared with the MACHO view.
-		// TODO: We should abstract out the "image" into an objc image type that represents what is required, which ig is the name?
 		// Load objective-c information.
-		auto objcProcessor = DSCObjC::SharedCacheObjCProcessor(&view, false);
+		auto objcProcessor = DSCObjC::SharedCacheObjCProcessor(&view, false, image.headerAddress);
 		try
 		{
 			if (m_processObjC)
-				objcProcessor.ProcessObjCData(image.GetName());
+				objcProcessor.ProcessObjCData();
 			if (m_processCFStrings)
-				objcProcessor.ProcessCFStrings(image.GetName());
+				objcProcessor.ProcessCFStrings();
 		}
 		catch (std::exception& e)
 		{

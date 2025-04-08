@@ -314,8 +314,7 @@ namespace BinaryNinja {
 		bool ApplyMethodType(Class& cls, Method& method, bool isInstanceMethod);
 		void ApplyMethodTypes(Class& cls);
 
-		Ref<Section> GetSectionForImage(std::optional<std::string> imageName, const char* sectionName);
-		void PostProcessObjCSections(ObjCReader* reader, std::optional<std::string> imageName);
+		void PostProcessObjCSections(ObjCReader* reader);
 
 	protected:
 		Ref<BinaryView> m_data;
@@ -327,13 +326,15 @@ namespace BinaryNinja {
 		// Because an objective-c processor might have access to other non-view symbols that we want to retrieve.
 		// By default, this will just get symbol at the address in the view.
 		virtual Ref<Symbol> GetSymbol(uint64_t address);
+		virtual Ref<Section> GetSectionWithName(const char* sectionName);
 
 	public:
 		virtual ~ObjCProcessor() = default;
 
 		ObjCProcessor(BinaryView* data, const char* loggerName, bool isBackedByDatabase, bool skipClassBaseProtocols = false);
-		void ProcessObjCData(std::optional<std::string> imageName);
-		void ProcessCFStrings(std::optional<std::string> imageName);
+		// TODO: Instead of passing in image name the processor must be given section refs in a structure that outlines all objc sections.
+		void ProcessObjCData();
+		void ProcessCFStrings();
 		void AddRelocatedPointer(uint64_t location, uint64_t rewrite);
 	};
 }

@@ -51,9 +51,6 @@ Ref<Settings> SharedCacheViewType::GetLoadSettingsForData(BinaryView* data)
 			settings->UpdateProperty(override, "readOnly", false);
 	}
 
-	Ref<Settings> programSettings = Settings::Instance();
-	programSettings->Set("analysis.workflows.functionWorkflow", "core.function.sharedCache", viewRef);
-
 	settings->RegisterSetting("loader.dsc.processCFStrings",
 		R"({
 		"title" : "Process CFString Metadata",
@@ -221,7 +218,9 @@ bool SharedCacheView::Init()
 
 	Ref<Settings> settings = GetLoadSettings(GetTypeName());
 
-	if (!settings)
+	// If we are a new file (not a database) lets go ahead and set the function workflow.
+	// We do not set the workflow on database as the user might have changed it in load options prior.
+	if (!settings && !GetFile()->IsBackedByDatabase())
 	{
 		Ref<Settings> programSettings = Settings::Instance();
 		programSettings->Set("analysis.workflows.functionWorkflow", "core.function.sharedCache", this);

@@ -80,7 +80,7 @@ pub fn insert_workflow() {
     };
 
     let old_function_meta_workflow = Workflow::instance("core.function.metaAnalysis");
-    let function_meta_workflow = old_function_meta_workflow.clone("core.function.metaAnalysis");
+    let function_meta_workflow = old_function_meta_workflow.clone_to("core.function.metaAnalysis");
     let guid_activity = Activity::new_with_action(GUID_ACTIVITY_CONFIG, guid_activity);
     function_meta_workflow
         .register_activity(&guid_activity)
@@ -89,7 +89,7 @@ pub fn insert_workflow() {
     function_meta_workflow.register().unwrap();
 
     let old_module_meta_workflow = Workflow::instance("core.module.metaAnalysis");
-    let module_meta_workflow = old_module_meta_workflow.clone("core.module.metaAnalysis");
+    let module_meta_workflow = old_module_meta_workflow.clone_to("core.module.metaAnalysis");
     let matcher_activity = Activity::new_with_action(MATCHER_ACTIVITY_CONFIG, matcher_activity);
     module_meta_workflow
         .register_activity(&matcher_activity)

@@ -100,7 +100,7 @@ pub extern "C" fn CorePluginInit() -> bool {
 
     // Register new workflow activity to load svd information.
     let old_module_meta_workflow = Workflow::instance("core.module.metaAnalysis");
-    let module_meta_workflow = old_module_meta_workflow.clone("core.module.metaAnalysis");
+    let module_meta_workflow = old_module_meta_workflow.clone_to("core.module.metaAnalysis");
     let loader_activity = Activity::new_with_action(LOADER_ACTIVITY_CONFIG, loader_activity);
     module_meta_workflow
         .register_activity(&loader_activity)

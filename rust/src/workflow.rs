@@ -164,16 +164,16 @@ pub struct Activity {
 }
 
 impl Activity {
+    #[allow(unused)]
     pub(crate) unsafe fn from_raw(handle: NonNull<BNActivity>) -> Self {
         Self { handle }
     }
-
-    #[allow(unused)]
+    
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNActivity>) -> Ref<Self> {
         Ref::new(Self { handle })
     }
 
-    pub fn new<S: BnStrCompatible>(config: S) -> Self {
+    pub fn new<S: BnStrCompatible>(config: S) -> Ref<Self> {
         unsafe extern "C" fn cb_action_nop(_: *mut c_void, _: *mut BNAnalysisContext) {}
         let config = config.into_bytes_with_nul();
         let result = unsafe {
@@ -183,10 +183,10 @@ impl Activity {
                 Some(cb_action_nop),
             )
         };
-        unsafe { Activity::from_raw(NonNull::new(result).unwrap()) }
+        unsafe { Activity::ref_from_raw(NonNull::new(result).unwrap()) }
     }
 
-    pub fn new_with_action<S, F>(config: S, mut action: F) -> Self
+    pub fn new_with_action<S, F>(config: S, mut action: F) -> Ref<Self>
     where
         S: BnStrCompatible,
         F: FnMut(&AnalysisContext),
@@ -208,7 +208,7 @@ impl Activity {
                 Some(cb_action::<F>),
             )
         };
-        unsafe { Activity::from_raw(NonNull::new(result).unwrap()) }
+        unsafe { Activity::ref_from_raw(NonNull::new(result).unwrap()) }
     }
 
     pub fn name(&self) -> BnString {
@@ -256,19 +256,19 @@ impl Workflow {
 
     /// Create a new unregistered [Workflow] with no activities.
     ///
-    /// To get a copy of an existing registered [Workflow] use [Workflow::clone].
-    pub fn new<S: BnStrCompatible>(name: S) -> Self {
+    /// To get a copy of an existing registered [Workflow] use [Workflow::clone_to].
+    pub fn new<S: BnStrCompatible>(name: S) -> Ref<Self> {
         let name = name.into_bytes_with_nul();
         let result = unsafe { BNCreateWorkflow(name.as_ref().as_ptr() as *const c_char) };
-        unsafe { Workflow::from_raw(NonNull::new(result).unwrap()) }
+        unsafe { Workflow::ref_from_raw(NonNull::new(result).unwrap()) }
     }
 
     /// Make a new unregistered [Workflow], copying all activities and the execution strategy.
     ///
     /// * `name` - the name for the new [Workflow]
     #[must_use]
-    pub fn clone<S: BnStrCompatible + Clone>(&self, name: S) -> Workflow {
-        self.clone_with_root(name, "")
+    pub fn clone_to<S: BnStrCompatible + Clone>(&self, name: S) -> Ref<Workflow> {
+        self.clone_to_with_root(name, "")
     }
 
     /// Make a new unregistered [Workflow], copying all activities, within `root_activity`, and the execution strategy.
@@ -276,15 +276,15 @@ impl Workflow {
     /// * `name` - the name for the new [Workflow]
     /// * `root_activity` - perform the clone operation with this activity as the root
     #[must_use]
-    pub fn clone_with_root<S: BnStrCompatible, A: BnStrCompatible>(
+    pub fn clone_to_with_root<S: BnStrCompatible, A: BnStrCompatible>(
         &self,
         name: S,
         root_activity: A,
-    ) -> Workflow {
+    ) -> Ref<Workflow> {
         let raw_name = name.into_bytes_with_nul();
         let activity = root_activity.into_bytes_with_nul();
         unsafe {
-            Self::from_raw(
+            Self::ref_from_raw(
                 NonNull::new(BNWorkflowClone(
                     self.handle.as_ptr(),
                     raw_name.as_ref().as_ptr() as *const c_char,
@@ -295,11 +295,11 @@ impl Workflow {
         }
     }
 
-    pub fn instance<S: BnStrCompatible>(name: S) -> Workflow {
+    pub fn instance<S: BnStrCompatible>(name: S) -> Ref<Workflow> {
         let result = unsafe {
             BNWorkflowInstance(name.into_bytes_with_nul().as_ref().as_ptr() as *const c_char)
         };
-        unsafe { Workflow::from_raw(NonNull::new(result).unwrap()) }
+        unsafe { Workflow::ref_from_raw(NonNull::new(result).unwrap()) }
     }
 
     /// List of all registered [Workflow]'s
@@ -341,7 +341,7 @@ impl Workflow {
     /// Register an [Activity] with this Workflow.
     ///
     /// * `activity` - the [Activity] to register
-    pub fn register_activity(&self, activity: &Activity) -> Result<Activity, ()> {
+    pub fn register_activity(&self, activity: &Activity) -> Result<Ref<Activity>, ()> {
         self.register_activity_with_subactivities::<Vec<String>>(activity, vec![])
     }
 
@@ -353,7 +353,7 @@ impl Workflow {
         &self,
         activity: &Activity,
         subactivities: I,
-    ) -> Result<Activity, ()>
+    ) -> Result<Ref<Activity>, ()>
     where
         I: IntoIterator,
         I::Item: BnStrCompatible,
@@ -375,7 +375,7 @@ impl Workflow {
             )
         };
         let activity_ptr = NonNull::new(result).ok_or(())?;
-        unsafe { Ok(Activity::from_raw(activity_ptr)) }
+        unsafe { Ok(Activity::ref_from_raw(activity_ptr)) }
     }
 
     /// Determine if an Activity exists in this [Workflow].
@@ -418,7 +418,7 @@ impl Workflow {
     }
 
     /// Retrieve the Activity object for the specified `name`.
-    pub fn activity<A: BnStrCompatible>(&self, name: A) -> Option<Activity> {
+    pub fn activity<A: BnStrCompatible>(&self, name: A) -> Option<Ref<Activity>> {
         let name = name.into_bytes_with_nul();
         let result = unsafe {
             BNWorkflowGetActivity(
@@ -426,7 +426,7 @@ impl Workflow {
                 name.as_ref().as_ptr() as *const c_char,
             )
         };
-        NonNull::new(result).map(|a| unsafe { Activity::from_raw(a) })
+        NonNull::new(result).map(|a| unsafe { Activity::ref_from_raw(a) })
     }
 
     /// Retrieve the list of activity roots for the [Workflow], or if

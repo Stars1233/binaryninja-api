@@ -1,6 +1,6 @@
 # arch-arm64
 
-This is the Aarch64 plugin that ships with Binary Ninja.
+This is the AArch64 plugin that ships with Binary Ninja.
 
 ## What's What
 

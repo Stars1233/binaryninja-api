@@ -148,7 +148,7 @@ static const char* GetRelocationString(MachoArm64RelocationType rel)
 	{
 		return relocTable[rel];
 	}
-	return "Unknown Aarch64 relocation";
+	return "Unknown AArch64 relocation";
 }
 
 
@@ -179,7 +179,7 @@ static const char* GetRelocationString(PeArm64RelocationType rel)
 	{
 		return relocTable[rel];
 	}
-	return "Unknown Aarch64 relocation";
+	return "Unknown AArch64 relocation";
 }
 
 
@@ -257,7 +257,7 @@ static const char* GetRelocationString(ElfArm64RelocationType rel)
 	if (relocMap.count(rel))
 		return relocMap.at(rel);
 
-	return "Unknown Aarch64 relocation";
+	return "Unknown AArch64 relocation";
 }
 
 
@@ -3431,20 +3431,20 @@ public:
 };
 
 
-static void InitAarch64Settings()
+static void InitAArch64Settings()
 {
 	Ref<Settings> settings = Settings::Instance();
 
 	settings->RegisterSetting("arch.aarch64.disassembly.alignRequired",
 			R"({
-			"title" : "AARCH64 Alignment Requirement",
+			"title" : "AArch64 Alignment Requirement",
 			"type" : "boolean",
 			"default" : true,
 			"description" : "Require instructions be on 4-byte aligned addresses to be disassembled."
 			})");
 	settings->RegisterSetting("arch.aarch64.disassembly.preferIntrinsics",
 			R"({
-			"title" : "AARCH64 Prefer Intrinsics for Vector Operations",
+			"title" : "AArch64 Prefer Intrinsics for Vector Operations",
 			"type" : "boolean",
 			"default" : true,
 			"description" : "Prefer generating calls to intrinsics (where one is available) to lifting vector operations as unrolled loops (where available). Note that not all vector operations are currently lifted as either intrinsics or unrolled loops."
@@ -3471,7 +3471,7 @@ extern "C"
 	BINARYNINJAPLUGIN bool CorePluginInit()
 #endif
 	{
-		InitAarch64Settings();
+		InitAArch64Settings();
 
 		Architecture* arm64 = new Arm64Architecture();
 

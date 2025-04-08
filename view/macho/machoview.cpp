@@ -750,7 +750,7 @@ MachOHeader MachoView::HeaderForAddress(BinaryView* data, uint64_t address, bool
 							break;
 						case MachOAarch64:
 						case MachOAarch6432:
-							m_logger->LogDebug("Aarch64 Thread state\n");
+							m_logger->LogDebug("AArch64 Thread state\n");
 							if (thread.flavor != _ARM_THREAD_STATE64)
 							{
 								reader.SeekRelative(thread.count * sizeof(uint32_t));

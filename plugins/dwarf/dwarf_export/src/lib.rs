@@ -605,8 +605,8 @@ fn present_form(bv_arch: &str) -> Vec<FormResponses> {
     // TODO : Choose to export types/functions/etc
     let archs = [
         "Unknown",
-        "Aarch64",
-        "Aarch64_Ilp32",
+        "AArch64",
+        "AArch64_Ilp32",
         "Arm",
         "Avr",
         "Bpf",

@@ -733,6 +733,8 @@ void MicrosoftRTTIProcessor::ProcessVFT()
         auto rdataSection = m_view->GetSectionByName(".rdata");
         for (const Ref<Segment> &segment: m_view->GetSegments())
         {
+            if (bgTask->IsCancelled())
+                break;
             if (segment->GetFlags() == (SegmentReadable | SegmentContainsData))
             {
                 m_logger->LogDebug("Attempting to find VirtualFunctionTables in segment %llx", segment->GetStart());

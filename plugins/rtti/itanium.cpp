@@ -685,6 +685,8 @@ void ItaniumRTTIProcessor::ProcessRTTI()
     // Scan data sections for rtti.
     for (const Ref<Section> &section: m_view->GetSections())
     {
+        if (bgTask->IsCancelled())
+            break;
         if (section->GetSemantics() == ReadOnlyDataSectionSemantics)
         {
             m_logger->LogDebug("Attempting to find RTTI in section %llx", section->GetStart());

@@ -695,9 +695,9 @@ void MicrosoftRTTIProcessor::ProcessRTTI()
 
 void MicrosoftRTTIProcessor::ProcessVFT()
 {
-    auto bgTask = new BackgroundTask("Scanning for Microsoft RTTI...", true);
+    auto bgTask = new BackgroundTask("Scanning for Microsoft VFT...", true);
     std::map<uint64_t, uint64_t> vftMap = {};
-    std::map<uint64_t, std::optional<VirtualFunctionTableInfo>> vftFinishedMap = {};
+    std::unordered_set<uint64_t> vftFinished = {};
     auto start_time = std::chrono::high_resolution_clock::now();
     for (auto &[coLocatorAddr, classInfo]: m_classInfo)
     {
@@ -749,20 +749,34 @@ void MicrosoftRTTIProcessor::ProcessVFT()
         }
     }
 
-    auto GetCachedVFTInfo = [&](uint64_t vftAddr, ClassInfo& classInfo) -> std::optional<VirtualFunctionTableInfo> {
-        // Check in the cache so that we don't process vfts more than once.
-        auto cachedVftInfo = vftFinishedMap.find(vftAddr);
-        if (cachedVftInfo != vftFinishedMap.end())
-            return cachedVftInfo->second;
+    std::function<void(uint64_t)> processClassAndBases = [&](uint64_t coLocatorAddr) -> void {
+        auto& classInfo = m_classInfo[coLocatorAddr];
+        uint64_t vftAddr = vftMap[coLocatorAddr];
+        if (vftFinished.find(vftAddr) != vftFinished.end() || classInfo.vft.has_value())
+            return;
+
+        // Process all relevant base classes first.
+        // Otherwise, when we process this class we won't have the base vft available if needed.
+        for (auto& baseInfo : classInfo.baseClasses)
+        {
+            for (auto& [baseCoLocAddr, baseClassInfo] : m_classInfo)
+            {
+                if (baseClassInfo.className != baseInfo.className)
+                    continue;
+                processClassAndBases(baseCoLocAddr);
+                // TODO: We might want to return the vft from processClassAndBases instead of doing this.
+                baseInfo.vft = m_classInfo[baseCoLocAddr].vft;
+            }
+        }
+
+        // Process the vtable for the current class.
+        // By this point all base classes should already exist, along with their type.
 
         // Get the appropriate base class if there is one by reading the colocator.
-        BinaryReader reader = BinaryReader(m_view);
-        reader.Seek(vftAddr - m_view->GetAddressSize());
-        auto coLocatorAddr = reader.ReadPointer();
         auto coLocator = ReadCompleteObjectorLocator(m_view, coLocatorAddr);
         // TODO: This should always be valid!
         if (!coLocator.has_value())
-            return std::nullopt;
+            return;
 
         std::optional<BaseClassInfo> baseClassInfo;
         for (const auto& base: classInfo.baseClasses)
@@ -775,45 +789,20 @@ void MicrosoftRTTIProcessor::ProcessVFT()
             }
         }
 
+        vftFinished.insert(vftAddr);
         auto vftInfo = ProcessVFT(vftAddr, classInfo, baseClassInfo);
-        vftFinishedMap[vftAddr] = vftInfo;
-        return vftInfo;
+        classInfo.vft = vftInfo.value();
     };
 
-    std::function<void(uint64_t)> ProcessClassAndBases = [&](uint64_t coLocatorAddr) -> void {
-        auto& classInfo = m_classInfo[coLocatorAddr];
-
-        // Process all relevant base classes first.
-        // Otherwise, when we process this class we won't have the base vft available if needed.
-        for (auto& baseInfo : classInfo.baseClasses)
-        {
-            for (auto& [baseCoLocAddr, baseClassInfo] : m_classInfo)
-            {
-                if (baseClassInfo.className == baseInfo.className)
-                {
-                    uint64_t baseVftAddr = vftMap[baseCoLocAddr];
-                    // Recurse into the bases bases.
-                    ProcessClassAndBases(baseCoLocAddr);
-
-                    // Fetch the VFT info for the base class and store it.
-                    if (auto baseVftInfo = GetCachedVFTInfo(baseVftAddr, baseClassInfo))
-                    {
-                        baseInfo.vft = baseVftInfo.value();
-                        break;
-                    }
-                }
-            }
-        }
-
-        // Process the vtable for the current class.
-        // By this point all base classes should already exist, along with their type.
-        uint64_t vftAddr = vftMap[coLocatorAddr];
-        if (auto vftInfo = GetCachedVFTInfo(vftAddr, classInfo))
-            classInfo.vft = vftInfo.value();
-    };
-    
+    size_t processedNum = 0;
     for (const auto &[coLocatorAddr, _]: vftMap)
-        ProcessClassAndBases(coLocatorAddr);
+    {
+        if (bgTask->IsCancelled())
+            break;
+        processClassAndBases(coLocatorAddr);
+        std::string progress = fmt::format("Processing Microsoft VFTs... {}/{}", processedNum++, vftMap.size());
+        bgTask->SetProgressText(progress);
+    }
 
     bgTask->Finish();
     auto end_time = std::chrono::high_resolution_clock::now();

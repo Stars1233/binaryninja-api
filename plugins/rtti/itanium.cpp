@@ -816,14 +816,15 @@ void ItaniumRTTIProcessor::ProcessVFT()
         m_classInfo[coLocatorAddr] = classInfo;
     };
 
+    size_t processedNum = 0;
     for (const auto &[coLocatorAddr, vftAddrs]: vftMap)
     {
         if (bgTask->IsCancelled())
             break;
         for (const auto& vftAddr: vftAddrs)
-        {
             populateVftEntries(coLocatorAddr, vftAddr);
-        }
+        std::string progress = fmt::format("Processing Itanium VFTs... {}/{}", processedNum++, vftMap.size());
+        bgTask->SetProgressText(progress);
     }
 
     bgTask->Finish();

@@ -10083,6 +10083,8 @@ namespace BinaryNinja {
 		WorkflowMachine(Ref<BinaryView> view);
 		WorkflowMachine(Ref<Function> function);
 
+		bool PostJsonRequest(const std::string& request);
+
 		/*! Start the workflow WorkflowMachine
 			Starts the workflow machine for the given BinaryView or Function.
 			\return true if the command is accepted, false otherwise.

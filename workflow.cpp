@@ -147,6 +147,23 @@ WorkflowMachine::WorkflowMachine(Ref<Function> function): m_function(function)
 }
 
 
+bool WorkflowMachine::PostJsonRequest(const std::string& request)
+{
+	string jsonResult;
+	if (m_function)
+		jsonResult = BNPostWorkflowRequestForFunction(m_function->GetObject(), request.c_str());
+	else
+		jsonResult = BNPostWorkflowRequestForBinaryView(m_view->GetObject(), request.c_str());
+
+	rapidjson::Document response(rapidjson::kObjectType);
+	response.Parse(jsonResult.c_str());
+	if (response.HasMember("commandStatus") && response["commandStatus"].HasMember("accepted"))
+		return response["commandStatus"]["accepted"].GetBool();
+
+	return false;
+}
+
+
 bool WorkflowMachine::Run()
 {
 	return PostRequest("run");

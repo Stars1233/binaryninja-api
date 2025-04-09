@@ -1,7 +1,3 @@
-//
-// Created by kat on 8/15/24.
-//
-
 #include <kernelcacheapi.h>
 #include <binaryninjaapi.h>
 #include "uitypes.h"
@@ -14,37 +10,29 @@
 #include <QSortFilterProxyModel>
 #include <QHeaderView>
 #include "filter.h"
+#include <QStyledItemDelegate>
+
+#include "ui/fontsettings.h"
 
 #ifndef BINARYNINJA_KCTRIAGE_H
 #define BINARYNINJA_KCTRIAGE_H
 
-class CollapsibleSection : public QWidget
+class AddressColorDelegate : public QStyledItemDelegate
 {
-	Q_OBJECT
-
-	QLabel* m_titleLabel;
-	QLabel* m_subtitleRightLabel;
-	QPushButton* m_collapseButton;
-
-	bool m_collapsed = true;
-
-	Animation* m_onContentAddedAnimation;
-
-	QWidget* m_contentWidgetContainer;
-	QWidget* m_contentWidget;
-
-protected:
-	QSize sizeHint() const override;
 
 public:
-	CollapsibleSection(QWidget* parent);
-	void setTitle(const QString& title);
-	void setSubtitleRight(const QString& subtitle);
+	explicit AddressColorDelegate(QObject* parent = nullptr) : QStyledItemDelegate(parent) {}
 
-	void setContentWidget(QWidget* contentWidget);
+	void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
+	{
+		QStyleOptionViewItem opt = option;
+		initStyleOption(&opt, index);
 
-	void setCollapsed(bool collapsed, bool animated = true);
-	bool isCollapsed() const { return m_collapsed; }
+		opt.palette.setColor(QPalette::Text, getThemeColor(BNThemeColor::AddressColor));
+		opt.displayAlignment = Qt::AlignCenter | Qt::AlignVCenter;
+
+		QStyledItemDelegate::paint(painter, opt, index);
+	}
 };
 
 
@@ -54,12 +42,13 @@ class FilterableTableView : public QTableView, public FilterTarget {
 	bool m_filterByHiding;
 
 public:
-	FilterableTableView(QWidget* parent = nullptr, bool filterByHiding = true)
+	explicit FilterableTableView(QWidget* parent = nullptr, bool filterByHiding = true)
 		: QTableView(parent), m_filterByHiding(filterByHiding) {
 		viewport()->installEventFilter(this);
+		setFont(getMonospaceFont(parent));
 	}
 
-	~FilterableTableView() override {}
+	~FilterableTableView() override = default;
 
 	void setFilter(const std::string& filter) override {
 		if (!m_filterByHiding)
@@ -112,7 +101,7 @@ public:
 
 	bool eventFilter(QObject* obj, QEvent* event) override {
 		if (event->type() == QEvent::KeyPress) {
-			QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
+			auto keyEvent = dynamic_cast<QKeyEvent*>(event);
 			if (keyEvent->key() == Qt::Key_Escape) {
 				clearSelection();
 				return true;
@@ -135,19 +124,18 @@ class SymbolTableModel : public QAbstractTableModel {
 	Q_OBJECT
 
 	SymbolTableView* m_parent;
+	QFont m_font;
 	std::string m_filter;
 	std::vector<KernelCacheAPI::KCSymbol> m_symbols;
 
 public:
 	explicit SymbolTableModel(SymbolTableView* parent);
 
-	int rowCount(const QModelIndex& parent = QModelIndex()) const override;
-	int columnCount(const QModelIndex& parent = QModelIndex()) const override;
-	QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
-	QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
-
+	int rowCount(const QModelIndex& parent) const override;
+	int columnCount(const QModelIndex& parent) const override;
+	QVariant data(const QModelIndex& index, int role) const override;
+	QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 	void updateSymbols();
-
 	void setFilter(std::string text);
 
 	const KernelCacheAPI::KCSymbol& symbolAt(int row) const;
@@ -165,7 +153,7 @@ class SymbolTableView : public QTableView, public FilterTarget
 
 public:
 	SymbolTableView(QWidget* parent, Ref<KernelCacheAPI::KernelCache> cache);
-	virtual ~SymbolTableView() override;
+	~SymbolTableView() override;
 
 	void scrollToFirstItem() override {
 		if (model()->rowCount() > 0) {
@@ -204,29 +192,36 @@ public:
 };
 
 
-class KCTriageView : public QWidget, public View
+class KCTriageView : public QWidget, public View, public UIContextNotification
 {
 	BinaryViewRef m_data;
 	QVBoxLayout* m_layout;
-	Ref<KernelCacheAPI::KernelCache> m_cache;
 
-	std::mutex m_headersMutex;
-	std::shared_ptr<std::vector<KernelCacheAPI::KernelCacheMachOHeader>> m_headers;
+	Ref<KernelCacheAPI::KernelCache> m_cache;
 
 	SplitTabWidget* m_triageTabs;
 	DockableTabCollection* m_triageCollection;
 
-	SplitTabWidget* m_bottomRegionTabs;
-	DockableTabCollection* m_bottomRegionCollection;
+	FilterableTableView* m_imageTable;
+	QStandardItemModel* m_imageModel;
 
+	SymbolTableView* m_symbolTable;
+
+	std::mutex m_headersMutex;
+	std::shared_ptr<std::vector<KernelCacheAPI::KernelCacheMachOHeader>> m_headers;
 
 public:
 	KCTriageView(QWidget* parent, BinaryViewRef data);
+	~KCTriageView() override;
 	BinaryViewRef getData() override;
 	void setSelectionOffsets(BNAddressRange range) override {};
 	QFont getFont() override;
 	bool navigate(uint64_t offset) override;
 	uint64_t getCurrentOffset() override;
+
+private:
+	QWidget* initImageTable();
+	void initSymbolTable();
 };
 
 

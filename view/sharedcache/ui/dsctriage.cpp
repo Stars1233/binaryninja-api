@@ -1,22 +1,20 @@
-//
-// Created by kat on 8/15/24.
-//
-
-#include "ui/fontsettings.h"
-#include "tabwidget.h"
+#include "dsctriage.h"
 #include "globalarea.h"
 #include "progresstask.h"
-#include <QMessageBox>
-#include <QHeaderView>
-#include "dsctriage.h"
 #include "symboltable.h"
+#include "ui/fontsettings.h"
+#include <QHeaderView>
+#include <QMessageBox>
+#include <utility>
 
 using namespace BinaryNinja;
 using namespace SharedCacheAPI;
 
+
 DSCTriageViewType::DSCTriageViewType()
 	: ViewType("DSCTriage", "Dyld Shared Cache Triage")
 {}
+
 
 int DSCTriageViewType::getPriority(BinaryViewRef data, const QString& filename)
 {
@@ -24,6 +22,7 @@ int DSCTriageViewType::getPriority(BinaryViewRef data, const QString& filename)
 		return 100;
 	return 0;
 }
+
 
 QWidget* DSCTriageViewType::create(BinaryViewRef data, ViewFrame* viewFrame)
 {
@@ -33,12 +32,14 @@ QWidget* DSCTriageViewType::create(BinaryViewRef data, ViewFrame* viewFrame)
 	return new DSCTriageView(viewFrame, data);
 }
 
+
 void DSCTriageViewType::Register()
 {
 	registerViewType(new DSCTriageViewType());
 }
 
-DSCTriageView::DSCTriageView(QWidget* parent, BinaryViewRef data) : QWidget(parent), m_data(data)
+
+DSCTriageView::DSCTriageView(QWidget* parent, BinaryViewRef data) : QWidget(parent), m_data(std::move(data))
 {
 	setBinaryDataNavigable(false);
 	setupView(this);
@@ -51,369 +52,9 @@ DSCTriageView::DSCTriageView(QWidget* parent, BinaryViewRef data) : QWidget(pare
 	auto triageTabStyle = new GlobalAreaTabStyle();
 	m_triageTabs->setTabStyle(triageTabStyle);
 
-	QWidget* defaultWidget = nullptr;
-
-	auto loadImagesWithAddr = [this](const std::vector<uint64_t>& addresses, bool includeDependencies = false) {
-		auto controller = SharedCacheController::GetController(*this->m_data);
-		if (!controller)
-			return;
-
-		std::map<uint64_t, CacheImage> images = {};
-		for (const uint64_t& addr : addresses)
-		{
-			auto image = controller->GetImageContaining(addr);
-			// Only try to load if we have not already.
-			if (image.has_value() && !controller->IsImageLoaded(*image))
-			{
-				images.insert({image->headerAddress, *image});
-
-				// TODO: We currently only add direct dependencies, may want to make the depth configurable?
-				if (includeDependencies)
-				{
-					auto dependencies = controller->GetImageDependencies(*image);
-					for (const auto& depName : dependencies)
-					{
-						auto depImage = controller->GetImageWithName(depName);
-						if (depImage.has_value() && !controller->IsImageLoaded(*depImage))
-						{
-							images.insert({depImage->headerAddress, *depImage});
-						}
-					}
-				}
-			}
-
-		}
-
-		// Don't create a worker action if we don't have any images.
-		if (images.empty())
-			return;
-
-		WorkerPriorityEnqueue([controller, this, images]() {
-			size_t loadedImages = 0;
-			const std::string initialLoad = fmt::format("Loading images... (0/{})", images.size());
-			auto imageLoadTask = BackgroundTask(initialLoad, true);
-
-			for (const auto& [addr, image] : images)
-			{
-				if (imageLoadTask.IsCancelled())
-					break;
-				std::string newLoad = fmt::format("Loading images... ({}/{})", loadedImages++, images.size());
-				imageLoadTask.SetProgressText(newLoad);
-				if (controller->ApplyImage(*this->m_data, image))
-					setImageLoaded(image.headerAddress);
-			}
-			imageLoadTask.Finish();
-
-			// We have loaded images, lets make sure to update analysis!
-			this->m_data->AddAnalysisOption("linearsweep");
-			this->m_data->UpdateAnalysis();
-		});
-	};
-
-	// Tab: Images
-	auto loadImageTable = new FilterableTableView(this);
-	{
-		m_imageModel = new QStandardItemModel(0, 3, loadImageTable);
-		m_imageModel->setHorizontalHeaderLabels({"Address", "Loaded", "Name"});
-
-		// Apply custom column styling
-		loadImageTable->setItemDelegateForColumn(0, new AddressColorDelegate(loadImageTable));
-		loadImageTable->setItemDelegateForColumn(1, new LoadedDelegate(loadImageTable));
-
-		// Context menu
-		loadImageTable->setContextMenuPolicy(Qt::CustomContextMenu);
-		connect(loadImageTable, &QWidget::customContextMenuRequested, [loadImageTable, loadImagesWithAddr](const QPoint &pos) {
-			QMenu contextMenu(tr("Load Image Actions"), loadImageTable);
-
-			// Get number of selected images
-			auto selected = loadImageTable->selectionModel()->selectedRows();
-			int selectedCount = 0;
-			std::vector<uint64_t> addresses;
-			for (const auto& idx : selected)
-			{
-				// Skip rows hidden by the filter
-				if (loadImageTable->isRowHidden(idx.row()))
-					continue;
-				addresses.push_back(idx.data().toString().toULongLong(nullptr, 16));
-				selectedCount++;
-			}
-
-			QAction noSelectionAction("No Images Selected", loadImageTable);
-			QAction loadImagesAction("", loadImageTable);
-			QAction loadImagesWithDepsAction("", loadImageTable);
-			if (selectedCount == 0)
-			{
-				noSelectionAction.setEnabled(false);
-				contextMenu.addAction(&noSelectionAction);
-			}
-			else
-			{
-				// Format action text for loading selected images
-				QString loadActionText = (selectedCount == 1) ? "Load Selected Image" : QString("Load %1 Selected Images").arg(selectedCount);
-				loadImagesAction.setText(loadActionText);
-				connect(&loadImagesAction, &QAction::triggered, [loadImagesWithAddr, addresses]() {
-					loadImagesWithAddr(addresses, false);
-				});
-				contextMenu.addAction(&loadImagesAction);
-
-				// Format action text for loading selected images with dependencies
-				QString loadWithDepsActionText = (selectedCount == 1) ? "Load Selected Image and Dependencies" : QString("Load %1 Selected Images and Dependencies").arg(selectedCount);
-				loadImagesWithDepsAction.setText(loadWithDepsActionText);
-				connect(&loadImagesWithDepsAction, &QAction::triggered, [loadImagesWithAddr, addresses]() {
-					loadImagesWithAddr(addresses, true);
-				});
-				contextMenu.addAction(&loadImagesWithDepsAction);
-			}
-
-			contextMenu.exec(loadImageTable->viewport()->mapToGlobal(pos));
-		});
-
-		auto loadImageButton = new QPushButton();
-		connect(loadImageButton, &QPushButton::clicked,
-			[loadImageTable, loadImagesWithAddr](bool) {
-				auto selected = loadImageTable->selectionModel()->selectedRows();
-				std::vector<uint64_t> addresses;
-				for (const auto& idx : selected)
-				{
-					// Skip rows hidden by the filter
-					if (loadImageTable->isRowHidden(idx.row()))
-						continue;
-					addresses.push_back(idx.data().toString().toULongLong(nullptr, 16));
-				}
-				loadImagesWithAddr(addresses);
-			});
-		loadImageButton->setText("Load Selected");
-
-		auto refreshDataButton = new QPushButton();
-		{
-			// TODO: Might want to introduce a cooldown for this button (if we even keep it)
-			connect(refreshDataButton, &QPushButton::clicked, [this](bool) { RefreshData(); });
-			refreshDataButton->setText("Refresh");
-		} // refreshDataButton
-
-		auto loadImageFilterEdit = new FilterEdit(loadImageTable);
-		connect(loadImageFilterEdit, &FilterEdit::textChanged, [loadImageTable](const QString& filter) {
-			loadImageTable->setFilter(filter.toStdString());
-		});
-
-		connect(loadImageTable, &FilterableTableView::activated, this, [=](const QModelIndex& index) {
-			auto addr = m_imageModel->item(index.row(), 0)->text().toULongLong(nullptr, 16);
-			loadImagesWithAddr({addr});
-		});
-
-		auto loadImageLayout = new QVBoxLayout;
-		loadImageLayout->addWidget(loadImageFilterEdit);
-		loadImageLayout->addWidget(loadImageTable);
-		auto buttonLayout = new QHBoxLayout;
-		buttonLayout->addWidget(loadImageButton);
-		buttonLayout->addWidget(refreshDataButton);
-		buttonLayout->setAlignment(Qt::AlignLeft);
-		loadImageLayout->addLayout(buttonLayout);
-
-		auto loadImageWidget = new QWidget;
-		loadImageWidget->setLayout(loadImageLayout);
-
-		loadImageTable->setModel(m_imageModel);
-
-		loadImageTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
-
-		loadImageTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
-		loadImageTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
-		loadImageTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
-
-		loadImageTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-		loadImageTable->setSelectionMode(QAbstractItemView::ExtendedSelection);
-
-		loadImageTable->setSortingEnabled(true);
-
-		loadImageTable->verticalHeader()->setVisible(false);
-
-		m_triageTabs->addTab(loadImageWidget, "Images");
-		defaultWidget = loadImageWidget;
-		m_triageTabs->setCanCloseTab(loadImageWidget, false);
-	} // loadImageTable
-
-	// Tab: Symbols
-	m_symbolTable = new SymbolTableView(this);
-	{
-		auto symbolFilterEdit = new FilterEdit(m_symbolTable);
-		connect(symbolFilterEdit, &FilterEdit::textChanged, [this](const QString& filter) {
-			m_symbolTable->setFilter(filter.toStdString());
-		});
-
-		// Apply custom column styling
-		m_symbolTable->setItemDelegateForColumn(0, new AddressColorDelegate(m_symbolTable));
-
-		auto loadSymbolImageButton = new QPushButton();
-		{
-			connect(loadSymbolImageButton, &QPushButton::clicked,
-				[this, loadImagesWithAddr](bool) {
-					auto selected = m_symbolTable->selectionModel()->selectedRows();
-					std::vector<uint64_t> addresses;
-					for (const auto& row : selected)
-						addresses.push_back(row.data().toString().toULongLong(nullptr, 16));
-					loadImagesWithAddr(addresses);
-				});
-			loadSymbolImageButton->setText("Load Image");
-		} // loadImageButton
-
-		// Shows the current selected rows image name.
-		auto currentImageLabel = new QLabel(this); {
-			currentImageLabel->setText("");
-			currentImageLabel->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-		}
-
-		// Update the label whenever the selection changes.
-		connect(m_symbolTable->selectionModel(), &QItemSelectionModel::currentRowChanged, this,
-	        [this, currentImageLabel](const QModelIndex &current, const QModelIndex &) {
-		        auto symbol = m_symbolTable->getSymbolAtRow(current.row());
-		        auto controller = SharedCacheController::GetController(*this->m_data);
-		        if (!controller)
-			        return;
-		        auto image = controller->GetImageContaining(symbol.address);
-		        if (image)
-			        currentImageLabel->setText("Image: " + QString::fromStdString(image->name));
-		        else
-			        currentImageLabel->setText("");
-	        });
-
-		auto symbolFooterLayout = new QHBoxLayout;
-		symbolFooterLayout->addWidget(loadSymbolImageButton);
-		symbolFooterLayout->addWidget(currentImageLabel);
-
-		symbolFooterLayout->setAlignment(Qt::AlignLeft);
-
-		auto symbolLayout = new QVBoxLayout;
-		symbolLayout->addWidget(symbolFilterEdit);
-		symbolLayout->addWidget(m_symbolTable);
-		symbolLayout->addLayout(symbolFooterLayout);
-
-		auto symbolWidget = new QWidget;
-		symbolWidget->setLayout(symbolLayout);
-
-		connect(m_symbolTable, &SymbolTableView::activated, this, [=](const QModelIndex& index){
-				auto symbol = m_symbolTable->getSymbolAtRow(index.row());
-				auto dialog = new QMessageBox(this);
-
-				auto controller = SharedCacheController::GetController(*this->m_data);
-				if (!controller)
-					return;
-
-				auto image = controller->GetImageContaining(symbol.address);
-				if (!image.has_value())
-					return;
-
-				dialog->setText("Load " + QString::fromStdString(image->name) + "?");
-				dialog->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-
-				connect(dialog, &QMessageBox::buttonClicked, this, [=](QAbstractButton* button)
-				{
-					if (button == dialog->button(QMessageBox::Yes))
-						loadImagesWithAddr({image->headerAddress});
-				});
-
-				dialog->exec();
-			});
-
-		m_triageTabs->addTab(symbolWidget, "Symbols");
-		m_triageTabs->setCanCloseTab(symbolWidget, false);
-	} // symbolSearch
-
-	// Tab: Mappings & Regions
-	auto cacheInfoWidget = new QWidget;
-	{
-		auto cacheInfoLayout = new QVBoxLayout(cacheInfoWidget);
-
-		auto cacheInfoSubwidget = new QWidget;
-
-		auto mappingTable = new FilterableTableView(cacheInfoSubwidget);
-		m_mappingModel = new QStandardItemModel(0, 4, mappingTable);
-		m_mappingModel->setHorizontalHeaderLabels({"Address", "Size", "File Address", "File Path"});
-
-		// Apply custom column styling
-		mappingTable->setItemDelegateForColumn(0, new AddressColorDelegate(mappingTable));
-
-		mappingTable->setModel(m_mappingModel);
-
-		mappingTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
-		mappingTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Fixed);
-		mappingTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
-		mappingTable->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Stretch);
-
-		mappingTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
-
-		mappingTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-		mappingTable->setSelectionMode(QAbstractItemView::ExtendedSelection);
-
-		mappingTable->setSortingEnabled(true);
-
-		mappingTable->verticalHeader()->setVisible(false);
-
-		auto regionTable = new FilterableTableView(cacheInfoSubwidget);
-		m_regionModel = new QStandardItemModel(0, 4, regionTable);
-		m_regionModel->setHorizontalHeaderLabels({"Address", "Size", "Type", "Name"});
-
-		// Apply custom column styling
-		regionTable->setItemDelegateForColumn(0, new AddressColorDelegate(regionTable));
-
-		regionTable->setModel(m_regionModel);
-
-		regionTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
-		regionTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Fixed);
-		regionTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Interactive);
-		regionTable->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Stretch);
-
-		regionTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
-
-		regionTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-		regionTable->setSelectionMode(QAbstractItemView::ExtendedSelection);
-
-		regionTable->setSortingEnabled(true);
-
-		regionTable->verticalHeader()->setVisible(false);
-
-		auto mappingLabel = new QLabel("Mappings");
-		auto mappingFilterEdit = new FilterEdit(mappingTable);
-		{
-			connect(mappingFilterEdit, &FilterEdit::textChanged, [mappingTable](const QString& filter) {
-				mappingTable->setFilter(filter.toStdString());
-			});
-		}
-
-		auto mappingHeaderLayout = new QHBoxLayout;
-		mappingHeaderLayout->addWidget(mappingLabel);
-		mappingHeaderLayout->addWidget(mappingFilterEdit);
-		mappingHeaderLayout->setAlignment(Qt::AlignJustify);
-		mappingHeaderLayout->setSpacing(30);
-
-		auto regionLabel = new QLabel("Regions");
-		auto regionFilterEdit = new FilterEdit(regionTable);
-		{
-			connect(regionFilterEdit, &FilterEdit::textChanged, [regionTable](const QString& filter) {
-				regionTable->setFilter(filter.toStdString());
-			});
-		}
-
-		auto regionHeaderLayout = new QHBoxLayout;
-		regionHeaderLayout->addWidget(regionLabel);
-		regionHeaderLayout->addWidget(regionFilterEdit);
-		regionHeaderLayout->setAlignment(Qt::AlignJustify);
-		regionHeaderLayout->setSpacing(30);
-
-		auto mappingLayout = new QVBoxLayout;
-		mappingLayout->addLayout(mappingHeaderLayout);
-		mappingLayout->addWidget(mappingTable);
-
-		auto regionLayout = new QVBoxLayout;
-		regionLayout->addLayout(regionHeaderLayout);
-		regionLayout->addWidget(regionTable);
-
-		cacheInfoLayout->addLayout(mappingLayout);
-		cacheInfoLayout->addLayout(regionLayout);
-
-		m_triageTabs->addTab(cacheInfoWidget, "Mappings & Regions");
-		m_triageTabs->setCanCloseTab(cacheInfoWidget, false);
-	} // cacheInfoSection
+	QWidget* defaultWidget = initImageTable();
+	initSymbolTable();
+	initCacheInfoTables();
 
 	m_layout = new QVBoxLayout(this);
 	m_layout->addWidget(m_triageTabs);
@@ -427,20 +68,393 @@ DSCTriageView::DSCTriageView(QWidget* parent, BinaryViewRef data) : QWidget(pare
 	m_triageTabs->selectWidget(defaultWidget);
 }
 
+
 DSCTriageView::~DSCTriageView()
 {
 	UIContext::unregisterNotification(this);
 }
+
+
+void DSCTriageView::loadImagesWithAddr(const std::vector<uint64_t>& addresses, bool includeDependencies) {
+	auto controller = SharedCacheController::GetController(*this->m_data);
+	if (!controller)
+		return;
+
+	std::map<uint64_t, CacheImage> images = {};
+	for (const uint64_t& addr : addresses)
+	{
+		auto image = controller->GetImageContaining(addr);
+		// Only try to load if we have not already.
+		if (image.has_value() && !controller->IsImageLoaded(*image))
+		{
+			images.insert({image->headerAddress, *image});
+
+			// TODO: We currently only add direct dependencies, may want to make the depth configurable?
+			if (includeDependencies)
+			{
+				auto dependencies = controller->GetImageDependencies(*image);
+				for (const auto& depName : dependencies)
+				{
+					auto depImage = controller->GetImageWithName(depName);
+					if (depImage.has_value() && !controller->IsImageLoaded(*depImage))
+					{
+						images.insert({depImage->headerAddress, *depImage});
+					}
+				}
+			}
+		}
+	}
+
+	// Don't create a worker action if we don't have any images.
+	if (images.empty())
+		return;
+
+	WorkerPriorityEnqueue([controller, this, images]() {
+		size_t loadedImages = 0;
+		const std::string initialLoad = fmt::format("Loading images... (0/{})", images.size());
+		auto imageLoadTask = BackgroundTask(initialLoad, true);
+
+		for (const auto& [addr, image] : images)
+		{
+			if (imageLoadTask.IsCancelled())
+				break;
+			std::string newLoad = fmt::format("Loading images... ({}/{})", loadedImages++, images.size());
+			imageLoadTask.SetProgressText(newLoad);
+			if (controller->ApplyImage(*this->m_data, image))
+				setImageLoaded(image.headerAddress);
+		}
+		imageLoadTask.Finish();
+
+		// We have loaded images, lets make sure to update analysis!
+		this->m_data->AddAnalysisOption("linearsweep");
+		this->m_data->UpdateAnalysis();
+	});
+}
+
+
+QWidget* DSCTriageView::initImageTable()
+{
+	auto loadImageTable = new FilterableTableView(this);
+
+	m_imageModel = new QStandardItemModel(0, 3, loadImageTable);
+	m_imageModel->setHorizontalHeaderLabels({"Address", "Loaded", "Name"});
+
+	// Apply custom column styling
+	loadImageTable->setItemDelegateForColumn(0, new AddressColorDelegate(loadImageTable));
+	loadImageTable->setItemDelegateForColumn(1, new LoadedDelegate(loadImageTable));
+
+	// Context menu
+	loadImageTable->setContextMenuPolicy(Qt::CustomContextMenu);
+	connect(loadImageTable, &QWidget::customContextMenuRequested, [this, loadImageTable](const QPoint &pos) {
+		QMenu contextMenu(tr("Load Image Actions"), loadImageTable);
+
+		// Get number of selected images
+		auto selected = loadImageTable->selectionModel()->selectedRows();
+		int selectedCount = 0;
+		std::vector<uint64_t> addresses;
+		for (const auto& idx : selected)
+		{
+			// Skip rows hidden by the filter
+			if (loadImageTable->isRowHidden(idx.row()))
+				continue;
+			addresses.push_back(idx.data().toString().toULongLong(nullptr, 16));
+			selectedCount++;
+		}
+
+		QAction noSelectionAction("No Images Selected", loadImageTable);
+		QAction loadImagesAction("", loadImageTable);
+		QAction loadImagesWithDepsAction("", loadImageTable);
+		if (selectedCount == 0)
+		{
+			noSelectionAction.setEnabled(false);
+			contextMenu.addAction(&noSelectionAction);
+		}
+		else
+		{
+			// Format action text for loading selected images
+			QString loadActionText = (selectedCount == 1) ? "Load Selected Image" : QString("Load %1 Selected Images").arg(selectedCount);
+			loadImagesAction.setText(loadActionText);
+			connect(&loadImagesAction, &QAction::triggered, [this, addresses]() {
+				loadImagesWithAddr(addresses, false);
+			});
+			contextMenu.addAction(&loadImagesAction);
+
+			// Format action text for loading selected images with dependencies
+			QString loadWithDepsActionText = (selectedCount == 1) ? "Load Selected Image and Dependencies" : QString("Load %1 Selected Images and Dependencies").arg(selectedCount);
+			loadImagesWithDepsAction.setText(loadWithDepsActionText);
+			connect(&loadImagesWithDepsAction, &QAction::triggered, [this, addresses]() {
+				this->loadImagesWithAddr(addresses, true);
+			});
+			contextMenu.addAction(&loadImagesWithDepsAction);
+		}
+
+		contextMenu.exec(loadImageTable->viewport()->mapToGlobal(pos));
+	});
+
+	auto loadImageButton = new QPushButton();
+	connect(loadImageButton, &QPushButton::clicked, [this, loadImageTable](bool) {
+		auto selected = loadImageTable->selectionModel()->selectedRows();
+		std::vector<uint64_t> addresses;
+		for (const auto& idx : selected)
+		{
+			// Skip rows hidden by the filter
+			if (loadImageTable->isRowHidden(idx.row()))
+				continue;
+			addresses.push_back(idx.data().toString().toULongLong(nullptr, 16));
+		}
+		loadImagesWithAddr(addresses);
+	});
+	loadImageButton->setText("Load Selected");
+
+	auto refreshDataButton = new QPushButton();
+	{
+		// TODO: Might want to introduce a cooldown for this button (if we even keep it)
+		connect(refreshDataButton, &QPushButton::clicked, [this](bool) { RefreshData(); });
+		refreshDataButton->setText("Refresh");
+	} // refreshDataButton
+
+	auto loadImageFilterEdit = new FilterEdit(loadImageTable);
+	connect(loadImageFilterEdit, &FilterEdit::textChanged, [loadImageTable](const QString& filter) {
+		loadImageTable->setFilter(filter.toStdString());
+	});
+
+	connect(loadImageTable, &FilterableTableView::activated, this, [=](const QModelIndex& index) {
+		auto addr = m_imageModel->item(index.row(), 0)->text().toULongLong(nullptr, 16);
+		loadImagesWithAddr({addr});
+	});
+
+	auto loadImageLayout = new QVBoxLayout;
+	loadImageLayout->addWidget(loadImageFilterEdit);
+	loadImageLayout->addWidget(loadImageTable);
+
+	auto buttonLayout = new QHBoxLayout;
+	buttonLayout->addWidget(loadImageButton);
+	buttonLayout->addWidget(refreshDataButton);
+	buttonLayout->setAlignment(Qt::AlignLeft);
+	loadImageLayout->addLayout(buttonLayout);
+
+	auto loadImageWidget = new QWidget;
+	loadImageWidget->setLayout(loadImageLayout);
+
+	loadImageTable->setModel(m_imageModel);
+
+	loadImageTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+
+	loadImageTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
+	loadImageTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+	loadImageTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
+
+	loadImageTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+	loadImageTable->setSelectionMode(QAbstractItemView::ExtendedSelection);
+
+	loadImageTable->setSortingEnabled(true);
+
+	loadImageTable->verticalHeader()->setVisible(false);
+
+	m_triageTabs->addTab(loadImageWidget, "Images");
+	m_triageTabs->setCanCloseTab(loadImageWidget, false);
+
+	return loadImageWidget; // For use as the default widget
+}
+
+
+void DSCTriageView::initSymbolTable()
+{
+	m_symbolTable = new SymbolTableView(this);
+
+	auto symbolFilterEdit = new FilterEdit(m_symbolTable);
+	connect(symbolFilterEdit, &FilterEdit::textChanged, [this](const QString& filter) {
+		m_symbolTable->setFilter(filter.toStdString());
+	});
+
+	// Apply custom column styling
+	m_symbolTable->setItemDelegateForColumn(0, new AddressColorDelegate(m_symbolTable));
+
+	auto loadSymbolImageButton = new QPushButton();
+	{
+		connect(loadSymbolImageButton, &QPushButton::clicked,
+				[this](bool) {
+					auto selected = m_symbolTable->selectionModel()->selectedRows();
+					std::vector<uint64_t> addresses;
+					for (const auto& row : selected)
+						addresses.push_back(row.data().toString().toULongLong(nullptr, 16));
+					loadImagesWithAddr(addresses);
+				});
+		loadSymbolImageButton->setText("Load Image");
+	} // loadImageButton
+
+	// Shows the current selected rows image name.
+	auto currentImageLabel = new QLabel(this); {
+		currentImageLabel->setText("");
+		currentImageLabel->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+	}
+
+	// Update the label whenever the selection changes.
+	connect(m_symbolTable->selectionModel(), &QItemSelectionModel::currentRowChanged, this,
+			[this, currentImageLabel](const QModelIndex &current, const QModelIndex &) {
+				auto symbol = m_symbolTable->getSymbolAtRow(current.row());
+				auto controller = SharedCacheController::GetController(*this->m_data);
+				if (!controller)
+					return;
+				auto image = controller->GetImageContaining(symbol.address);
+				if (image)
+					currentImageLabel->setText("Image: " + QString::fromStdString(image->name));
+				else
+					currentImageLabel->setText("");
+			});
+
+	auto symbolFooterLayout = new QHBoxLayout;
+	symbolFooterLayout->addWidget(loadSymbolImageButton);
+	symbolFooterLayout->addWidget(currentImageLabel);
+
+	symbolFooterLayout->setAlignment(Qt::AlignLeft);
+
+	auto symbolLayout = new QVBoxLayout;
+	symbolLayout->addWidget(symbolFilterEdit);
+	symbolLayout->addWidget(m_symbolTable);
+	symbolLayout->addLayout(symbolFooterLayout);
+
+	auto symbolWidget = new QWidget;
+	symbolWidget->setLayout(symbolLayout);
+
+	connect(m_symbolTable, &SymbolTableView::activated, this, [=](const QModelIndex& index){
+		auto symbol = m_symbolTable->getSymbolAtRow(index.row());
+		auto dialog = new QMessageBox(this);
+
+		auto controller = SharedCacheController::GetController(*this->m_data);
+		if (!controller)
+			return;
+
+		auto image = controller->GetImageContaining(symbol.address);
+		if (!image.has_value())
+			return;
+
+		dialog->setText("Load " + QString::fromStdString(image->name) + "?");
+		dialog->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+
+		connect(dialog, &QMessageBox::buttonClicked, this, [=](QAbstractButton* button)
+		{
+			if (button == dialog->button(QMessageBox::Yes))
+				loadImagesWithAddr({image->headerAddress});
+		});
+
+		dialog->exec();
+	});
+
+	m_triageTabs->addTab(symbolWidget, "Symbols");
+	m_triageTabs->setCanCloseTab(symbolWidget, false);
+}
+
+
+void DSCTriageView::initCacheInfoTables()
+{
+	auto cacheInfoWidget = new QWidget;
+
+	auto cacheInfoLayout = new QVBoxLayout(cacheInfoWidget);
+
+	auto cacheInfoSubwidget = new QWidget;
+
+	auto mappingTable = new FilterableTableView(cacheInfoSubwidget);
+	m_mappingModel = new QStandardItemModel(0, 4, mappingTable);
+	m_mappingModel->setHorizontalHeaderLabels({"Address", "Size", "File Address", "File Path"});
+
+	// Apply custom column styling
+	mappingTable->setItemDelegateForColumn(0, new AddressColorDelegate(mappingTable));
+
+	mappingTable->setModel(m_mappingModel);
+
+	mappingTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
+	mappingTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Fixed);
+	mappingTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
+	mappingTable->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Stretch);
+
+	mappingTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+
+	mappingTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+	mappingTable->setSelectionMode(QAbstractItemView::ExtendedSelection);
+
+	mappingTable->setSortingEnabled(true);
+
+	mappingTable->verticalHeader()->setVisible(false);
+
+	auto regionTable = new FilterableTableView(cacheInfoSubwidget);
+	m_regionModel = new QStandardItemModel(0, 4, regionTable);
+	m_regionModel->setHorizontalHeaderLabels({"Address", "Size", "Type", "Name"});
+
+	// Apply custom column styling
+	regionTable->setItemDelegateForColumn(0, new AddressColorDelegate(regionTable));
+
+	regionTable->setModel(m_regionModel);
+
+	regionTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
+	regionTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Fixed);
+	regionTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Interactive);
+	regionTable->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Stretch);
+
+	regionTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+
+	regionTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+	regionTable->setSelectionMode(QAbstractItemView::ExtendedSelection);
+
+	regionTable->setSortingEnabled(true);
+
+	regionTable->verticalHeader()->setVisible(false);
+
+	auto mappingLabel = new QLabel("Mappings");
+	auto mappingFilterEdit = new FilterEdit(mappingTable);
+	{
+		connect(mappingFilterEdit, &FilterEdit::textChanged, [mappingTable](const QString& filter) {
+			mappingTable->setFilter(filter.toStdString());
+		});
+	}
+
+	auto mappingHeaderLayout = new QHBoxLayout;
+	mappingHeaderLayout->addWidget(mappingLabel);
+	mappingHeaderLayout->addWidget(mappingFilterEdit);
+	mappingHeaderLayout->setAlignment(Qt::AlignJustify);
+	mappingHeaderLayout->setSpacing(30);
+
+	auto regionLabel = new QLabel("Regions");
+	auto regionFilterEdit = new FilterEdit(regionTable);
+	{
+		connect(regionFilterEdit, &FilterEdit::textChanged, [regionTable](const QString& filter) {
+			regionTable->setFilter(filter.toStdString());
+		});
+	}
+
+	auto regionHeaderLayout = new QHBoxLayout;
+	regionHeaderLayout->addWidget(regionLabel);
+	regionHeaderLayout->addWidget(regionFilterEdit);
+	regionHeaderLayout->setAlignment(Qt::AlignJustify);
+	regionHeaderLayout->setSpacing(30);
+
+	auto mappingLayout = new QVBoxLayout;
+	mappingLayout->addLayout(mappingHeaderLayout);
+	mappingLayout->addWidget(mappingTable);
+
+	auto regionLayout = new QVBoxLayout;
+	regionLayout->addLayout(regionHeaderLayout);
+	regionLayout->addWidget(regionTable);
+
+	cacheInfoLayout->addLayout(mappingLayout);
+	cacheInfoLayout->addLayout(regionLayout);
+
+	m_triageTabs->addTab(cacheInfoWidget, "Mappings & Regions");
+	m_triageTabs->setCanCloseTab(cacheInfoWidget, false);
+}
+
 
 QFont DSCTriageView::getFont()
 {
 	return getMonospaceFont(this);
 }
 
+
 BinaryViewRef DSCTriageView::getData()
 {
 	return m_data;
 }
+
 
 bool DSCTriageView::navigate(uint64_t offset)
 {
@@ -448,10 +462,12 @@ bool DSCTriageView::navigate(uint64_t offset)
 	return true;
 }
 
+
 uint64_t DSCTriageView::getCurrentOffset()
 {
 	return 0;
 }
+
 
 SelectionInfoForXref DSCTriageView::getSelectionForXref()
 {
@@ -461,11 +477,13 @@ SelectionInfoForXref DSCTriageView::getSelectionForXref()
 	return selection;
 }
 
+
 void DSCTriageView::OnAfterOpenFile(UIContext *context, FileContext *file, ViewFrame *frame)
 {
 	RefreshData();
 	UIContextNotification::OnAfterOpenFile(context, file, frame);
 }
+
 
 // Called when shared cache information has changed.
 void DSCTriageView::RefreshData()
@@ -516,6 +534,7 @@ void DSCTriageView::RefreshData()
 
 	m_symbolTable->populateSymbols(*m_data);
 }
+
 
 void DSCTriageView::setImageLoaded(const uint64_t imageHeaderAddr)
 {

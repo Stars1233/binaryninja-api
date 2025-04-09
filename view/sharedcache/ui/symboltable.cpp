@@ -102,7 +102,8 @@ void SymbolTableModel::setFilter(std::string text)
 			if (((std::string_view)symbol.name).find(m_filter) != std::string::npos)
 				m_modelSymbols.push_back(symbol);
 		m_modelSymbols.shrink_to_fit();
-	} else
+	}
+	else
 	{
 		m_modelSymbols = m_preparedSymbols;
 	}
@@ -112,7 +113,7 @@ void SymbolTableModel::setFilter(std::string text)
 
 
 SymbolTableView::SymbolTableView(QWidget* parent)
-	: m_model(new SymbolTableModel(this)) {
+	: QTableView(parent), m_model(new SymbolTableModel(this)) {
 
 	// Set up the filter model
 	setModel(m_model);

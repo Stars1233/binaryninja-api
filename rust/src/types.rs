@@ -771,7 +771,7 @@ impl Type {
         };
 
         let result = unsafe {
-            Self::ref_from_raw(BNNewTypeReference(BNCreateFunctionType(
+            Self::ref_from_raw(BNCreateFunctionType(
                 &mut owned_raw_return_type,
                 &mut raw_calling_convention,
                 raw_parameters.as_mut_ptr(),
@@ -785,7 +785,7 @@ impl Type {
                 &mut return_regs,
                 BNNameType::NoNameType,
                 &mut pure,
-            )))
+            ))
         };
 
         for raw_param in raw_parameters {

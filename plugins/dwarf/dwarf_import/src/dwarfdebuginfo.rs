@@ -581,7 +581,7 @@ impl DebugInfoBuilder {
         for function in self.functions() {
             // let calling_convention: Option<Ref<CallingConvention<CoreArchitecture>>> = None;
 
-            debug_info.add_function(DebugFunctionInfo::new(
+            debug_info.add_function(&DebugFunctionInfo::new(
                 function.full_name.clone(),
                 function.full_name.clone(), // TODO : This should eventually be changed, but the "full_name" should probably be the unsimplified version, and the "short_name" should be the simplified version...currently the symbols view shows the full version, so changing it here too makes it look bad in the UI
                 function.raw_name.clone(),

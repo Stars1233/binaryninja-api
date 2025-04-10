@@ -45,7 +45,7 @@ impl CustomDebugInfoParser for TestDebugInfoParser {
             vec![],
             vec![],
         );
-        debug_info.add_function(test_func);
+        debug_info.add_function(&test_func);
         true
     }
 }

@@ -770,16 +770,25 @@ impl DebugInfo {
     }
 
     /// Adds a function scoped under the current parser's name to the debug info
-    pub fn add_function(&self, new_func: DebugFunctionInfo) -> bool {
-        let short_name_bytes = new_func.short_name.map(|name| name.into_bytes_with_nul());
+    pub fn add_function(&self, new_func: &DebugFunctionInfo) -> bool {
+        let short_name_bytes = new_func
+            .short_name
+            .as_ref()
+            .map(|name| name.into_bytes_with_nul());
         let short_name = short_name_bytes
             .as_ref()
             .map_or(std::ptr::null_mut() as *mut _, |name| name.as_ptr() as _);
-        let full_name_bytes = new_func.full_name.map(|name| name.into_bytes_with_nul());
+        let full_name_bytes = new_func
+            .full_name
+            .as_ref()
+            .map(|name| name.into_bytes_with_nul());
         let full_name = full_name_bytes
             .as_ref()
             .map_or(std::ptr::null_mut() as *mut _, |name| name.as_ptr() as _);
-        let raw_name_bytes = new_func.raw_name.map(|name| name.into_bytes_with_nul());
+        let raw_name_bytes = new_func
+            .raw_name
+            .as_ref()
+            .map(|name| name.into_bytes_with_nul());
         let raw_name = raw_name_bytes
             .as_ref()
             .map_or(std::ptr::null_mut() as *mut _, |name| name.as_ptr() as _);
@@ -816,11 +825,11 @@ impl DebugInfo {
                     fullName: full_name,
                     rawName: raw_name,
                     address: new_func.address,
-                    type_: match new_func.type_ {
+                    type_: match &new_func.type_ {
                         Some(type_) => type_.handle,
                         _ => std::ptr::null_mut(),
                     },
-                    platform: match new_func.platform {
+                    platform: match &new_func.platform {
                         Some(platform) => platform.handle,
                         _ => std::ptr::null_mut(),
                     },

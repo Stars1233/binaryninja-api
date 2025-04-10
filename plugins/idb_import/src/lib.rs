@@ -269,7 +269,7 @@ fn parse_id0_section_info(
                 if bnty.is_none() {
                     error!("Unable to convert the function type at {addr:#x}",)
                 }
-                if !debug_info.add_function(DebugFunctionInfo::new(
+                if !debug_info.add_function(&DebugFunctionInfo::new(
                     None,
                     None,
                     label.map(str::to_string),

@@ -1686,7 +1686,7 @@ void PseudoRustFunction::GetExprText(const HighLevelILInstruction& instr, HighLe
 					srcPrecedence = LowUnaryOperatorPrecedence;
 
 				vector<InstructionTextToken> pointerTokens{};
-				if (AppendPointerTextToken(srcExpr, constant, pointerTokens, settings, DereferenceNonDataSymbols, srcPrecedence) == DataSymbolResult)
+				if (AppendPointerTextToken(instr, constant, pointerTokens, settings, DereferenceNonDataSymbols, srcPrecedence) == DataSymbolResult)
 				{
 					if (type && type->GetClass() == PointerTypeClass && instr.size != type->GetChildType()->GetWidth())
 					{

@@ -1614,7 +1614,7 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 				const auto constant = srcExpr.GetConstant<HLIL_CONST_PTR>();
 
 				vector<InstructionTextToken> pointerTokens{};
-				if (AppendPointerTextToken(srcExpr, constant, pointerTokens, settings, DereferenceNonDataSymbols, precedence) == DataSymbolResult)
+				if (AppendPointerTextToken(instr, constant, pointerTokens, settings, DereferenceNonDataSymbols, precedence) == DataSymbolResult)
 				{
 					const auto type = srcExpr.GetType();
 					if (type && type->GetClass() == PointerTypeClass && instr.size != type->GetChildType()->GetWidth())

@@ -145,8 +145,13 @@ bool SharedCacheViewType::IsTypeValidForData(BinaryView* data)
 SharedCacheView::SharedCacheView(const std::string& typeName, BinaryView* data, bool parseOnly) :
 	BinaryView(typeName, data->GetFile(), data), m_parseOnly(parseOnly)
 {
-	CreateLogger("SharedCache");
-	CreateLogger("SharedCache.ObjC");
+	// By default, we will assume the primary file name from the original file path.
+	// This is subject to be overridden via `LoadMetadata`.
+	m_primaryFileName = BaseFileName(GetFile()->GetOriginalFilename());
+
+	// Load up the metadata from the parent view (because our metadata is hilariously not available during view init)
+	if (const auto metadata = GetParentView()->QueryMetadata(VIEW_METADATA_KEY))
+		LoadMetadata(*metadata);
 }
 
 enum DSCPlatform
@@ -796,72 +801,25 @@ bool SharedCacheView::Init()
 	return InitController();
 }
 
-// Get the file path and file name for the primary cache entry.
-// We need this to support BNDB and projects.
-std::optional<std::pair<std::string, std::string>> GetPrimaryFileInfo(BinaryView& view)
-{
-	auto viewFile = view.GetFile();
-	// Add the primary file, for a regular view this is the original path.
-	auto primaryFilePath = viewFile->GetOriginalFilename();
-
-	// If we don't have an original file path, prompt the user to select one.
-	if (primaryFilePath.empty())
-	{
-		if (!GetOpenFileNameInput(primaryFilePath, "Please select the primary shared cache file"))
-			return std::nullopt;
-		// Update so next load we don't need to prompt the user.
-		viewFile->SetOriginalFilename(primaryFilePath);
-	}
-
-	// The primary file name for which we will use when adding files.
-	// NOTE: For projects the file name here is a UUID, we will need to traverse the project to get the name.
-	auto primaryFileName = BaseFileName(primaryFilePath);
-
-	// If we are a project file, we need to grab the actual name of the file.
-	if (auto primaryProjectFile = viewFile->GetProjectFile())
-	{
-		primaryFileName = primaryProjectFile->GetName();
-
-		// If we are a BNDB in a project, we need to change the `primaryFilePath` as well.
-		// Because our shared cache processing only works through our mapped file accessor we need to original
-		// file to map in, this can be relaxed if we ever support Binary Ninja file accessors.
-		if (primaryFileName.find(".bndb") != std::string::npos)
-		{
-			primaryFileName = primaryFileName.substr(0, primaryFileName.size() - 5);
-			for (const auto& pj : primaryProjectFile->GetProject()->GetFiles())
-			{
-				auto projectFilePath = pj->GetPathOnDisk();
-				auto projectFileName = pj->GetName();
-				if (projectFileName == primaryFileName || projectFilePath == primaryFilePath)
-				{
-					primaryFilePath = projectFilePath;
-					primaryFileName = projectFileName;
-					break;
-				}
-			}
-		}
-	}
-
-	return {{primaryFilePath, primaryFileName}};
-}
-
 bool SharedCacheView::InitController()
 {
-	auto primaryFileInfo = GetPrimaryFileInfo(*this);
-	if (!primaryFileInfo.has_value())
+	auto primaryFilePath = GetPrimaryFilePath();
+	if (!primaryFilePath.has_value())
+	{
+		m_logger->LogError("Failed to get primary file path!");
 		return false;
-	auto [primaryFilePath, primaryFileName] = primaryFileInfo.value();
-	std::string primaryFileDir = std::filesystem::path(primaryFilePath).parent_path().string();
+	}
+	std::string primaryFileDir = std::filesystem::path(*primaryFilePath).parent_path().string();
 
 	// OK, we have the primary shared cache file, now let's add the entries.
 	auto sharedCacheBuilder = SharedCacheBuilder(this);
-	sharedCacheBuilder.SetPrimaryFileName(primaryFileName);
+	sharedCacheBuilder.SetPrimaryFileName(m_primaryFileName);
 
 	// Add the primary file. If we fail log alert that the primary cache file is invalid.
 	// We process the primary cache entry first as it might be consulted in the processing of later entries.
-	if (!sharedCacheBuilder.AddFile(primaryFilePath, primaryFileName, CacheEntryType::Primary))
+	if (!sharedCacheBuilder.AddFile(*primaryFilePath, m_primaryFileName, CacheEntryType::Primary))
 	{
-		m_logger->LogAlertF("Failed to add primary cache file: '{}'", primaryFileName);
+		m_logger->LogAlertF("Failed to add primary cache file: '{}'", m_primaryFileName);
 		return false;
 	}
 
@@ -871,39 +829,35 @@ bool SharedCacheView::InitController()
 		sharedCacheBuilder.AddDirectory(primaryFileDir);
 		if (auto projectFile = GetFile()->GetProjectFile())
 			sharedCacheBuilder.AddProjectFolder(projectFile->GetFolder());
-		auto entryCount = sharedCacheBuilder.GetCache().GetEntries().size();
+		auto totalEntries = sharedCacheBuilder.GetCache().GetEntries().size();
 		auto endTime = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<double> elapsed = endTime - startTime;
-		m_logger->LogInfo("Processing %zu entries took %.3f seconds", entryCount, elapsed.count());
+		m_logger->LogInfo("Processing %zu entries took %.3f seconds", totalEntries, elapsed.count());
 
 		// If we can't store all of our files for this cache in the accessor cache we might run into issues, warn the user.
-		if (entryCount > FileAccessorCache::Global().GetCacheSize())
+		if (totalEntries > FileAccessorCache::Global().GetCacheSize())
 			m_logger->LogWarn("Cache contains more entries than the allowed number of opened file handles, this may impact reliability.");
 
-		// If we have less entries than the primary header subcache array count than let the user add another directory.
-		const auto& cacheEntries = sharedCacheBuilder.GetCache().GetEntries();
-		for (const auto& [_, entry] : cacheEntries)
+		// Verify that we are not missing any entries that were stored in the metadata.
+		// If we are that means we should alert the user that a previously associated cache entry is missing.
+		std::set<std::string> missingCacheEntries = m_secondaryFileNames;
+		uint64_t expectedFileCount = 1;
+		for (const auto& entry : sharedCacheBuilder.GetCache().GetEntries())
 		{
-			if (entry.GetType() != CacheEntryType::Primary)
-				continue;
-
-			auto requiredCount = entry.GetHeader().subCacheArrayCount;
-			if (requiredCount <= entryCount)
-				continue;
-
-			m_logger->LogWarnF("Opening with {} entries when shared cache header says there are {}, likely missing files, prompting user to select a directory containing the rest.", entryCount, requiredCount);
-			// We don't have enough entries, prompt the user to select a directory with the rest.
-			std::string supplementaryDir;
-			if (GetDirectoryNameInput(supplementaryDir, "Directory with associated shared cache files"))
-			{
-				auto additionalEntries = sharedCacheBuilder.AddDirectory(primaryFileDir);
-				m_logger->LogInfoF("Processed an additional {} entries...", additionalEntries);
-				entryCount += additionalEntries;
-				// If we are still below the count, just let the user know and continue.
-				if (entryCount < requiredCount)
-					m_logger->LogWarnF("Provided entry files still below the reported entry count in the shared cache header. Some functionality may be lost.");
-			}
+			missingCacheEntries.erase(entry.GetFileName());
+			LogSecondaryFileName(entry.GetFileName());
+			// Set the number of sub-caches so we can verify it later.
+			if (entry.GetType() == CacheEntryType::Primary)
+				expectedFileCount += entry.GetHeader().subCacheArrayCount;
 		}
+		for (const auto& missingFileName: missingCacheEntries)
+			m_logger->LogErrorF("Secondary cache file '{}' is missing!", missingFileName);
+
+		// Verify that we have the required amount of sub-caches, if not alert the user.
+		if (expectedFileCount == 1)
+			m_logger->LogAlertF("Primary cache file '{}' has no sub-caches! You are likely opening a secondary cache file instead of a primary one.", m_primaryFileName);
+		else if (totalEntries < expectedFileCount)
+			m_logger->LogAlertF("Insufficient cache files in dyld header ({}/{}), loading as partial shared cache...", totalEntries, expectedFileCount);
 	}
 
 	auto sharedCache = sharedCacheBuilder.Finalize();
@@ -986,4 +940,108 @@ bool SharedCacheView::InitController()
 	}
 
 	return true;
+}
+
+void SharedCacheView::SetPrimaryFileName(std::string primaryFileName)
+{
+	m_primaryFileName = std::move(primaryFileName);
+	GetParentView()->StoreMetadata(VIEW_METADATA_KEY, GetMetadata());
+}
+
+void SharedCacheView::LogSecondaryFileName(std::string secondaryFileName)
+{
+	m_secondaryFileNames.insert(std::move(secondaryFileName));
+	GetParentView()->StoreMetadata(VIEW_METADATA_KEY, GetMetadata());
+}
+
+std::optional<std::string> SharedCacheView::GetPrimaryFilePath()
+{
+	auto viewFile = GetFile();
+	// 1. Try and get the primary file path using `GetOriginalFilename`.
+	auto primaryFilePath = viewFile->GetOriginalFilename();
+
+	// 2. If the original file name is not a usable file path then prompt the user to select one.
+	if (primaryFilePath.empty() || !std::filesystem::exists(primaryFilePath))
+	{
+		if (!GetOpenFileNameInput(primaryFilePath, "Please select the primary shared cache file"))
+			return std::nullopt;
+		SetPrimaryFileName(BaseFileName(primaryFilePath));
+		// Update so next load we don't need to prompt the user.
+		viewFile->SetOriginalFilename(primaryFilePath);
+	}
+
+	// 3. If we are not in a project, we can go ahead and return the file path, it does not need to be resolved from project.
+	auto primaryProjectFile = viewFile->GetProjectFile();
+	if (!primaryProjectFile)
+		return primaryFilePath;
+
+	auto project = primaryProjectFile->GetProject();
+	auto primaryProjectFileName = primaryProjectFile->GetName();
+	auto primaryProjectFilePath = primaryProjectFile->GetPathOnDisk();
+
+	// 4. If we are not a BNDB project file than we can return the path on disk as we are the primary file.
+	if (primaryProjectFileName.find(".bndb") == std::string::npos)
+	{
+		// Set the primary file name to the project file name so on subsequent loads we can pick it up.
+		SetPrimaryFileName(primaryProjectFileName);
+		return primaryProjectFilePath;
+	}
+
+	// 5. If we are a BNDB project file the path must be resolved from the file name.
+	auto primaryProjectFileFolder = primaryProjectFile->GetFolder();
+	for (const auto& pj : project->GetFiles())
+	{
+		// Skip files not in the same folder.
+		if (!IsSameFolder(pj->GetFolder(), primaryProjectFileFolder))
+			continue;
+		// We are looking for the file with file name we stored in metadata.
+		if (pj->GetName() != m_primaryFileName)
+			continue;
+		return pj->GetPathOnDisk();
+	}
+
+	// 6. If we fail to resolve the project file given the `m_primaryFileName` than we fall back to asking the user.
+	std::string newPrimaryFilePath;
+	if (!GetOpenFileNameInput(newPrimaryFilePath, "Please select the primary shared cache file"))
+		return std::nullopt;
+
+	// TODO: We likely want to verify that the project file exists in the same directory as the BNDB.
+	// TODO: We currently require the database to exist in the same directory as the files.
+	// Update the primary file name for later loads, otherwise we would keep prompting to select a file.
+	primaryProjectFile = project->GetFileByPathOnDisk(newPrimaryFilePath);
+	SetPrimaryFileName(primaryProjectFile->GetName());
+	return newPrimaryFilePath;
+}
+
+Ref<Metadata> SharedCacheView::GetMetadata() const
+{
+	std::map<std::string, Ref<Metadata>> viewMeta;
+
+	std::vector<std::string> secondaryFileNames;
+	secondaryFileNames.reserve(m_secondaryFileNames.size());
+	for (const auto& secondaryFileName : m_secondaryFileNames)
+		secondaryFileNames.push_back(secondaryFileName);
+
+	// TODO: Refactor this to just "cache files" which is a new struct of:
+	// TODO: cache file name
+	// TODO: cache file UUID
+	// TODO: cache file entry type?
+	viewMeta["secondaryFileNames"] = new Metadata(secondaryFileNames);
+	viewMeta["primaryFileName"] = new Metadata(m_primaryFileName);
+
+	return new Metadata(viewMeta);
+}
+
+void SharedCacheView::LoadMetadata(const Metadata &metadata)
+{
+	auto viewMeta = metadata.GetKeyValueStore();
+	if (viewMeta.find("secondaryFileNames") != viewMeta.end())
+	{
+		const auto secondaryFileNames = viewMeta["secondaryFileNames"]->GetStringList();
+		for (const auto& secondaryFileName : secondaryFileNames)
+			m_secondaryFileNames.insert(secondaryFileName);
+	}
+
+	if (viewMeta.find("primaryFileName") != viewMeta.end())
+		m_primaryFileName = viewMeta["primaryFileName"]->GetString();
 }

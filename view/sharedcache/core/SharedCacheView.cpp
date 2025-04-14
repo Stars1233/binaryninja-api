@@ -811,6 +811,19 @@ bool SharedCacheView::InitController()
 	}
 	std::string primaryFileDir = std::filesystem::path(*primaryFilePath).parent_path().string();
 
+	// Get the primary project file from the current files project.
+	// This is required to allow selecting a primary file in a different directory. Otherwise, we search the current database directory.
+	Ref<ProjectFile> primaryProjectFile = nullptr;
+	auto currentProjectFile = GetFile()->GetProjectFile();
+	if (currentProjectFile)
+		primaryProjectFile = currentProjectFile->GetProject()->GetFileByPathOnDisk(*primaryFilePath);
+
+	if (!IsSameFolderForFile(primaryProjectFile, currentProjectFile))
+	{
+		// TODO: Remove this restriction using stored cache UUID's and a fast project file search.
+		m_logger->LogWarn("Because the primary file is in a different project folder you will need to select it on every open, consider moving the database file into the same folder.");
+	}
+
 	// OK, we have the primary shared cache file, now let's add the entries.
 	auto sharedCacheBuilder = SharedCacheBuilder(this);
 	sharedCacheBuilder.SetPrimaryFileName(m_primaryFileName);
@@ -827,8 +840,8 @@ bool SharedCacheView::InitController()
 		// After this we should have all the mappings available as well.
 		auto startTime = std::chrono::high_resolution_clock::now();
 		sharedCacheBuilder.AddDirectory(primaryFileDir);
-		if (auto projectFile = GetFile()->GetProjectFile())
-			sharedCacheBuilder.AddProjectFolder(projectFile->GetFolder());
+		if (primaryProjectFile)
+			sharedCacheBuilder.AddProjectFolder(primaryProjectFile->GetFolder());
 		auto totalEntries = sharedCacheBuilder.GetCache().GetEntries().size();
 		auto endTime = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<double> elapsed = endTime - startTime;

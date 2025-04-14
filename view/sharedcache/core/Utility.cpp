@@ -137,6 +137,15 @@ std::string BaseFileName(const std::string& path)
 	return path;
 }
 
+bool IsSameFolderForFile(Ref<ProjectFile> a, Ref<ProjectFile> b)
+{
+	if (!a && !b)
+		return true;
+	if (a && b)
+		return IsSameFolder(a->GetFolder(), b->GetFolder());
+	return false;
+}
+
 bool IsSameFolder(Ref<ProjectFolder> a, Ref<ProjectFolder> b)
 {
 	if (!a && !b)

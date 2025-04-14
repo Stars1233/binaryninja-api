@@ -134,6 +134,7 @@ BNSharedCacheEntry EntryToApi(const CacheEntry& entry)
 {
 	BNSharedCacheEntry apiEntry;
 	apiEntry.path = BNAllocString(entry.GetFilePath().c_str());
+	apiEntry.name = BNAllocString(entry.GetFileName().c_str());
 	apiEntry.entryType = EntryTypeToApi(entry.GetType());
 	const auto& mappings = entry.GetMappings();
 	apiEntry.mappingCount = mappings.size();
@@ -408,15 +409,15 @@ extern "C"
 		const auto& entries = controller->object->GetCache().GetEntries();
 		*count = entries.size();
 		BNSharedCacheEntry* apiEntries = new BNSharedCacheEntry[*count];
-		size_t idx = 0;
-		for (const auto& [_, entry] : entries)
-			apiEntries[idx++] = EntryToApi(entry);
+		for (size_t i = 0; i < *count; i++)
+			apiEntries[i] = EntryToApi(entries[i]);
 		return apiEntries;
 	}
 
 	void BNSharedCacheFreeEntry(BNSharedCacheEntry entry)
 	{
 		BNFreeString(entry.path);
+		BNFreeString(entry.name);
 		delete[] entry.mappings;
 	}
 

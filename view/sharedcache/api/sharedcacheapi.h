@@ -278,6 +278,7 @@ namespace SharedCacheAPI {
 	struct CacheEntry
 	{
 		std::string path;
+		std::string name;
 		BNSharedCacheEntryType entryType;
 		std::vector<CacheMappingInfo> mappings;
 	};

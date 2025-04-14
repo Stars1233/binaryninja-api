@@ -78,6 +78,7 @@ BNSharedCacheEntry EntryToApi(const CacheEntry &entry)
 {
 	BNSharedCacheEntry apiEntry {};
 	apiEntry.path = BNAllocString(entry.path.c_str());
+	apiEntry.name = BNAllocString(entry.name.c_str());
 	apiEntry.entryType = entry.entryType;
 	const auto &mappings = entry.mappings;
 	apiEntry.mappingCount = mappings.size();
@@ -92,6 +93,7 @@ CacheEntry EntryFromApi(BNSharedCacheEntry apiEntry)
 {
 	CacheEntry entry {};
 	entry.path = apiEntry.path;
+	entry.name = apiEntry.name;
 	entry.entryType = apiEntry.entryType;
 	entry.mappings.reserve(apiEntry.mappingCount);
 	for (size_t i = 0; i < apiEntry.mappingCount; i++)

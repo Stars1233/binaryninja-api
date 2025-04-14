@@ -355,8 +355,8 @@ void DSCTriageView::initCacheInfoTables()
 	auto cacheInfoSubwidget = new QWidget;
 
 	auto mappingTable = new FilterableTableView(cacheInfoSubwidget);
-	m_mappingModel = new QStandardItemModel(0, 4, mappingTable);
-	m_mappingModel->setHorizontalHeaderLabels({"Address", "Size", "File Address", "File Path"});
+	m_mappingModel = new QStandardItemModel(0, 5, mappingTable);
+	m_mappingModel->setHorizontalHeaderLabels({"Address", "Size", "File Address", "File Name", "File Path"});
 
 	// Apply custom column styling
 	mappingTable->setItemDelegateForColumn(0, new AddressColorDelegate(mappingTable));
@@ -366,7 +366,8 @@ void DSCTriageView::initCacheInfoTables()
 	mappingTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
 	mappingTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Fixed);
 	mappingTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
-	mappingTable->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Stretch);
+	mappingTable->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
+	mappingTable->horizontalHeader()->setSectionResizeMode(4, QHeaderView::Stretch);
 
 	mappingTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
@@ -527,6 +528,7 @@ void DSCTriageView::RefreshData()
 				new QStandardItem(QString("0x%1").arg(mapping.vmAddress, 0, 16)),
 				new QStandardItem(QString("0x%1").arg(mapping.size, 0, 16)),
 				new QStandardItem(QString("0x%1").arg(mapping.fileOffset, 0, 16)),
+				new QStandardItem(QString::fromStdString(entry.name)),
 				new QStandardItem(QString::fromStdString(entry.path))
 			});
 		}

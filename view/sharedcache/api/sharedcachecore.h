@@ -97,6 +97,7 @@ extern "C"
 
 	typedef struct BNSharedCacheEntry {
 		char* path;
+		char* name;
 		BNSharedCacheEntryType entryType;
 		size_t mappingCount;
 		BNSharedCacheMappingInfo* mappings;

@@ -207,7 +207,7 @@ QWidget* DSCTriageView::initImageTable()
 			addresses.push_back(idx.data().toString().toULongLong(nullptr, 16));
 		loadImagesWithAddr(addresses);
 	});
-	loadImageButton->setText("Load Selected");
+	loadImageButton->setText(" Load Selected ");
 
 	auto refreshDataButton = new QPushButton();
 	{

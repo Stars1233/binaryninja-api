@@ -266,7 +266,7 @@ QWidget* KCTriageView::initImageTable()
 	m_imageTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
 	m_imageTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
-	m_imageTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+	m_imageTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Interactive);
 	m_imageTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
 
 	m_imageTable->setSelectionBehavior(QAbstractItemView::SelectRows);

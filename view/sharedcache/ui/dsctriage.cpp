@@ -262,7 +262,7 @@ QWidget* DSCTriageView::initImageTable()
 
 	m_imageTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
-	m_imageTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
+	m_imageTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
 	m_imageTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
 	m_imageTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
 
@@ -368,29 +368,30 @@ void DSCTriageView::initCacheInfoTables()
 
 	auto cacheInfoSubwidget = new QWidget;
 
-	auto mappingTable = new FilterableTableView(cacheInfoSubwidget);
-	m_mappingModel = new QStandardItemModel(0, 5, mappingTable);
+	m_mappingTable = new FilterableTableView(cacheInfoSubwidget);
+	m_mappingModel = new QStandardItemModel(0, 5, m_mappingTable);
 	m_mappingModel->setHorizontalHeaderLabels({"Address", "Size", "File Address", "File Name", "File Path"});
 
 	// Apply custom column styling
-	mappingTable->setItemDelegateForColumn(0, new AddressColorDelegate(mappingTable));
+	m_mappingTable->setItemDelegateForColumn(0, new AddressColorDelegate(m_mappingTable));
 
-	mappingTable->setModel(m_mappingModel);
+	m_mappingTable->setModel(m_mappingModel);
 
-	mappingTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
-	mappingTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Fixed);
-	mappingTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
-	mappingTable->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
-	mappingTable->horizontalHeader()->setSectionResizeMode(4, QHeaderView::Stretch);
+	m_mappingTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+	m_mappingTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+	m_mappingTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
+	m_mappingTable->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Interactive);
+	m_mappingTable->horizontalHeader()->resizeSection(3, 300);
+	m_mappingTable->horizontalHeader()->setSectionResizeMode(4, QHeaderView::Stretch);
 
-	mappingTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+	m_mappingTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
-	mappingTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-	mappingTable->setSelectionMode(QAbstractItemView::ExtendedSelection);
+	m_mappingTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+	m_mappingTable->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
-	mappingTable->setSortingEnabled(true);
+	m_mappingTable->setSortingEnabled(true);
 
-	mappingTable->verticalHeader()->setVisible(false);
+	m_mappingTable->verticalHeader()->setVisible(false);
 
 	auto regionTable = new FilterableTableView(cacheInfoSubwidget);
 	m_regionModel = new QStandardItemModel(0, 4, regionTable);
@@ -401,9 +402,9 @@ void DSCTriageView::initCacheInfoTables()
 
 	regionTable->setModel(m_regionModel);
 
-	regionTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
-	regionTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Fixed);
-	regionTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Interactive);
+	regionTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+	regionTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+	regionTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
 	regionTable->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Stretch);
 
 	regionTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -416,12 +417,10 @@ void DSCTriageView::initCacheInfoTables()
 	regionTable->verticalHeader()->setVisible(false);
 
 	auto mappingLabel = new QLabel("Mappings");
-	auto mappingFilterEdit = new FilterEdit(mappingTable);
-	{
-		connect(mappingFilterEdit, &FilterEdit::textChanged, [mappingTable](const QString& filter) {
-			mappingTable->setFilter(filter.toStdString());
-		});
-	}
+	auto mappingFilterEdit = new FilterEdit(m_mappingTable);
+	connect(mappingFilterEdit, &FilterEdit::textChanged, [this](const QString& filter) {
+		m_mappingTable->setFilter(filter.toStdString());
+	});
 
 	auto mappingHeaderLayout = new QHBoxLayout;
 	mappingHeaderLayout->addWidget(mappingLabel);
@@ -431,11 +430,9 @@ void DSCTriageView::initCacheInfoTables()
 
 	auto regionLabel = new QLabel("Regions");
 	auto regionFilterEdit = new FilterEdit(regionTable);
-	{
-		connect(regionFilterEdit, &FilterEdit::textChanged, [regionTable](const QString& filter) {
-			regionTable->setFilter(filter.toStdString());
-		});
-	}
+	connect(regionFilterEdit, &FilterEdit::textChanged, [regionTable](const QString& filter) {
+		regionTable->setFilter(filter.toStdString());
+	});
 
 	auto regionHeaderLayout = new QHBoxLayout;
 	regionHeaderLayout->addWidget(regionLabel);
@@ -445,7 +442,7 @@ void DSCTriageView::initCacheInfoTables()
 
 	auto mappingLayout = new QVBoxLayout;
 	mappingLayout->addLayout(mappingHeaderLayout);
-	mappingLayout->addWidget(mappingTable);
+	mappingLayout->addWidget(m_mappingTable);
 
 	auto regionLayout = new QVBoxLayout;
 	regionLayout->addLayout(regionHeaderLayout);

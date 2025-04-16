@@ -188,6 +188,7 @@ class DSCTriageView : public QWidget, public View, public UIContextNotification
 
 	SymbolTableView* m_symbolTable;
 
+	FilterableTableView* m_mappingTable;
 	QStandardItemModel* m_mappingModel;
 
 	QStandardItemModel* m_regionModel;

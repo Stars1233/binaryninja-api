@@ -95,6 +95,7 @@ nav:
           - Objective-C: 'guide/objectivec.md'
           - Firmware Ninja: 'guide/firmwareninja.md'
           - Shared Cache: 'guide/sharedcache.md'
+          - Kernel Cache: 'guide/kernelcache.md'
         - Debugger:
             - Overview: 'guide/debugger/index.md'
             - Remote Debugging: 'guide/debugger/remote-debugging.md'

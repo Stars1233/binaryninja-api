@@ -50,7 +50,11 @@ void VFTAnalysis(const Ref<AnalysisContext>& analysisContext)
 extern "C" {
 	BN_DECLARE_CORE_ABI_VERSION
 
-	BINARYNINJAPLUGIN bool CorePluginInit()
+#ifdef DEMO_EDITION
+		bool RTTIPluginInit()
+#else
+		BINARYNINJAPLUGIN bool CorePluginInit()
+#endif
 	{
 		// TODO: In the future we will have a function level workflow which:
 		// TODO:	1. Uses MSVC metadata to identify if a function is apart of a VFT

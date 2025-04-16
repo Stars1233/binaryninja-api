@@ -85,6 +85,7 @@ void RenderLayer::Register(RenderLayer* layer, BNRenderLayerDefaultEnableState e
 	cb.applyToLinearViewObject = ApplyToLinearViewObjectCallback;
 	cb.freeLines = FreeLinesCallback;
 	layer->m_object = BNRegisterRenderLayer(layer->m_nameForRegister.c_str(), &cb, enableState);
+	layer->AddRefForRegistration();
 	g_registeredInstances[layer->m_object] = layer;
 }
 

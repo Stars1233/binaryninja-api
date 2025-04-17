@@ -39,7 +39,7 @@ The local shared cache on macOS is located at `/System/Volumes/Preboot/Cryptexes
 
 Binary Ninja currently only supports `dyld_shared_cache` files that have been extracted into a flat directory, so you will need to extract the IPSW (if there is one) first. After extraction, we expect files similar to the following:
 
-  - `your_project_folder`
+  - `your_directory`
     - `dyld_shared_cache_arm64` (**Primary**)
     - `dyld_shared_cache_arm64.01` (Secondary, optional)
     - `dyld_shared_cache_arm64.02` (Secondary, optional)

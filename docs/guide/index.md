@@ -890,6 +890,9 @@ The scripting console is not a full IDE, but it has several convenience features
 - `<CTRL>-R` allows for reverse-searching your console history
 - `<UP>` and `<DOWN>` can be used to view the command-history
 
+???+ Tip "Tip"
+    All scripting consoles share a single python instance. This is an intentional design choice and has the following benefits: you can create variables in one tab/window and then access it in another. The downside is that if you run a long-running script for example, the console will still be blocked in other tabs and windows. This is a known trade-off and not expected to change.
+
 ### Magic Console Variables
 
 The interactive python prompt also has several built-in "magic" functions and variables. Some are read-only, and some are writable to provide convenient interactivity between the UI and console:

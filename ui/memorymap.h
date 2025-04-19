@@ -262,6 +262,7 @@ class BINARYNINJAUIAPI MemoryMapView : public QWidget, public View
 
 public:
 	MemoryMapView(BinaryViewRef data, MemoryMapContainer* container);
+	virtual ~MemoryMapView();
 
 	BinaryViewRef getData() override { return m_data; }
 	uint64_t getCurrentOffset() override;

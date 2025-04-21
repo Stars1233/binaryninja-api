@@ -48,7 +48,7 @@ bool BaseAddressDetection::DetectBaseAddress(BaseAddressDetectionSettings& setti
         settings.MaxPointersPerCluster,
     };
 
-    return BNDetectBaseAddress(m_object, bnSettings);
+    return BNDetectBaseAddress(m_object, &bnSettings);
 }
 
 

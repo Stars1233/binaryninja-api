@@ -2166,6 +2166,11 @@ impl Function {
         unsafe { BNUnsplitVariable(self.handle, &raw_var) }
     }
 
+    /// Causes this function to be analyzed if it's out of date. This function does not wait for the analysis to finish.
+    pub fn analyze(&self) {
+        unsafe { BNAnalyzeFunction(self.handle) }
+    }
+
     /// Causes this function to be reanalyzed. This function does not wait for the analysis to finish.
     ///
     /// * `update_type` - Desired update type

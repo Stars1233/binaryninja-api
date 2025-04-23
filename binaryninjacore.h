@@ -37,7 +37,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 103
+#define BN_CURRENT_CORE_ABI_VERSION 104
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -5252,6 +5252,7 @@ extern "C"
 	BINARYNINJACOREAPI bool BNLookupImportedTypePlatform(BNBinaryView* view, const BNQualifiedName* typeName, BNPlatform** platform, BNQualifiedName* resultName);
 
 	BINARYNINJACOREAPI void BNReanalyzeAllFunctions(BNBinaryView* view);
+	BINARYNINJACOREAPI void BNAnalyzeFunction(BNFunction* func);
 	BINARYNINJACOREAPI void BNReanalyzeFunction(BNFunction* func, BNFunctionUpdateType type);
 	BINARYNINJACOREAPI void BNMarkUpdatesRequired(BNFunction* func, BNFunctionUpdateType type);
 	BINARYNINJACOREAPI void BNMarkCallerUpdatesRequired(BNFunction* func, BNFunctionUpdateType type);

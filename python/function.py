@@ -2454,6 +2454,14 @@ class Function:
 		type_id = core.BNGetIntegerConstantDisplayTypeEnumerationType(self.handle, arch.handle, instr_addr, value, operand)
 		return display_type, type_id
 
+	def analyze(self) -> None:
+		"""
+		``analyze`` causes this function to be analyzed if it's out of date. This function does not wait for the analysis to finish.
+
+		:rtype: None
+		"""
+		core.BNAnalyzeFunction(self.handle)
+
 	def reanalyze(self, update_type: FunctionUpdateType = FunctionUpdateType.UserFunctionUpdate) -> None:
 		"""
 		``reanalyze`` causes this function to be reanalyzed. This function does not wait for the analysis to finish.

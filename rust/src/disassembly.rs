@@ -142,6 +142,14 @@ impl DisassemblyTextLine {
             ..Default::default()
         }
     }
+
+    pub fn new_with_addr(tokens: Vec<InstructionTextToken>, addr: u64) -> Self {
+        Self {
+            address: addr,
+            tokens,
+            ..Default::default()
+        }
+    }
 }
 
 impl From<&str> for DisassemblyTextLine {
@@ -308,6 +316,10 @@ impl InstructionTextToken {
         }
     }
 
+    /// Construct a new token **without** an associated address.
+    ///
+    /// You most likely want to call [`InstructionTextToken::new_with_address`], while also adjusting
+    /// the [`InstructionTextToken::expr_index`] field where applicable.
     pub fn new(text: impl Into<String>, kind: InstructionTextTokenKind) -> Self {
         Self {
             address: 0,
@@ -493,13 +505,13 @@ pub enum InstructionTextTokenKind {
         hash: Option<u64>,
     },
     CodeSymbol {
-        // TODO: Value of what?
+        // Target address of the symbol
         value: u64,
         // TODO: Size of what?
         size: usize, // TODO: Operand?
     },
     DataSymbol {
-        // TODO: Value of what?
+        // Target address of the symbol
         value: u64,
         // TODO: Size of what?
         size: usize, // TODO: Operand?

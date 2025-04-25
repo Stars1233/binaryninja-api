@@ -39,6 +39,7 @@ std::string RemoveItaniumPrefix(std::string &name)
 {
     // Remove numerical prefixes.
     // TODO: We might want to use the numbers for figuring out the class info.
+    // TODO: NSt6locale5facetE is not demangled. N and St seem to be prefixes.
     while (!name.empty() && std::isdigit(name[0]))
         name = name.substr(1);
     return name;

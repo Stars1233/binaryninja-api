@@ -321,10 +321,18 @@ std::optional<TypeInfoVariant> ReadTypeInfoVariant(BinaryView *view, uint64_t ob
         uint64_t typeInfoAddr = reader.ReadPointer();
         if (!view->IsValidOffset(typeInfoAddr))
             return std::nullopt;
-        auto vftSym = view->GetSymbolByAddress(typeInfoAddr);
-        if (vftSym == nullptr)
-            return std::nullopt;
-        baseSym = vftSym;
+        auto typeInfoSym = view->GetSymbolByAddress(typeInfoAddr);
+        if (typeInfoSym == nullptr)
+        {
+            // For stripped binaries there will be no symbol, contruct a type info object and check.
+            auto rootTypeInfo = GetTypeInfo(view, typeInfoAddr);
+            if (!rootTypeInfo.has_value())
+                return std::nullopt;
+            if (rootTypeInfo->type_name.find("__cxxabiv1") == std::string::npos)
+                return std::nullopt;
+            typeInfoSym = new Symbol(DataSymbol, fmt::format("_typeinfo_for_{}", rootTypeInfo->type_name), typeInfoAddr);
+        }
+        baseSym = typeInfoSym;
     }
 
     auto baseSymName = baseSym->GetShortName();

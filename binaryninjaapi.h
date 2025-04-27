@@ -10113,16 +10113,44 @@ namespace BinaryNinja {
 		bool PostRequest(const std::string& command);
 
 	public:
+
+		// TODO: Convert to BNWorkflowMachineStatus structure
+		struct Status
+		{
+			std::string state = "Invalid";
+			std::string activity;
+			bool localLogEnabled;
+			bool globalLogEnabled;
+		};
+
 		WorkflowMachine(Ref<BinaryView> view);
 		WorkflowMachine(Ref<Function> function);
 
 		bool PostJsonRequest(const std::string& request);
 
-		/*! Start the workflow WorkflowMachine
+		void ShowTopology();
+
+		WorkflowMachine::Status GetStatus();
+
+		/*! Resume the workflow machine
+
+			Resumes the workflow machine for the given BinaryView or Function.
+			\return true if the command is accepted, false otherwise.
+		*/
+		bool Resume();
+
+		/*! Start the workflow Machine
 			Starts the workflow machine for the given BinaryView or Function.
 			\return true if the command is accepted, false otherwise.
 		*/
 		bool Run();
+
+		/*! Configure the workflow machine
+
+			Configures the workflow machine.
+			\return true if the command is accepted, false otherwise.
+		*/
+		bool Configure();
 
 		/*! Halt the workflow machine
 
@@ -10160,12 +10188,6 @@ namespace BinaryNinja {
 			\return true if the command is accepted, false otherwise.
 		*/
 		bool Step();
-
-		// TODO: Add new BNWorkflowMachineStatus structure and cooresponding API
-		// BNWorkflowMachineStatus GetStatus();
-		// TODO remove the following APIs once the above is implemented
-		std::string GetState();
-		std::pair<bool, bool> GetLogStatus();
 
 		bool SetLogEnabled(bool enable, bool global = false);
 

@@ -85,7 +85,7 @@ extern "C" {
 				"runOnce": true,
 				"auto": {}
 			}
-		})~", &VFTAnalysis);
+		})~", &VFTAnalysis, {"core.module.update"});
 
 		// Run rtti before debug info is applied.
 		rttiMetaWorkflow->Insert("core.module.loadDebugInfo", "analysis.rtti.rttiAnalysis");

@@ -175,9 +175,6 @@ bool SharedCacheView::Init()
 
 	m_logger = new Logger("SharedCache.View", GetFile()->GetSessionId());
 
-	uint32_t platform;
-	// NOTE: This entry only exists on ios 11 and later, older versions will just assume iOS.
-	GetParentView()->Read(&platform, 0xd8, 4);
 	char magic[17];
 	GetParentView()->Read(&magic, 0, 16);
 	magic[16] = 0;
@@ -197,8 +194,19 @@ bool SharedCacheView::Init()
 		return false;
 	}
 
-	// TODO: Do we want to add any warnings about platform support here?
-	// TODO: Do we still consider macos experimental?
+	// Use the value of mappingOffset as an upper bound for the size of the
+	// header to avoid misinterpreting bytes outside of the header.
+	uint32_t mappingOffset;
+	GetParentView()->Read(&mappingOffset, 0x10, 4);
+
+	uint32_t platform;
+	if (mappingOffset >= 0xd8 + 4) {
+		GetParentView()->Read(&platform, 0xd8, 4);
+	} else {
+		m_logger->LogWarn("Old header without platform field: Defaulting to iOS");
+		platform = DSCPlatformiOS;
+	}
+
 	switch (platform)
 	{
 	case DSCPlatformMacOS:
@@ -219,9 +227,8 @@ bool SharedCacheView::Init()
 		m_logger->LogError("Unsupported platform: %d", platform);
 		return false;
 	default:
-		m_logger->LogWarn("Unknown platform: %d selecting iOS...", platform);
-		os = "ios";
-		break;
+		m_logger->LogWarn("Unknown platform: %d", platform);
+		return false;
 	}
 
 	SetDefaultPlatform(Platform::GetByName(os + "-" + arch));

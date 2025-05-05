@@ -713,11 +713,11 @@ class VariableNameAndType(CoreVariable):
 	@classmethod
 	def from_identifier(cls, identifier, name, type):
 		var = core.BNFromVariableIdentifier(identifier)
-		return cls(name, type, var.type, var.index, var.storage)
+		return cls(var.type, var.index, var.storage, name, type)
 
 	@classmethod
 	def from_core_variable(cls, var, name, type):
-		return cls(name, type, var.type, var.index, var.storage)
+		return cls(var.type, var.index, var.storage, name, type)
 
 
 class Variable(CoreVariable):

@@ -74,10 +74,17 @@ DSCTriageView::~DSCTriageView()
 
 
 void DSCTriageView::loadImagesWithAddr(const std::vector<uint64_t>& addresses, bool includeDependencies) {
-	auto controller = SharedCacheController::GetController(*this->m_data);
+	auto controller = SharedCacheController::GetController(*m_data);
 	if (!controller)
 		return;
 
+	// TODO: NOTE ABOUT `IsImageLoaded` BEING COMMENTED OUT. PLEASE READ.
+	// TODO: Because commiting undo actions will use main thread to synchronize we must not be holding any locks
+	// TODO: This can really only ever be removed if:
+	// TODO:	1. we can set a user function type without creating an undo action, basically like the rest of shared cache
+	// TODo:		use an auto function or some hack to get the user function but without the undo action.
+	// TODO:	2. we can use the undo buffer from any thread and not just the main thread
+	// TODO: I have exhausted all other options, this is a serious issue we should address soon.
 	typedef std::vector<CacheImage> ImageList;
 	ImageList images = {};
 	for (const uint64_t& addr : addresses)
@@ -86,8 +93,8 @@ void DSCTriageView::loadImagesWithAddr(const std::vector<uint64_t>& addresses, b
 		if (image.has_value())
 		{
 			// Only try to load if we have not already.
-			if (!controller->IsImageLoaded(*image))
-				images.emplace_back(*image);
+			// if (!controller->IsImageLoaded(*image))
+			images.emplace_back(*image);
 
 			// TODO: We currently only add direct dependencies, may want to make the depth configurable?
 			if (includeDependencies)
@@ -96,7 +103,7 @@ void DSCTriageView::loadImagesWithAddr(const std::vector<uint64_t>& addresses, b
 				for (const auto& depName : dependencies)
 				{
 					auto depImage = controller->GetImageWithName(depName);
-					if (depImage.has_value() && !controller->IsImageLoaded(*depImage))
+					if (depImage.has_value()/* && !controller->IsImageLoaded(*depImage) */)
 					{
 						images.emplace_back(*depImage);
 					}

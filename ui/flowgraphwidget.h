@@ -226,6 +226,7 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	virtual void OnAnalysisFunctionUpdated(BinaryNinja::BinaryView* data, BinaryNinja::Function* func) override;
 	virtual void OnAnalysisFunctionUpdateRequested(BinaryNinja::BinaryView* data, BinaryNinja::Function* func) override;
 	virtual void OnDataMetadataUpdated(BinaryNinja::BinaryView* data, uint64_t offset) override;
+	virtual void OnTagAdded(BinaryNinja::BinaryView* data, const BinaryNinja::TagReference& tagRef) override;
 	virtual void OnTagUpdated(BinaryNinja::BinaryView* data, const BinaryNinja::TagReference& tagRef) override;
 
 	void setInitialGraph(FlowGraphRef graph);

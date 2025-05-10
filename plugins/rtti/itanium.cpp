@@ -41,6 +41,28 @@ uint64_t TypeInfoSize(BinaryView *view)
 }
 
 
+// TODO: Delete this function when access semantics are not so screwy.
+bool IsOffsetReadOnlyData(BinaryView *view, uint64_t offset)
+{
+    // Check to see if the section has default section semantics and let it pass.
+    for (const auto& section : view->GetSectionsAt(offset))
+    {
+        // TODO: Adding external here is weird but its whatever. This whole function needs to go away anyways.
+        switch (section->GetSemantics())
+        {
+            case DefaultSectionSemantics:
+            case ReadOnlyDataSectionSemantics:
+            case ExternalSectionSemantics:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    return false;
+}
+
+
 std::optional<TypeInfo> GetTypeInfo(BinaryView* view, uint64_t address)
 {
     // TODO: We really need a valid offset range thing.
@@ -53,7 +75,9 @@ std::optional<TypeInfo> GetTypeInfo(BinaryView* view, uint64_t address)
     if (!view->IsValidOffset(base) || view->IsOffsetCodeSemantics(base))
         return std::nullopt;
     auto typeNameAddr = reader.ReadPointer();
-    if (!view->IsValidOffset(typeNameAddr) || view->IsOffsetCodeSemantics(typeNameAddr))
+    // NOTE: This used to check IsOffsetCodeSemantics but for some reason the default section semantics
+    // is picked up as code. This really makes me sad. Hopefully the offset semantics rework is done soon!
+    if (!view->IsValidOffset(typeNameAddr) || !IsOffsetReadOnlyData(view, typeNameAddr))
         return std::nullopt;
     reader.Seek(typeNameAddr);
     auto type_name = reader.ReadCString(512);
@@ -728,11 +752,13 @@ void ItaniumRTTIProcessor::ProcessRTTI()
 
     m_view->BeginBulkModifySymbols();
     // Scan data sections for rtti.
-    for (const Ref<Section> &section: m_view->GetSections())
+    for (const Ref<Section> &section : m_view->GetSections())
     {
         if (bgTask->IsCancelled())
             break;
-        if (section->GetSemantics() == ReadOnlyDataSectionSemantics)
+        auto sectionSemantics = section->GetSemantics();
+        // Some RTTI unfortunately will get put into a DefaultSectionSemantics section, so we have to check those.
+        if (sectionSemantics == ReadOnlyDataSectionSemantics || sectionSemantics == DefaultSectionSemantics)
         {
             m_logger->LogDebug("Attempting to find RTTI in section %llx", section->GetStart());
             scan(section);

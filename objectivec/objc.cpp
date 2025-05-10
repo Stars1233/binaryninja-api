@@ -599,9 +599,7 @@ void ObjCProcessor::LoadCategories(ObjCReader* reader, Ref<Section> classPtrSect
 		}
 		if (categoryBaseClassName.empty())
 		{
-			m_logger->LogInfo(
-				"[SharedCache.ObjC] Using base address as stand-in classname for category at 0x%llx",
-				catLocation);
+			m_logger->LogInfo("Using base address as stand-in classname for category at 0x%llx", catLocation);
 			categoryBaseClassName = fmt::format("{:x}", catLocation);
 		}
 		try

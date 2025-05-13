@@ -285,7 +285,7 @@ void ObjCProcessor::DefineObjCSymbol(
 		QualifiedName varName;
 
 		return std::pair<Ref<Symbol>, Ref<Type>>(
-			new Symbol(type, shortName, fullName, name, addr, GlobalBinding, nameSpace), typeRef);
+			new Symbol(type, shortName, fullName, name, addr, LocalBinding, nameSpace), typeRef);
 	};
 
 	if (deferred)

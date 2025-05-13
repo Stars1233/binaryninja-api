@@ -279,7 +279,7 @@ extern "C"
 #endif
 
 #ifdef DEMO_EDITION
-	bool MacPluginInit()
+	bool MacKernelPluginInit()
 #else
 	BINARYNINJAPLUGIN bool CorePluginInit()
 #endif

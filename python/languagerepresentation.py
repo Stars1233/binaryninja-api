@@ -35,7 +35,7 @@ from . import variable
 from . import types
 from .log import log_error
 from .enums import BraceRequirement, HighlightStandardColor, InstructionTextTokenType, OperatorPrecedence, ScopeType, \
-	SymbolDisplayType, SymbolDisplayResult
+	SymbolDisplayType, SymbolDisplayResult, InstructionTextTokenContext
 
 
 class HighLevelILTokenEmitter:
@@ -91,6 +91,60 @@ class HighLevelILTokenEmitter:
 	def no_indent_for_this_line(self):
 		"""Forces there to be no indentation for the next line."""
 		core.BNHighLevelILTokenEmitterNoIndentForThisLine(self.handle)
+
+	def prepend_blank_collapse_indicator(self):
+		"""
+		Insert, at the beginning of the line, a collapse indicator token.
+		The indicator will be a blank space and not have any functionality.
+		"""
+		core.BNHighLevelILTokenPrependCollapseBlankIndicator(self.handle);
+
+	def prepend_instr_collapse_indicator(
+		self,
+		function_: 'function.Function',
+		instr: 'highlevelil.HighLevelILInstruction',
+		discriminator: int = 0
+	):
+		"""
+		Insert, at the beginning of the line, a collapse indicator token.
+
+		The indicator will allow the user to collapse the region specified by
+		(instr, discriminator) on the function.
+		Implementations can use :py:func:`Function.is_instruction_collapsed` and
+		:py:func:`Function.is_region_collapsed` to account for collapsed regions in rendering.
+
+		:param function_: Function whose instructions are being emitted
+		:param instr: Instruction being emitted which can be collapsed
+		:param discriminator: Unique discriminator id for the region
+		"""
+		if not self.has_collapsable_regions:
+			return
+
+		# Insert the collapse indicator at the beginning of the line if one isn't already there or the
+		# one that is there is empty
+		context = InstructionTextTokenContext.ContentCollapsiblePadding
+		if instr.can_collapse:
+			if function_ and function_.is_instruction_collapsed(instr, discriminator):
+				context = InstructionTextTokenContext.ContentCollapsedContext
+			else:
+				context = InstructionTextTokenContext.ContentExpandedContext
+		self.prepend_region_collapse_indicator(context, instr.get_instruction_hash(discriminator))
+
+	def prepend_region_collapse_indicator(
+		self,
+		context: InstructionTextTokenContext,
+		hash: int
+	):
+		core.BNHighLevelILTokenPrependCollapseIndicator(self.handle, context, hash)
+
+	@property
+	def has_collapsable_regions(self) -> bool:
+		"""If the emitter can emit regions which can be collapsed"""
+		return core.BNHighLevelILTokenEmitterHasCollapsableRegions(self.handle)
+
+	@has_collapsable_regions.setter
+	def has_collapsable_regions(self, value: bool):
+		core.BNHighLevelILTokenEmitterSetHasCollapsableRegions(self.handle, value)
 
 	class ZeroConfidenceContext:
 		"""

@@ -3337,6 +3337,59 @@ class Function:
 			bc.confidence = core.max_confidence
 		core.BNSetUserFunctionInlinedDuringAnalysis(self.handle, bc)
 
+	def toggle_region(self, hash):
+		"""
+		Toggle the collapsed state of a region during rendering, by hash value
+		:param hash: Hash value of region
+		"""
+		core.BNFunctionToggleRegion(self.handle, hash)
+
+	def collapse_region(self, hash):
+		"""
+		Collapse a region during rendering
+		:param hash: Hash value of region
+		"""
+		core.BNFunctionCollapseRegion(self.handle, hash)
+
+	def expand_region(self, hash):
+		"""
+		Un-collapse a region during rendering
+		:param hash: Hash value of region
+		"""
+		core.BNFunctionExpandRegion(self.handle, hash)
+
+	def expand_all(self):
+		"""
+		Expand all regions in the function
+		"""
+		core.BNFunctionExpandAll(self.handle)
+
+	@property
+	def is_collapsed(self):
+		"""If the entire function is collapsed during rendering."""
+		return self.is_region_collapsed(self.start)
+
+	def is_instruction_collapsed(
+		self,
+		instr: 'highlevelil.HighLevelILInstruction',
+		discriminator: int = 0
+	) -> bool:
+		"""
+		Determine if a given HLIL instruction (with discriminator) is collapsed during rendering.
+		:param instr: Instruction which might be collapsed
+		:param discriminator: Unique discriminator id for the region
+		:return: True if the instruction should be rendered as collapsed
+		"""
+		return self.is_region_collapsed(instr.get_instruction_hash(discriminator))
+
+	def is_region_collapsed(self, hash) -> bool:
+		"""
+		Determine if a given region is collapsed during rendering.
+		:param hash: Hash value of region
+		:return: True if the region should be rendered as collapsed
+		"""
+		return core.BNFunctionIsRegionCollapsed(self.handle, hash)
+
 
 class AdvancedFunctionAnalysisDataRequestor:
 	def __init__(self, func: Optional['Function'] = None):

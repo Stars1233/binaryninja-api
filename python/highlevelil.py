@@ -943,6 +943,36 @@ class HighLevelILInstruction(BaseILInstruction):
 		finally:
 			core.BNFreeDisassemblyTextLines(lines, count.value)
 
+	@property
+	def can_collapse(self) -> bool:
+		"""If this instruction can be collapsed in rendered lines"""
+		return self.operation in [
+			HighLevelILOperation.HLIL_IF,
+			HighLevelILOperation.HLIL_WHILE,
+			HighLevelILOperation.HLIL_WHILE_SSA,
+			HighLevelILOperation.HLIL_DO_WHILE,
+			HighLevelILOperation.HLIL_DO_WHILE_SSA,
+			HighLevelILOperation.HLIL_FOR,
+			HighLevelILOperation.HLIL_FOR_SSA,
+			HighLevelILOperation.HLIL_SWITCH,
+			HighLevelILOperation.HLIL_CASE
+		]
+
+	def get_instruction_hash(self, discriminator: int) -> int:
+		"""
+		Hash of instruction matching the C++ HighLevelILInstruction::GetInstructionHash,
+		used for collapsed region matching.
+		:param discriminator: Extra value to include in the hash to differentiate regions
+		"""
+
+		def rotl(value, shift):
+			return ((value << shift) & 0xffffffffffffffff) | (value >> (64 - shift))
+
+		hash = self.operation.value
+		hash ^= rotl(self.address, 23)
+		hash ^= rotl(discriminator, 47)
+		return hash
+
 
 @dataclass(frozen=True, repr=False, eq=False)
 class HighLevelILUnaryBase(HighLevelILInstruction, UnaryOperation):

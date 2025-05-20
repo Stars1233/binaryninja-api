@@ -3073,7 +3073,7 @@ class Function:
 		:rtype: list(ReferenceSource)
 		"""
 		for site in self.view.get_code_refs(self.start):
-			if isinstance(site.llil, lowlevelil.LowLevelILCall):
+			if isinstance(site.llil, Localcall):
 				yield site
 
 	@property

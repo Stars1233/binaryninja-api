@@ -31,7 +31,6 @@ from .enums import (
 	HighlightColorStyle, DisassemblyOption, IntegerDisplayType, FunctionAnalysisSkipOverride, FunctionUpdateType,
 	BuiltinType
 )
-from .commonil import Localcall
 
 from . import associateddatastore  # Required in the main scope due to being an argument for _FunctionAssociatedDataStore
 from . import types
@@ -50,6 +49,7 @@ from . import languagerepresentation
 from . import deprecation
 from . import metadata
 from . import __version__
+from .commonil import Localcall
 
 # we define the following as such so the linter doesn't confuse 'highlight' the module with the
 # property of the same name. There is probably some other work around but it eludes me.

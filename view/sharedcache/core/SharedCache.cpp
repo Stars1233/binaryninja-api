@@ -368,7 +368,7 @@ void SharedCache::ProcessEntryRegions(const CacheEntry& entry)
 			mappingRegion.start = mapping.address;
 			mappingRegion.size = mapping.size;
 			mappingRegion.name = fmt::format("{}::_data_{}", entry.GetFileName(), lastMappingIndex++);
-			mappingRegion.flags = SegmentReadable;
+			mappingRegion.flags = static_cast<BNSegmentFlag>(SegmentReadable | SegmentDenyWrite);
 			mappingRegion.type = CacheRegionType::DyldData;
 
 			// Add the dyld data mapping as a region to the cache.

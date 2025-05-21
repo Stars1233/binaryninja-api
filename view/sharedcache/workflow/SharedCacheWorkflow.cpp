@@ -128,7 +128,7 @@ void AnalyzeStubFunction(Ref<Function> func, Ref<MediumLevelILFunction> mlil, Sh
 		// Adjust the new region semantics to read only, this helps analysis pickup constant loads in our stub functions.
 		// NOTE: We do NOT do this for stub island as that contains CODE!
 		if (region->type != SharedCacheRegionTypeStubIsland)
-			region->flags = static_cast<BNSegmentFlag>(SegmentReadable | SegmentContainsData);
+			region->flags = static_cast<BNSegmentFlag>(SegmentReadable | SegmentContainsData | SegmentDenyWrite);
 		return controller.ApplyRegion(*view, *region);
 	};
 
@@ -252,7 +252,7 @@ void AnalyzeStandardFunction(Ref<Function> func, Ref<MediumLevelILFunction> mlil
 		// Adjust the new region semantics to read only, this helps analysis pickup constant loads in our stub functions.
 		// NOTE: We do NOT do this for stub island as that contains CODE!
 		if (region->type != SharedCacheRegionTypeStubIsland)
-			region->flags = static_cast<BNSegmentFlag>(SegmentReadable | SegmentContainsData);
+			region->flags = static_cast<BNSegmentFlag>(SegmentReadable | SegmentContainsData | SegmentDenyWrite);
 		return controller.ApplyRegion(*view, *region);
 	};
 

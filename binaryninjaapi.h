@@ -20976,6 +20976,8 @@ template<typename T> struct fmt::formatter<BinaryNinja::Ref<T>>
 	fmt::formatter<T> inner;
 	format_context::iterator format(const BinaryNinja::Ref<T>& obj, format_context& ctx) const
 	{
+		if (obj.GetPtr() == nullptr)
+			return fmt::format_to(ctx.out(), "{}", "<null>");
 		return inner.format(*obj.GetPtr(), ctx);
 	}
 	constexpr auto parse(format_parse_context& ctx) -> format_parse_context::iterator { return inner.parse(ctx); }

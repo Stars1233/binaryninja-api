@@ -673,26 +673,25 @@ fn write_dwarf<T: gimli::Endianity>(
     let mut sections = Sections::new(EndianVec::new(endian));
     dwarf.write(&mut sections).map_err(|e| e.to_string())?;
 
-    sections
-        .for_each(|input_id, input_data| {
-            // Create section in output object
-            let output_id = out_object.add_section(
-                vec![], // Only machos have segment names? see object::write::Object::segment_name
-                input_id.name().as_bytes().to_vec(),
-                SectionKind::Debug, // TODO: Might be wrong
-            );
+    sections.for_each(|input_id, input_data| {
+        // Create section in output object
+        let output_id = out_object.add_section(
+            vec![], // Only machos have segment names? see object::write::Object::segment_name
+            input_id.name().as_bytes().to_vec(),
+            SectionKind::Debug, // TODO: Might be wrong
+        );
 
-            // Write data to section in output object
-            let out_section = out_object.section_mut(output_id);
-            if out_section.is_bss() {
-                return Err("Please report this as a bug: output section is bss".to_string());
-            } else {
-                out_section.set_data(input_data.clone().into_vec(), 1);
-            }
-            // out_section.flags = in_section.flags(); // TODO
+        // Write data to section in output object
+        let out_section = out_object.section_mut(output_id);
+        if out_section.is_bss() {
+            return Err("Please report this as a bug: output section is bss".to_string());
+        } else {
+            out_section.set_data(input_data.clone().into_vec(), 1);
+        }
+        // out_section.flags = in_section.flags(); // TODO
 
-            Ok(())
-        })?;
+        Ok(())
+    })?;
 
     if let Ok(out_data) = out_object.write() {
         if let Err(err) = fs::write(file_path, out_data) {

@@ -37,7 +37,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 107
+#define BN_CURRENT_CORE_ABI_VERSION 108
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -1934,6 +1934,8 @@ extern "C"
 		void (*freeRegisterList)(void* ctxt, uint32_t* regs, size_t len);
 
 		BNType* (*getGlobalRegisterType)(void* ctxt, uint32_t reg);
+
+		size_t (*getAddressSize)(void* ctxt);
 
 		void (*adjustTypeParserInput)(
 			void* ctxt,
@@ -6972,6 +6974,7 @@ extern "C"
 
 	BINARYNINJACOREAPI uint32_t* BNGetPlatformGlobalRegisters(BNPlatform* platform, size_t* count);
 	BINARYNINJACOREAPI BNType* BNGetPlatformGlobalRegisterType(BNPlatform* platform, uint32_t reg);
+	BINARYNINJACOREAPI size_t BNGetPlatformAddressSize(BNPlatform* platform);
 	BINARYNINJACOREAPI void BNPlatformAdjustTypeParserInput(
 		BNPlatform* platform,
 		BNTypeParser* parser,

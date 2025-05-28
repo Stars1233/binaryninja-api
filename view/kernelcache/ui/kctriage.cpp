@@ -244,7 +244,7 @@ QWidget* KCTriageView::initImageTable()
 		m_imageTable->setFilter(filter.toStdString());
 	});
 
-	connect(m_imageTable, &FilterableTableView::activated, this, [=](const QModelIndex& index) {
+	connect(m_imageTable, &FilterableTableView::activated, this, [=, this](const QModelIndex& index) {
 		auto addr = m_imageModel->item(index.row(), 0)->text().toULongLong(nullptr, 16);
 		loadImagesWithAddr({addr});
 	});
@@ -325,7 +325,7 @@ void KCTriageView::initSymbolTable()
 	auto symbolWidget = new QWidget;
 	symbolWidget->setLayout(symbolLayout);
 
-	std::function<void(uint64_t)> navigateToAddress = [=](uint64_t addr) {
+	std::function<void(uint64_t)> navigateToAddress = [=, this](uint64_t addr) {
 		ExecuteOnMainThread([addr, this](){
 			if (Settings::Instance()->Get<bool>("ui.view.graph.preferred"))
 				m_data->Navigate("Graph:KCView", addr);
@@ -334,7 +334,7 @@ void KCTriageView::initSymbolTable()
 		});
 	};
 
-	connect(m_symbolTable, &SymbolTableView::activated, this, [=](const QModelIndex& index)
+	connect(m_symbolTable, &SymbolTableView::activated, this, [=, this](const QModelIndex& index)
 	{
 		auto symbol = m_symbolTable->getSymbolAtRow(index.row());
 		WorkerPriorityEnqueue([this, symbol, navigateToAddress]() {

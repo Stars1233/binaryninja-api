@@ -232,7 +232,7 @@ ImportsTreeView::ImportsTreeView(ImportsWidget* parent, TriageView* view, Binary
 
 	// Allow view-specific shortcuts when imports are focused
 	m_actionHandler.setupActionHandler(this);
-	m_actionHandler.setActionContext([=]() { return m_view->actionContext(); });
+	m_actionHandler.setActionContext([=, this]() { return m_view->actionContext(); });
 
 	m_model = new GenericImportsModel(this, m_data);
 	setModel(m_model);

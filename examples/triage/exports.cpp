@@ -28,7 +28,7 @@ GenericExportsModel::GenericExportsModel(QWidget* parent, BinaryViewRef data): Q
 	m_updateTimer->setSingleShot(true);
 	m_updateTimer->setInterval(500);
 	connect(m_updateTimer, &QTimer::timeout, this, &GenericExportsModel::updateModel);
-	connect(this, &GenericExportsModel::modelUpdate, this, [=]() {
+	connect(this, &GenericExportsModel::modelUpdate, this, [=, this]() {
 		if (m_updateTimer->isActive())
 			return;
 		m_updateTimer->start();
@@ -285,7 +285,7 @@ ExportsTreeView::ExportsTreeView(ExportsWidget* parent, TriageView* view, Binary
 
 	// Allow view-specific shortcuts when imports are focused
 	m_actionHandler.setupActionHandler(this);
-	m_actionHandler.setActionContext([=]() { return m_view->actionContext(); });
+	m_actionHandler.setActionContext([=, this]() { return m_view->actionContext(); });
 
 	setFont(getMonospaceFont(this));
 
@@ -306,11 +306,11 @@ ExportsTreeView::ExportsTreeView(ExportsWidget* parent, TriageView* view, Binary
 	connect(selectionModel(), &QItemSelectionModel::currentChanged, this, &ExportsTreeView::exportSelected);
 	connect(this, &QTreeView::doubleClicked, this, &ExportsTreeView::exportDoubleClicked);
 
-	connect(m_model, &QAbstractItemModel::modelAboutToBeReset, this, [=]() {
+	connect(m_model, &QAbstractItemModel::modelAboutToBeReset, this, [=, this]() {
 		m_selection = selectionModel()->selectedIndexes();
 		m_scroll = verticalScrollBar()->value();
 	});
-	connect(m_model, &QAbstractItemModel::modelReset, this, [=]() {
+	connect(m_model, &QAbstractItemModel::modelReset, this, [=, this]() {
 		for (auto& idx : m_selection)
 		{
 			setCurrentIndex(idx);

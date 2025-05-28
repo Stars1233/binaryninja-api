@@ -61,7 +61,6 @@ int main(int ac, char **av)
 	uint32_t insword = 0;
 	uint64_t baseaddr = 0;
 	int instindex = 1;
-	int c = 0;
 	int version = -1;
 	int flags = 0;
 	int result = 0;

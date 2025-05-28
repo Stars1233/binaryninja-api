@@ -2439,7 +2439,7 @@ Ref<Symbol> MachoView::DefineMachoSymbol(
 
 	}
 
-	auto process = [=]() {
+	auto process = [=, this]() {
 		// If name does not start with alphabetic character or symbol, prepend an underscore
 		string rawName = name;
 		if (!(((name[0] >= 'A') && (name[0] <= 'Z')) || ((name[0] >= 'a') && (name[0] <= 'z')) || (name[0] == '_')

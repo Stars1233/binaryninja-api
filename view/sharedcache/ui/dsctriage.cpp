@@ -269,7 +269,7 @@ QWidget* DSCTriageView::initImageTable()
 		m_imageTable->setFilter(filter.toStdString());
 	});
 
-	connect(m_imageTable, &FilterableTableView::activated, this, [=](const QModelIndex& index) {
+	connect(m_imageTable, &FilterableTableView::activated, this, [=, this](const QModelIndex& index) {
 		auto addr = m_imageModel->item(index.row(), 0)->text().toULongLong(nullptr, 16);
 		loadImagesWithAddr({addr});
 	});
@@ -360,7 +360,7 @@ void DSCTriageView::initSymbolTable()
 	auto symbolWidget = new QWidget;
 	symbolWidget->setLayout(symbolLayout);
 
-	connect(m_symbolTable, &SymbolTableView::activated, this, [=](const QModelIndex& index){
+	connect(m_symbolTable, &SymbolTableView::activated, this, [=, this](const QModelIndex& index){
 		auto symbol = m_symbolTable->getSymbolAtRow(index.row());
 		auto dialog = new QMessageBox(this);
 
@@ -375,7 +375,7 @@ void DSCTriageView::initSymbolTable()
 		dialog->setText("Load " + QString::fromStdString(image->name) + "?");
 		dialog->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
 
-		connect(dialog, &QMessageBox::buttonClicked, this, [=](QAbstractButton* button)
+		connect(dialog, &QMessageBox::buttonClicked, this, [=, this](QAbstractButton* button)
 		{
 			if (button == dialog->button(QMessageBox::Yes))
 				loadImagesWithAddr({image->headerAddress});

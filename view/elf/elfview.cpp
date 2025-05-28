@@ -2511,7 +2511,7 @@ void ElfView::DefineElfSymbol(BNSymbolType type, const string& incomingName, uin
 	if (gotEntry)
 		m_gotEntryLocations.emplace(addr);
 
-	auto process = [=]() {
+	auto process = [=, this]() {
 		NameSpace nameSpace = GetInternalNameSpace();
 		if (type == ExternalSymbol)
 		{

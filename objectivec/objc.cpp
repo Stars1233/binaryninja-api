@@ -327,7 +327,7 @@ void ObjCProcessor::DefineObjCSymbol(
 	if (name.size() == 0 || addr == 0)
 		return;
 
-	auto process = [=]() {
+	auto process = [=, this]() {
 		NameSpace nameSpace = m_data->GetInternalNameSpace();
 		if (type == ExternalSymbol)
 		{

@@ -2808,7 +2808,6 @@ void PseudoCFunction::GetExpr_CONST_PTR(const BinaryNinja::HighLevelILInstructio
 	BinaryNinja::HighLevelILTokenEmitter& tokens, BinaryNinja::DisassemblySettings* settings,
 	BNOperatorPrecedence precedence, bool statement)
 {
-	auto constant = instr.GetConstant<HLIL_CONST_PTR>();
 	tokens.AppendPointerTextToken(
 		instr, instr.GetConstant<HLIL_CONST_PTR>(), settings, AddressOfDataSymbols, precedence);
 	if (statement)

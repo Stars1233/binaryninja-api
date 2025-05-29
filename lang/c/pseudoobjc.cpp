@@ -318,7 +318,7 @@ bool PseudoObjCFunction::GetExpr_GenericObjCRuntimeCall(uint64_t address, const 
 	if (parameterExprs.size() < 1)
 		return false;
 
-	for (auto _ : selectorTokens)
+	for ([[maybe_unused]] auto _ : selectorTokens)
 		tokens.AppendOpenBracket();
 
 	GetExprText(parameterExprs[0], tokens, settings);

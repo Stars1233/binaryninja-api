@@ -2,7 +2,10 @@ use binaryninjacore_sys::*;
 use std::fmt::{Debug, Formatter};
 use std::hash::{Hash, Hasher};
 
-use super::{MediumLevelILBlock, MediumLevelILInstruction, MediumLevelInstructionIndex};
+use super::{
+    MediumLevelExpressionIndex, MediumLevelILBlock, MediumLevelILInstruction,
+    MediumLevelInstructionIndex,
+};
 use crate::architecture::CoreArchitecture;
 use crate::basic_block::BasicBlock;
 use crate::confidence::Conf;
@@ -33,7 +36,7 @@ impl MediumLevelILFunction {
     }
 
     pub fn instruction_at<L: Into<Location>>(&self, loc: L) -> Option<MediumLevelILInstruction> {
-        Some(MediumLevelILInstruction::new(
+        Some(MediumLevelILInstruction::from_instr_index(
             self.to_owned(),
             self.instruction_index_at(loc)?,
         ))
@@ -64,18 +67,21 @@ impl MediumLevelILFunction {
         if index.0 >= self.instruction_count() {
             None
         } else {
-            Some(MediumLevelILInstruction::new(self.to_owned(), index))
+            Some(MediumLevelILInstruction::from_instr_index(
+                self.to_owned(),
+                index,
+            ))
         }
     }
 
     pub fn instruction_from_expr_index(
         &self,
-        expr_index: MediumLevelInstructionIndex,
+        expr_index: MediumLevelExpressionIndex,
     ) -> Option<MediumLevelILInstruction> {
         if expr_index.0 >= self.expression_count() {
             None
         } else {
-            Some(MediumLevelILInstruction::new_expr(
+            Some(MediumLevelILInstruction::from_expr_index(
                 self.to_owned(),
                 expr_index,
             ))
@@ -402,7 +408,7 @@ impl MediumLevelILFunction {
         unsafe { BNMediumLevelILSetCurrentAddress(self.handle, arch, location.addr) }
     }
 
-    /// Returns the [`BasicBlock`] at the given instruction `index`.
+    /// Returns the [`BasicBlock`] at the given instruction `index`. Function must be finalized.
     ///
     /// You can also retrieve this using [`MediumLevelILInstruction::basic_block`].
     pub fn basic_block_containing_index(

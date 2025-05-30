@@ -86,7 +86,7 @@ where
                 self.op.operands[operand_idx] as usize,
             )
         };
-        PossibleValueSet::from_owned_raw(raw_pvs)
+        PossibleValueSet::from_owned_core_raw(raw_pvs)
     }
 }
 

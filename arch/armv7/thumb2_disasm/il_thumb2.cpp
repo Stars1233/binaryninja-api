@@ -59,11 +59,56 @@ static int GetSpecialRegister(LowLevelILFunction& il, decomp_result* instr, size
 	switch (sysm >> 3)
 	{
 		case 0:
-			switch(tmp)
+			switch (sysm & 7)
 			{
-				case 1: return REGS_APSR_G;
-				case 2:	return REGS_APSR_NZCVQ;
-				case 3: return REGS_APSR_NZCVQG;
+			case 0:
+				switch(tmp)
+				{
+					case 1: return REGS_APSR_G;
+					case 2:	return REGS_APSR_NZCVQ;
+					case 3: return REGS_APSR_NZCVQG;
+					case 0:
+					default:
+						return REGS_APSR;
+				}
+			case 1:
+				switch(tmp)
+				{
+					case 1: return REGS_IAPSR_G;
+					case 2:	return REGS_IAPSR_NZCVQ;
+					case 3: return REGS_IAPSR_NZCVQG;
+					case 0:
+					default:
+						return REGS_IAPSR;
+				}
+			case 2:
+				switch(tmp)
+				{
+					case 1: return REGS_EAPSR_G;
+					case 2:	return REGS_EAPSR_NZCVQ;
+					case 3: return REGS_EAPSR_NZCVQG;
+					case 0:
+					default:
+						return REGS_EAPSR;
+				}
+			case 3:
+				switch(tmp)
+				{
+					case 1: return REGS_XPSR_G;
+					case 2:	return REGS_XPSR_NZCVQ;
+					case 3: return REGS_XPSR_NZCVQG;
+					case 0:
+					default:
+						return REGS_XPSR;
+				}
+			case 5:
+				return REGS_IPSR;
+			case 6:
+				return REGS_EPSR;
+			case 7:
+				return REGS_IEPSR;
+			default:
+				return REG_INVALID;
 			}
 			break;
 		case 1:
@@ -77,8 +122,8 @@ static int GetSpecialRegister(LowLevelILFunction& il, decomp_result* instr, size
 			switch (sysm & 7)
 			{
 				case 0: return REGS_PRIMASK;
-				case 1:
-				case 2: return REGS_BASEPRI;
+				case 1: return REGS_BASEPRI;
+				case 2: return REGS_BASEPRI_MAX;
 				case 3: return REGS_FAULTMASK;
 				case 4: return REGS_CONTROL;
 			}
@@ -1131,7 +1176,8 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 			il.Intrinsic(
 				{RegisterOrFlag::Register(dest_reg)}, /* outputs */
 				intrinsic_id,
-				{il.Register(4, GetSpecialRegister(il, instr, 1))} /* inputs */
+				// {il.Register(4, GetSpecialRegister(il, instr, 1))} /* inputs */
+				{il.Const(4, GetSpecialRegister(il, instr, 1))} /* inputs */
 			)
 		);
 		break;
@@ -1141,40 +1187,54 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 		int dest_reg = GetSpecialRegister(il, instr, 0);
 		int intrinsic_id = ARMV7_INTRIN_MSR;
 
+		il.AddInstruction(
+			il.Intrinsic(
+				{}, /* outputs */
+				intrinsic_id,
+				{
+					// il.Register(4, dest_reg),
+					il.Const(4, dest_reg),
+					ReadILOperand(il, instr, 1)
+				} /* inputs */
+			)
+		);
+
+
 		/* certain MSR scenarios earn a specialized intrinsic */
 		// if (dest_reg == REGS_BASEPRI)
 		// 	intrinsic_id = ARM_M_INTRIN_SET_BASEPRI;
-		switch (dest_reg) {
-			case REGS_MSP:
-			case REGS_PSP:
-			case REGS_BASEPRI:
-			case REGS_BASEPRI_MAX:
-			case REGS_PRIMASK:
-			case REGS_FAULTMASK:
-			case REGS_CONTROL:
-			case REGS_IPSR:
-			case REGS_EPSR:
-			case REGS_IEPSR:
-				il.AddInstruction(
-					il.Intrinsic(
-						{}, /* outputs */
-						intrinsic_id,
-						{
-							il.Register(4, dest_reg),
-							ReadILOperand(il, instr, 1)
-						} /* inputs */
-					)
-				);
-				break;
-			default:
-				il.AddInstruction(
-					il.Intrinsic(
-						{RegisterOrFlag::Register(dest_reg)}, /* outputs */
-						intrinsic_id,
-						{ReadILOperand(il, instr, 1)} /* inputs */
-					)
-				);
-		}
+		// switch (dest_reg) {
+		// 	case REGS_MSP:
+		// 	case REGS_PSP:
+		// 	case REGS_BASEPRI:
+		// 	case REGS_BASEPRI_MAX:
+		// 	case REGS_PRIMASK:
+		// 	case REGS_FAULTMASK:
+		// 	case REGS_CONTROL:
+		// 	case REGS_IPSR:
+		// 	case REGS_EPSR:
+		// 	case REGS_IEPSR:
+		// 		il.AddInstruction(
+		// 			il.Intrinsic(
+		// 				{}, /* outputs */
+		// 				intrinsic_id,
+		// 				{
+		// 					// il.Register(4, dest_reg),
+		// 					il.Const(4, dest_reg),
+		// 					ReadILOperand(il, instr, 1)
+		// 				} /* inputs */
+		// 			)
+		// 		);
+		// 		break;
+		// 	default:
+		// 		il.AddInstruction(
+		// 			il.Intrinsic(
+		// 				{RegisterOrFlag::Register(dest_reg)}, /* outputs */
+		// 				intrinsic_id,
+		// 				{ReadILOperand(il, instr, 1)} /* inputs */
+		// 			)
+		// 		);
+		// }
 
 		break;
 	}

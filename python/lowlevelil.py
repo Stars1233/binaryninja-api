@@ -2656,7 +2656,7 @@ class LowLevelILIntrinsic(LowLevelILInstruction, Intrinsic):
 		return [
 			("output", self.output, "List[Union[ILFlag, ILRegister]]"),
 			("intrinsic", self.intrinsic, "ILIntrinsic"),
-			("params", self.params, "List['LowLevelILInstruction']"),
+			("params", self.params, "List[LowLevelILInstruction]"),
 		]
 
 

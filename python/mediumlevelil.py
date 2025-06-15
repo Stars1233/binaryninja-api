@@ -1400,7 +1400,7 @@ class MediumLevelILCallParam(MediumLevelILInstruction):
 		return f"<MediumLevelILCallParam: {self.src}>"
 
 	@property
-	def src(self) -> List[variable.Variable]:
+	def src(self) -> List[MediumLevelILInstruction]:
 		return self._get_expr_list(0, 1)
 
 	@property
@@ -1414,7 +1414,7 @@ class MediumLevelILSeparateParamList(MediumLevelILInstruction):
 		return f"<MediumLevelILSeparateParamList: {self.src}>"
 
 	@property
-	def src(self) -> List[variable.Variable]:
+	def src(self) -> List[MediumLevelILInstruction]:
 		return self._get_expr_list(0, 1)
 
 	@property
@@ -1428,7 +1428,7 @@ class MediumLevelILSharedParamSlot(MediumLevelILInstruction):
 		return f"<MediumLevelILSharedParamSlot: {self.src}>"
 
 	@property
-	def src(self) -> List[variable.Variable]:
+	def src(self) -> List[MediumLevelILInstruction]:
 		return self._get_expr_list(0, 1)
 
 	@property
@@ -1999,7 +1999,7 @@ class MediumLevelILCallParamSsa(MediumLevelILInstruction, SSA):
 		return self._get_int(0)
 
 	@property
-	def src(self) -> List[SSAVariable]:
+	def src(self) -> List[MediumLevelILInstruction]:
 		return self._get_expr_list(1, 2)
 
 	@property
@@ -2216,7 +2216,7 @@ class MediumLevelILSyscallUntyped(MediumLevelILCallBase, Syscall):
 		return inst.dest
 
 	@property
-	def params(self) -> List[variable.Variable]:
+	def params(self) -> List[MediumLevelILInstruction]:
 		inst = self._get_expr(1)
 		assert isinstance(inst, MediumLevelILCallParam), "MediumLevelILCallUntyped return bad type for 'params'"
 		return inst.src
@@ -2510,7 +2510,7 @@ class MediumLevelILSyscallUntypedSsa(MediumLevelILCallBase, Syscall, SSA):
 		return inst.dest_memory
 
 	@property
-	def params(self) -> List[SSAVariable]:
+	def params(self) -> List[MediumLevelILInstruction]:
 		inst = self._get_expr(1)
 		assert isinstance(
 		    inst, MediumLevelILCallParamSsa
@@ -2715,7 +2715,7 @@ class MediumLevelILTailcallUntyped(MediumLevelILCallBase, Tailcall):
 		return self._get_expr(1)
 
 	@property
-	def params(self) -> List[variable.Variable]:
+	def params(self) -> List[MediumLevelILInstruction]:
 		inst = self._get_expr(2)
 		assert isinstance(inst, MediumLevelILCallParam), "MediumLevelILTailcallUntyped return bad type for 'params'"
 		return inst.src
@@ -2790,7 +2790,7 @@ class MediumLevelILCallUntypedSsa(MediumLevelILCallBase, Localcall, SSA):
 		return self._get_expr(1)
 
 	@property
-	def params(self) -> List[SSAVariable]:
+	def params(self) -> List[MediumLevelILInstruction]:
 		inst = self._get_expr(2)
 		assert isinstance(inst, MediumLevelILCallParamSsa), "MediumLevelILCallUntypedSsa return bad type for 'params'"
 		return inst.src
@@ -2902,7 +2902,7 @@ class MediumLevelILTailcallUntypedSsa(MediumLevelILCallBase, Tailcall, SSA):
 		return self._get_expr(1)
 
 	@property
-	def params(self) -> List[SSAVariable]:
+	def params(self) -> List[MediumLevelILInstruction]:
 		inst = self._get_expr(2)
 		assert isinstance(
 		    inst, MediumLevelILCallParamSsa
@@ -2965,7 +2965,7 @@ class MediumLevelILCallUntyped(MediumLevelILCallBase, Localcall):
 		return self._get_expr(1)
 
 	@property
-	def params(self) -> List[variable.Variable]:
+	def params(self) -> List[MediumLevelILInstruction]:
 		inst = self._get_expr(2)
 		assert isinstance(inst, MediumLevelILCallParam), "MediumLevelILCallUntyped return bad type for 'params'"
 		return inst.src

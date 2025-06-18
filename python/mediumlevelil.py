@@ -2229,7 +2229,7 @@ class MediumLevelILSyscallUntyped(MediumLevelILCallBase, Syscall):
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [
 			('output', self.output, 'List[Variable]'),
-			('params', self.params, 'List[Variable]'),
+			('params', self.params, 'List[MediumLevelILInstruction]'),
 			('stack', self.stack, 'MediumLevelILInstruction'),
 		]
 
@@ -2729,7 +2729,7 @@ class MediumLevelILTailcallUntyped(MediumLevelILCallBase, Tailcall):
 		return [
 			('output', self.output, 'List[Variable]'),
 			('dest', self.dest, 'MediumLevelILInstruction'),
-			('params', self.params, 'List[Variable]'),
+			('params', self.params, 'List[MediumLevelILInstruction]'),
 			('stack', self.stack, 'MediumLevelILInstruction'),
 		]
 
@@ -2979,7 +2979,7 @@ class MediumLevelILCallUntyped(MediumLevelILCallBase, Localcall):
 		return [
 			('output', self.output, 'List[Variable]'),
 			('dest', self.dest, 'MediumLevelILInstruction'),
-			('params', self.params, 'List[Variable]'),
+			('params', self.params, 'List[MediumLevelILInstruction]'),
 			('stack', self.stack, 'MediumLevelILInstruction'),
 		]
 

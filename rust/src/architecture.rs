@@ -471,14 +471,14 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
         il: &LowLevelILMutableFunction,
     ) -> Option<(usize, bool)>;
 
-    fn analyze_basic_blocks(
+    unsafe fn analyze_basic_blocks(
         &self,
         function: &mut Function,
         context: *mut BNBasicBlockAnalysisContext,
     ) {
         unsafe {
             BNArchitectureDefaultAnalyzeBasicBlocks(function.handle, context);
-        };
+        }
     }
 
     /// Fallback flag value calculation path. This method is invoked when the core is unable to
@@ -1544,14 +1544,14 @@ impl Architecture for CoreArchitecture {
         }
     }
 
-    fn analyze_basic_blocks(
+    unsafe fn analyze_basic_blocks(
         &self,
         function: &mut Function,
         context: *mut BNBasicBlockAnalysisContext,
     ) {
         unsafe {
             BNArchitectureAnalyzeBasicBlocks(self.handle, function.handle, context);
-        };
+        }
     }
 
     fn flag_write_llil<'a>(
@@ -2267,7 +2267,9 @@ where
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let mut function = unsafe { Function::from_raw(function) };
-        custom_arch.analyze_basic_blocks(&mut function, context);
+        unsafe {
+            custom_arch.analyze_basic_blocks(&mut function, context);
+        }
     }
 
     extern "C" fn cb_reg_name<A>(ctxt: *mut c_void, reg: u32) -> *mut c_char

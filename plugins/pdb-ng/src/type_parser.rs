@@ -867,7 +867,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             match (m.bitfield_position, m.bitfield_size) {
                 (Some(pos), Some(_size)) => {
                     if last_bitfield_offset != m.offset || last_bitfield_pos >= pos {
-                        if let Some(mut builder) = bitfield_builder.take() {
+                        if let Some(builder) = bitfield_builder.take() {
                             combined_bitfield_members.push(ParsedMember {
                                 ty: Conf::new(
                                     Type::structure(builder.finalize().as_ref()),
@@ -901,7 +901,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                         .insert(&m.ty, &m.name, 0, false, m.access, m.scope);
                 }
                 (None, None) => {
-                    if let Some(mut builder) = bitfield_builder.take() {
+                    if let Some(builder) = bitfield_builder.take() {
                         combined_bitfield_members.push(ParsedMember {
                             ty: Conf::new(
                                 Type::structure(builder.finalize().as_ref()),
@@ -922,7 +922,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 e => return Err(anyhow!("Unexpected bitfield parameters {:?}", e)),
             }
         }
-        if let Some(mut builder) = bitfield_builder.take() {
+        if let Some(builder) = bitfield_builder.take() {
             combined_bitfield_members.push(ParsedMember {
                 ty: Conf::new(Type::structure(builder.finalize().as_ref()), MAX_CONFIDENCE),
                 name: bitfield_name(last_bitfield_offset, last_bitfield_idx),

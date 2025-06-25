@@ -347,19 +347,19 @@ namespace BinaryNinja {
 
 		bool operator!() const { return m_obj == nullptr; }
 
-		bool operator==(const T* obj) const { return T::GetObject(m_obj) == T::GetObject(obj); }
+		bool operator==(T* obj) const { return T::GetObject(m_obj) == T::GetObject(obj); }
 
 		bool operator==(const Ref<T>& obj) const { return T::GetObject(m_obj) == T::GetObject(obj.m_obj); }
 
-		bool operator!=(const T* obj) const { return T::GetObject(m_obj) != T::GetObject(obj); }
+		bool operator!=(T* obj) const { return T::GetObject(m_obj) != T::GetObject(obj); }
 
 		bool operator!=(const Ref<T>& obj) const { return T::GetObject(m_obj) != T::GetObject(obj.m_obj); }
 
-		bool operator<(const T* obj) const { return T::GetObject(m_obj) < T::GetObject(obj); }
+		bool operator<(T* obj) const { return T::GetObject(m_obj) < T::GetObject(obj); }
 
 		bool operator<(const Ref<T>& obj) const { return T::GetObject(m_obj) < T::GetObject(obj.m_obj); }
 
-		bool operator>(const T* obj) const { return T::GetObject(m_obj) > T::GetObject(obj); }
+		bool operator>(T* obj) const { return T::GetObject(m_obj) > T::GetObject(obj); }
 
 		bool operator>(const Ref<T>& obj) const { return T::GetObject(m_obj) > T::GetObject(obj.m_obj); }
 
@@ -369,19 +369,19 @@ namespace BinaryNinja {
 	template <class T>
 	bool operator==(T* a, const Ref<T>& b)
 	{
-		return a == b.GetPtr();
+		return T::GetObject(a) == T::GetObject(b.GetPtr());
 	}
 
 	template <class T>
 	bool operator!=(T* a, const Ref<T>& b)
 	{
-		return a != b.GetPtr();
+		return T::GetObject(a) != T::GetObject(b.GetPtr());
 	}
 
 	template <class T>
 	bool operator<(T* a, const Ref<T>& b)
 	{
-		return a < b.GetPtr();
+		return T::GetObject(a) < T::GetObject(b.GetPtr());
 	}
 
 	/*!
@@ -398,11 +398,11 @@ namespace BinaryNinja {
 		operator T*() const { return m_obj; }
 		T* operator->() const { return m_obj; }
 		T& operator*() const { return *m_obj; }
-		bool operator==(const T* obj) const { return T::GetObject(m_obj) == T::GetObject(obj); }
+		bool operator==(T* obj) const { return T::GetObject(m_obj) == T::GetObject(obj); }
 		bool operator==(const Ref<T>& obj) const { return T::GetObject(m_obj) == T::GetObject(obj.m_obj); }
-		bool operator!=(const T* obj) const { return T::GetObject(m_obj) != T::GetObject(obj); }
+		bool operator!=(T* obj) const { return T::GetObject(m_obj) != T::GetObject(obj); }
 		bool operator!=(const Ref<T>& obj) const { return T::GetObject(m_obj) != T::GetObject(obj.m_obj); }
-		bool operator<(const T* obj) const { return T::GetObject(m_obj) < T::GetObject(obj); }
+		bool operator<(T* obj) const { return T::GetObject(m_obj) < T::GetObject(obj); }
 		bool operator<(const Ref<T>& obj) const { return T::GetObject(m_obj) < T::GetObject(obj.m_obj); }
 		T* GetPtr() const { return m_obj; }
 	};
@@ -410,19 +410,19 @@ namespace BinaryNinja {
 	template <class T>
 	bool operator==(T* a, const CallbackRef<T>& b)
 	{
-		return a == b.GetPtr();
+		return T::GetObject(a) == T::GetObjcet(b.GetPtr());
 	}
 
 	template <class T>
 	bool operator!=(T* a, const CallbackRef<T>& b)
 	{
-		return a != b.GetPtr();
+		return T::GetObject(a) != T::GetObject(b.GetPtr());
 	}
 
 	template <class T>
 	bool operator<(T* a, const CallbackRef<T>& b)
 	{
-		return a < b.GetPtr();
+		return T::GetObject(a) < T::GetObject(b.GetPtr());
 	}
 
 	/*!

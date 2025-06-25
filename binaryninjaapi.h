@@ -217,7 +217,7 @@ namespace BinaryNinja {
 
 		T* GetObject() const { return m_object; }
 
-		static T* GetObject(StaticCoreRefCountObject* obj)
+		static T* GetObject(const StaticCoreRefCountObject* obj)
 		{
 			if (!obj)
 				return nullptr;

@@ -21,13 +21,18 @@ class BINARYNINJAUIAPI ExpandableGroup : public QWidget
 	QParallelAnimationGroup* m_animation;
 	QScrollArea* m_content;
 	int m_duration = 100;
+	bool m_expanded;
 
   private Q_SLOTS:
 	void toggled(bool expanded);
+
+  Q_SIGNALS:
+	void sizeChanged();
 
   public:
 	explicit ExpandableGroup(QLayout* contentLayout, const QString& title = "", QWidget* parent = nullptr, bool expanded = false);
 	void setupAnimation(QLayout* contentLayout);
 	void setTitle(const QString& title) { m_title->setText(title); }
 	void toggle(bool expanded);
+	bool expanded() { return m_expanded; }
 };

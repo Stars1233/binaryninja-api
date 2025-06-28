@@ -528,7 +528,7 @@ bool PseudoCFunction::TryEmitSimplifiedTernary(
 
 	// Emit the false-source expression
 	GetExprText(falseAssign, emitter, settings, TernaryOperatorPrecedence);
-	emitter.Append(KeywordToken, ";");
+	emitter.Append(TextToken, ";");
 
 	// If the ternary expression is too complex (i.e. too many tokens), revert back.
 	if (tokens.size() - originalTokenCount > emitter.GetMaxTernarySimplificationTokens())

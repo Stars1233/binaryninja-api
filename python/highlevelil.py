@@ -2552,10 +2552,13 @@ class HighLevelILFunction:
 
 	def __repr__(self):
 		arch = self.source_function.arch
+		form = ""
+		if self.il_form == FunctionGraphType.HighLevelILSSAFormFunctionGraph:
+			form += " ssa form"
 		if arch:
-			return "<hlil func: %s@%#x>" % (arch.name, self.source_function.start)
+			return f"<HighLevelILFunction{form}: {arch.name}@{self.source_function.start:#x}>"
 		else:
-			return "<hlil func: %#x>" % self.source_function.start
+			return f"<HighLevelILFunction{form}: {self.source_function.start:#x}>"
 
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):

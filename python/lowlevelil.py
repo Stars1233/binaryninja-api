@@ -3311,12 +3311,17 @@ class LowLevelILFunction:
 			core.BNFreeLowLevelILFunction(self.handle)
 
 	def __repr__(self):
+		form = ""
+		if self.il_form == FunctionGraphType.LiftedILFunctionGraph:
+			form += " lifted il"
+		if self.il_form == FunctionGraphType.LowLevelILSSAFormFunctionGraph:
+			form += " ssa form"
 		if self.source_function is not None and self.source_function.arch is not None:
-			return f"<{self.__class__.__name__}: {self.source_function.arch.name}@{self.source_function.start:#x}>"
+			return f"<{self.__class__.__name__}{form}: {self.source_function.arch.name}@{self.source_function.start:#x}>"
 		elif self.source_function is not None:
-			return f"<{self.__class__.__name__}: {self.source_function.start:#x}>"
+			return f"<{self.__class__.__name__}{form}: {self.source_function.start:#x}>"
 		else:
-			return f"<{self.__class__.__name__}: anonymous>"
+			return f"<{self.__class__.__name__}{form}: anonymous>"
 
 	def __len__(self):
 		return int(core.BNGetLowLevelILInstructionCount(self.handle))

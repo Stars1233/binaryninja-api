@@ -3283,10 +3283,21 @@ class MediumLevelILFunction:
 
 	def __repr__(self):
 		arch = self.source_function.arch
+		form = ""
+		if self.il_form in [
+			FunctionGraphType.MappedMediumLevelILFunctionGraph,
+			FunctionGraphType.MappedMediumLevelILSSAFormFunctionGraph,
+		]:
+			form += " mapped mlil"
+		if self.il_form in [
+			FunctionGraphType.MediumLevelILSSAFormFunctionGraph,
+			FunctionGraphType.MappedMediumLevelILSSAFormFunctionGraph,
+		]:
+			form += " ssa form"
 		if arch:
-			return f"<MediumLevelILFunction: {arch.name}@{self.source_function.start:#x}>"
+			return f"<MediumLevelILFunction{form}: {arch.name}@{self.source_function.start:#x}>"
 		else:
-			return f"<MediumLevelILFunction: {self.source_function.start:#x}>"
+			return f"<MediumLevelILFunction{form}: {self.source_function.start:#x}>"
 
 	def __len__(self):
 		return int(core.BNGetMediumLevelILInstructionCount(self.handle))

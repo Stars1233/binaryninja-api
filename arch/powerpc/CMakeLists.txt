@@ -11,8 +11,9 @@ file(GLOB SOURCES
 	assembler.cpp
 	disassembler.cpp
 	il.cpp
-	util.cpp
 	*.h
+	decode/*.c
+	decode/*.h
 )
 
 if(DEMO)

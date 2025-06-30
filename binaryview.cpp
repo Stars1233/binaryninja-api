@@ -5530,13 +5530,11 @@ void BinaryView::SetUserGlobalPointerValue(const Confidence<RegisterValue>& valu
 }
 
 
-optional<pair<string, BNStringType>> BinaryView::StringifyUnicodeData(Architecture* arch,
-	const DataBuffer& buffer, bool allowShortStrings)
+optional<pair<string, BNStringType>> BinaryView::StringifyUnicodeData(Architecture* arch, const DataBuffer& buffer, bool allowShortStrings)
 {
 	char* str = nullptr;
 	BNStringType type = AsciiString;
-	if (!BNStringifyUnicodeData(m_object, arch ? arch->GetObject() : nullptr, buffer.GetBufferObject(),
-		allowShortStrings, &str, &type))
+	if (!BNStringifyUnicodeData(m_object, arch ? arch->GetObject() : nullptr, buffer.GetBufferObject(), allowShortStrings, &str, &type))
 		return nullopt;
 
 	string result(str);

@@ -510,6 +510,8 @@ class LowLevelILInstruction(BaseILInstruction):
 		inst = core.BNGetLowLevelILByIndex(func.handle, expr_index)
 		assert inst is not None, "core.BNGetLowLevelILByIndex returned None"
 		core_inst = CoreLowLevelILInstruction.from_BNLowLevelILInstruction(inst)
+		if instr_index is None:
+			instr_index = func.get_instruction_index_for_expr(expr_index)
 		return ILInstruction[core_inst.operation](func, expr_index, core_inst, instr_index)  # type: ignore
 
 	def copy_to(
@@ -6220,6 +6222,16 @@ class LowLevelILFunction:
 		value = core.BNGetLowLevelILSSAFlagValue(self.handle, flag, flag_ssa.version)
 		result = variable.RegisterValue.from_BNRegisterValue(value, self._arch)
 		return result
+
+	def get_instruction_index_for_expr(self, expr: ExpressionIndex) -> Optional[InstructionIndex]:
+		result = core.BNGetLowLevelILInstructionForExpr(self.handle, expr)
+		if result >= core.BNGetLowLevelILInstructionCount(self.handle):
+			return None
+		return InstructionIndex(result)
+
+	def get_expr_index_for_instruction(self, instr: InstructionIndex) -> ExpressionIndex:
+		result = core.BNGetLowLevelILInstructionForExpr(self.handle, instr)
+		return ExpressionIndex(result)
 
 	def get_medium_level_il_instruction_index(self,
 	                                          instr: InstructionIndex) -> Optional['mediumlevelil.InstructionIndex']:

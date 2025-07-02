@@ -135,7 +135,7 @@ impl FormInputField {
         let int_default = value.hasDefault.then_some(value.intDefault);
         let address_default = value.hasDefault.then_some(value.addressDefault);
         let index_default = value.hasDefault.then_some(value.indexDefault);
-        let bool_default = value.hasDefault.then_some(value.intResult != 0);
+        let bool_default = int_default.map(|i| i != 0);
         let extension = raw_to_string(value.ext);
         let current_address = value.currentAddress;
         let string_result = raw_to_string(value.stringResult);
@@ -355,6 +355,7 @@ impl FormInputField {
     pub fn try_default_int(&self) -> Option<i64> {
         match self {
             FormInputField::Integer { default, .. } => *default,
+            FormInputField::Checkbox { default, .. } => default.map(|b| b as i64),
             _ => None,
         }
     }
@@ -391,6 +392,7 @@ impl FormInputField {
     pub fn try_value_int(&self) -> Option<i64> {
         match self {
             FormInputField::Integer { value, .. } => Some(*value),
+            FormInputField::Checkbox { value, .. } => Some(*value as i64),
             _ => None,
         }
     }

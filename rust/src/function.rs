@@ -2372,11 +2372,13 @@ impl Function {
     }
 
     /// List of address of unresolved indirect branches
-    pub fn unresolved_indirect_branches(&self) -> Array<UnresolvedIndirectBranches> {
+    /*
+    pub fn unresolved_indirect_branches(&self) -> Array<Arch> {
         let mut count = 0;
         let result = unsafe { BNGetUnresolvedIndirectBranches(self.handle, &mut count) };
         unsafe { Array::new(result, count, ()) }
     }
+    */
 
     /// Returns a string representing the provenance. This portion of the API
     /// is under development. Currently the provenance information is

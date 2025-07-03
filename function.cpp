@@ -1852,13 +1852,15 @@ Ref<Function> Function::GetCalleeForAnalysis(Ref<Platform> platform, uint64_t ad
 }
 
 
-vector<uint64_t> Function::GetUnresolvedIndirectBranches()
+vector<ArchAndAddr> Function::GetUnresolvedIndirectBranches()
 {
 	size_t count;
-	uint64_t* addrs = BNGetUnresolvedIndirectBranches(m_object, &count);
-	vector<uint64_t> result;
-	result.insert(result.end(), addrs, &addrs[count]);
-	BNFreeAddressList(addrs);
+	BNArchitectureAndAddress* addresses = BNGetUnresolvedIndirectBranches(m_object, &count);
+	vector<ArchAndAddr> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+		result.push_back({new CoreArchitecture(addresses[i].arch), addresses[i].address});
+	BNFreeArchitectureAndAddressList(addresses);
 	return result;
 }
 

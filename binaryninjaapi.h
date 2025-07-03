@@ -8137,6 +8137,7 @@ namespace BinaryNinja {
 		std::optional<std::map<uint64_t, std::set<ArchAndAddr>>> m_directCodeReferences;
 		std::optional<std::set<ArchAndAddr>> m_directNoReturnCalls;
 		std::optional<std::set<ArchAndAddr>> m_haltedDisassemblyAddresses;
+		std::optional<std::map<ArchAndAddr, ArchAndAddr>> m_inlinedUnresolvedIndirectBranches;
 
 	public:
 		BNBasicBlockAnalysisContext* m_context;
@@ -8160,6 +8161,7 @@ namespace BinaryNinja {
 		std::map<uint64_t, std::set<ArchAndAddr>>& GetDirectCodeReferences();
 		std::set<ArchAndAddr>& GetDirectNoReturnCalls();
 		std::set<ArchAndAddr>& GetHaltedDisassemblyAddresses();
+		std::map<ArchAndAddr, ArchAndAddr>& GetInlinedUnresolvedIndirectBranches();
 
 		void AddTempOutgoingReference(Function* targetFunc);
 
@@ -11495,7 +11497,7 @@ namespace BinaryNinja {
 
 		Ref<Function> GetCalleeForAnalysis(Ref<Platform> platform, uint64_t addr, bool exact);
 
-		std::vector<uint64_t> GetUnresolvedIndirectBranches();
+		std::vector<ArchAndAddr> GetUnresolvedIndirectBranches();
 		bool HasUnresolvedIndirectBranches();
 
 		void SetAutoCallTypeAdjustment(Architecture* arch, uint64_t addr, const Confidence<Ref<Type>>& adjust);

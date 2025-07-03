@@ -1277,18 +1277,22 @@ class Function:
 		return result
 
 	@property
-	def unresolved_indirect_branches(self) -> List[int]:
+	def unresolved_indirect_branches(self) -> List[Tuple['architecture.Architecture', int]]:
 		"""List of unresolved indirect branches (read-only)"""
 		count = ctypes.c_ulonglong()
-		addrs = core.BNGetUnresolvedIndirectBranches(self.handle, count)
-		assert addrs is not None, "core.BNGetUnresolvedIndirectBranches returned None"
+		addresses = core.BNGetUnresolvedIndirectBranches(self.handle, count)
 		try:
+			assert addresses is not None, "core.BNGetUnresolvedIndirectBranches returned None"
 			result = []
-			for i in range(0, count.value):
-				result.append(addrs[i])
+			for i in range(count.value):
+				result.append((
+					architecture.CoreArchitecture._from_cache(addresses[i].arch),
+					addresses[i].address
+				))
 			return result
 		finally:
-			core.BNFreeAddressList(addrs)
+			if addresses is not None:
+				core.BNFreeArchitectureAndAddressList(addresses)
 
 	@property
 	def has_unresolved_indirect_branches(self) -> bool:

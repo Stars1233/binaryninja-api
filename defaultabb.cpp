@@ -75,6 +75,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 	auto& directRefs = context.GetDirectCodeReferences();
 	auto& directNoReturnCalls = context.GetDirectNoReturnCalls();
 	auto& haltedDisassemblyAddresses = context.GetHaltedDisassemblyAddresses();
+	auto& inlinedUnresolvedIndirectBranches = context.GetInlinedUnresolvedIndirectBranches();
 
 	bool hasInvalidInstructions = false;
 	set<ArchAndAddr> guidedSourceBlockTargets;
@@ -325,6 +326,81 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 				{
 					bool fastPath;
 
+					auto handleAsFallback = [&]() {
+						// Undefined type or target, check for targets from analysis and stop disassembling this block
+						endsBlock = true;
+
+						if (info.branchType[i] == IndirectBranch)
+						{
+							// Indirect calls need not end the block early.
+							Ref<LowLevelILFunction> ilFunc = new LowLevelILFunction(location.arch, nullptr);
+							location.arch->GetInstructionLowLevelIL(opcode, location.address, maxLen, *ilFunc);
+							for (size_t idx = 0; idx < ilFunc->GetInstructionCount(); idx++)
+							{
+								if ((*ilFunc)[idx].operation == LLIL_CALL)
+								{
+									endsBlock = false;
+									break;
+								}
+							}
+						}
+
+						indirectBranchIter = indirectBranches.find(location);
+						endIter = indirectBranches.end();
+						if (indirectBranchIter != endIter)
+						{
+							for (auto& branch : indirectBranchIter->second)
+							{
+								directRefs[branch.address].emplace(location);
+								Ref<Platform> targetPlatform = funcPlatform;
+								if (branch.arch != function->GetArchitecture())
+									targetPlatform = funcPlatform->GetRelatedPlatform(branch.arch);
+
+								// Normal analysis should not inline indirect targets that are function starts
+								if (translateTailCalls && data->GetAnalysisFunction(targetPlatform, branch.address))
+									continue;
+
+								if (isGuidedSourceBlock)
+									guidedSourceBlockTargets.insert(branch);
+
+								block->AddPendingOutgoingEdge(IndirectBranch, branch.address, branch.arch);
+								if (seenBlocks.count(branch) == 0)
+								{
+									blocksToProcess.push(branch);
+									seenBlocks.insert(branch);
+								}
+							}
+						}
+						else if (info.branchType[i] == ExceptionBranch)
+						{
+							block->SetCanExit(false);
+						}
+						else if (info.branchType[i] == FunctionReturn && function->CanReturn().GetValue())
+						{
+							// Support for contextual function returns. This is mainly used for ARM/Thumb with 'blx lr'. It's most common for this to be treated
+							// as a function return, however it can also be a function call. For now this transform is described as follows:
+							// 1) Architecture lifts a call instruction as LLIL_CALL with a branch type of FunctionReturn
+							// 2) By default, contextualFunctionReturns is used to translate this to a LLIL_RET (conservative)
+							// 3) Downstream analysis uses dataflow to validate the return target
+							// 4) If the target is not the ReturnAddressValue, then we avoid the translation to a return and leave the instruction as a call
+							if (auto it = contextualFunctionReturns.find(location); it != contextualFunctionReturns.end())
+								endsBlock = it->second;
+							else
+							{
+								Ref<LowLevelILFunction> ilFunc = new LowLevelILFunction(location.arch, nullptr);
+								location.arch->GetInstructionLowLevelIL(opcode, location.address, maxLen, *ilFunc);
+								if (ilFunc->GetInstructionCount() && ((*ilFunc)[0].operation == LLIL_CALL))
+									contextualFunctionReturns[location] = true;
+							}
+						}
+						else
+						{
+							// If analysis did not find any valid branch targets, don't assume anything about global
+							// function state, such as __noreturn analysis, since we can't see the entire function->
+							block->SetUndeterminedOutgoingEdges(true);
+						}
+					};
+
 					switch (info.branchType[i])
 					{
 					case UnconditionalBranch:
@@ -375,7 +451,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 								calledFunctions.insert(otherFunc);
 								if (info.branchType[i] == UnconditionalBranch)
 								{
-									if (!otherFunc->CanReturn())
+									if (!otherFunc->CanReturn() && !otherFunc->IsInlinedDuringAnalysis().GetValue())
 									{
 										directNoReturnCalls.insert(location);
 										endsBlock = true;
@@ -465,19 +541,31 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 								break;
 							}
 
-							directRefs[target.address].emplace(location);
-							if (!func->CanReturn())
-							{
-								directNoReturnCalls.insert(location);
-								endsBlock = true;
-								block->SetCanExit(false);
-							}
 
 							// Add function as an early reference in case it gets updated before this
 							// function finishes analysis.
 							context.AddTempOutgoingReference(func);
 
 							calledFunctions.emplace(func);
+
+							directRefs[target.address].emplace(location);
+							if (!func->CanReturn())
+							{
+								if (func->IsInlinedDuringAnalysis().GetValue() && func->HasUnresolvedIndirectBranches())
+								{
+									auto unresolved = func->GetUnresolvedIndirectBranches();
+									if (unresolved.size() == 1)
+									{
+										inlinedUnresolvedIndirectBranches[location] = *unresolved.begin();
+										handleAsFallback();
+										break;
+									}
+								}
+
+								directNoReturnCalls.insert(location);
+								endsBlock = true;
+								block->SetCanExit(false);
+							}
 						}
 						break;
 
@@ -485,78 +573,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 						break;
 
 					default:
-						// Undefined type or target, check for targets from analysis and stop disassembling this block
-						endsBlock = true;
-
-						if (info.branchType[i] == IndirectBranch)
-						{
-							// Indirect calls need not end the block early.
-							Ref<LowLevelILFunction> ilFunc = new LowLevelILFunction(location.arch, nullptr);
-							location.arch->GetInstructionLowLevelIL(opcode, location.address, maxLen, *ilFunc);
-							for (size_t idx = 0; idx < ilFunc->GetInstructionCount(); idx++)
-							{
-								if ((*ilFunc)[idx].operation == LLIL_CALL)
-								{
-									endsBlock = false;
-									break;
-								}
-							}
-						}
-
-						indirectBranchIter = indirectBranches.find(location);
-						endIter = indirectBranches.end();
-						if (indirectBranchIter != endIter)
-						{
-							for (auto& branch : indirectBranchIter->second)
-							{
-								directRefs[branch.address].emplace(location);
-								Ref<Platform> targetPlatform = funcPlatform;
-								if (branch.arch != function->GetArchitecture())
-									targetPlatform = funcPlatform->GetRelatedPlatform(branch.arch);
-
-								// Normal analysis should not inline indirect targets that are function starts
-								if (translateTailCalls && data->GetAnalysisFunction(targetPlatform, branch.address))
-									continue;
-
-								if (isGuidedSourceBlock)
-									guidedSourceBlockTargets.insert(branch);
-
-								block->AddPendingOutgoingEdge(IndirectBranch, branch.address, branch.arch);
-								if (seenBlocks.count(branch) == 0)
-								{
-									blocksToProcess.push(branch);
-									seenBlocks.insert(branch);
-								}
-							}
-						}
-						else if (info.branchType[i] == ExceptionBranch)
-						{
-							block->SetCanExit(false);
-						}
-						else if (info.branchType[i] == FunctionReturn)
-						{
-							// Support for contextual function returns. This is mainly used for ARM/Thumb with 'blx lr'. It's most common for this to be treated
-							// as a function return, however it can also be a function call. For now this transform is described as follows:
-							// 1) Architecture lifts a call instruction as LLIL_CALL with a branch type of FunctionReturn
-							// 2) By default, contextualFunctionReturns is used to translate this to a LLIL_RET (conservative)
-							// 3) Downstream analysis uses dataflow to validate the return target
-							// 4) If the target is not the ReturnAddressValue, then we avoid the translation to a return and leave the instruction as a call
-							if (auto it = contextualFunctionReturns.find(location); it != contextualFunctionReturns.end())
-								endsBlock = it->second;
-							else
-							{
-								Ref<LowLevelILFunction> ilFunc = new LowLevelILFunction(location.arch, nullptr);
-								location.arch->GetInstructionLowLevelIL(opcode, location.address, maxLen, *ilFunc);
-								if (ilFunc->GetInstructionCount() && ((*ilFunc)[0].operation == LLIL_CALL))
-									contextualFunctionReturns[location] = true;
-							}
-						}
-						else
-						{
-							// If analysis did not find any valid branch targets, don't assume anything about global
-							// function state, such as __noreturn analysis, since we can't see the entire function->
-							block->SetUndeterminedOutgoingEdges(true);
-						}
+						handleAsFallback();
 						break;
 					}
 				}

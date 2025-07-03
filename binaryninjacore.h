@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 116
+#define BN_CURRENT_CORE_ABI_VERSION 117
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 116
+#define BN_MINIMUM_CORE_ABI_VERSION 117
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -1904,6 +1904,9 @@ extern "C"
 
 		size_t haltedDisassemblyAddressesCount;
 		BNArchitectureAndAddress* haltedDisassemblyAddresses;
+
+		size_t inlinedUnresolvedIndirectBranchCount;
+		BNArchitectureAndAddress* inlinedUnresolvedIndirectBranches;
 	} BNBasicBlockAnalysisContext;
 
 	typedef struct BNCustomArchitecture
@@ -5141,7 +5144,7 @@ extern "C"
 	BINARYNINJACOREAPI BNFunction* BNGetCalleeForAnalysis(BNFunction* func, BNPlatform* platform,
 		uint64_t addr, bool exact);
 
-	BINARYNINJACOREAPI uint64_t* BNGetUnresolvedIndirectBranches(BNFunction* func, size_t* count);
+	BINARYNINJACOREAPI BNArchitectureAndAddress* BNGetUnresolvedIndirectBranches(BNFunction* func, size_t* count);
 	BINARYNINJACOREAPI bool BNHasUnresolvedIndirectBranches(BNFunction* func);
 
 	BINARYNINJACOREAPI void BNFunctionToggleRegion(BNFunction* func, uint64_t hash);
@@ -5214,6 +5217,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNAnalyzeBasicBlocksContextSetDirectNoReturnCalls(BNBasicBlockAnalysisContext* abb, BNArchitectureAndAddress* sources, size_t count);
 	BINARYNINJACOREAPI void BNAnalyzeBasicBlocksContextSetContextualFunctionReturns(BNBasicBlockAnalysisContext* abb, BNArchitectureAndAddress* sources, bool* values, size_t count);
 	BINARYNINJACOREAPI void BNAnalyzeBasicBlocksContextSetHaltedDisassemblyAddresses(BNBasicBlockAnalysisContext* abb, BNArchitectureAndAddress* sources, size_t count);
+	BINARYNINJACOREAPI void BNAnalyzeBasicBlocksContextSetInlinedUnresolvedIndirectBranches(BNBasicBlockAnalysisContext* abb, BNArchitectureAndAddress* locations, size_t count);
 
 	BINARYNINJACOREAPI BNAnalysisParameters BNGetParametersForAnalysis(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNSetParametersForAnalysis(BNBinaryView* view, BNAnalysisParameters params);

@@ -298,6 +298,15 @@ std::set<ArchAndAddr>& BasicBlockAnalysisContext::GetHaltedDisassemblyAddresses(
 }
 
 
+std::map<ArchAndAddr, ArchAndAddr>& BasicBlockAnalysisContext::GetInlinedUnresolvedIndirectBranches()
+{
+	if (!m_inlinedUnresolvedIndirectBranches)
+		m_inlinedUnresolvedIndirectBranches.emplace();
+
+	return *m_inlinedUnresolvedIndirectBranches;
+}
+
+
 void BasicBlockAnalysisContext::AddTempOutgoingReference(Function* targetFunc)
 {
 	BNAnalyzeBasicBlocksContextAddTempReference(m_context, targetFunc->m_object);
@@ -384,6 +393,29 @@ void BasicBlockAnalysisContext::Finalize()
 
 		BNAnalyzeBasicBlocksContextSetHaltedDisassemblyAddresses(m_context, haltedAddresses, haltedDisassemblyAddresses.size());
 		delete[] haltedAddresses;
+	}
+
+	if (m_inlinedUnresolvedIndirectBranches)
+	{
+		auto& inlinedUnresolvedIndirectBranches = *m_inlinedUnresolvedIndirectBranches;
+
+		BNArchitectureAndAddress* locations = new BNArchitectureAndAddress[inlinedUnresolvedIndirectBranches.size() * 2];
+
+		size_t i = 0;
+		for (auto& pair : inlinedUnresolvedIndirectBranches)
+		{
+			locations[i].arch = pair.first.arch->GetObject();
+			locations[i].address = pair.first.address;
+
+			locations[i + 1].arch = pair.second.arch->GetObject();
+			locations[i + 1].address = pair.second.address;
+
+			i += 2;
+		}
+
+		BNAnalyzeBasicBlocksContextSetInlinedUnresolvedIndirectBranches(m_context, locations, inlinedUnresolvedIndirectBranches.size() * 2);
+
+		delete[] locations;
 	}
 
 	if (m_contextualReturns)

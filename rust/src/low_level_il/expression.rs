@@ -272,12 +272,14 @@ where
     ExternPtr(Operation<'func, M, F, operation::Extern>),
 
     RegStackPop(Operation<'func, M, F, operation::RegStackPop>),
+    RegStackFreeReg(Operation<'func, M, F, operation::RegStackPop>),
 
     CallOutputSsa(Operation<'func, M, F, operation::CallOutputSsa>),
     CallParamSsa(Operation<'func, M, F, operation::CallParamSsa>),
     CallStackSsa(Operation<'func, M, F, operation::CallStackSsa>),
 
     Add(Operation<'func, M, F, operation::BinaryOp>),
+    AddOverflow(Operation<'func, M, F, operation::BinaryOp>),
     Adc(Operation<'func, M, F, operation::BinaryOpCarry>),
     Sub(Operation<'func, M, F, operation::BinaryOp>),
     Sbb(Operation<'func, M, F, operation::BinaryOpCarry>),
@@ -330,7 +332,7 @@ where
     CmpSgt(Operation<'func, M, F, operation::Condition>),
     CmpUgt(Operation<'func, M, F, operation::Condition>),
 
-    //TestBit(Operation<'func, M, F, operation::TestBit>), // TODO
+    TestBit(Operation<'func, M, F, operation::BinaryOp>),
     BoolToInt(Operation<'func, M, F, operation::UnaryOp>),
 
     Fadd(Operation<'func, M, F, operation::BinaryOp>),
@@ -361,7 +363,6 @@ where
 
     SeparateParamListSsa(Operation<'func, M, F, operation::SeparateParamListSsa>),
 
-    // TODO ADD_OVERFLOW
     Unimpl(Operation<'func, M, F, operation::NoArgs>),
     UnimplMem(Operation<'func, M, F, operation::UnimplMem>),
 
@@ -418,6 +419,9 @@ where
             LLIL_REG_STACK_POP => {
                 LowLevelILExpressionKind::RegStackPop(Operation::new(function, op, index))
             }
+            LLIL_REG_STACK_FREE_REG => {
+                LowLevelILExpressionKind::RegStackFreeReg(Operation::new(function, op, index))
+            }
 
             LLIL_CALL_OUTPUT_SSA => {
                 LowLevelILExpressionKind::CallOutputSsa(Operation::new(function, op, index))
@@ -430,6 +434,9 @@ where
             }
 
             LLIL_ADD => LowLevelILExpressionKind::Add(Operation::new(function, op, index)),
+            LLIL_ADD_OVERFLOW => {
+                LowLevelILExpressionKind::AddOverflow(Operation::new(function, op, index))
+            }
             LLIL_ADC => LowLevelILExpressionKind::Adc(Operation::new(function, op, index)),
             LLIL_SUB => LowLevelILExpressionKind::Sub(Operation::new(function, op, index)),
             LLIL_SBB => LowLevelILExpressionKind::Sbb(Operation::new(function, op, index)),
@@ -478,6 +485,7 @@ where
             LLIL_CMP_SGT => LowLevelILExpressionKind::CmpSgt(Operation::new(function, op, index)),
             LLIL_CMP_UGT => LowLevelILExpressionKind::CmpUgt(Operation::new(function, op, index)),
 
+            LLIL_TEST_BIT => LowLevelILExpressionKind::TestBit(Operation::new(function, op, index)),
             LLIL_BOOL_TO_INT => {
                 LowLevelILExpressionKind::BoolToInt(Operation::new(function, op, index))
             }
@@ -530,9 +538,9 @@ where
                 LowLevelILExpressionKind::UnimplMem(Operation::new(function, op, index))
             }
 
-            // TODO TEST_BIT ADD_OVERFLOW LLIL_REG_STACK_PUSH
+            // TODO: LLIL_REG_STACK_PUSH
             _ => {
-                #[cfg(debug_assertions)]
+                // #[cfg(debug_assertions)]
                 log::error!(
                     "Got unexpected operation {:?} in value expr at 0x{:x}",
                     op.operation,
@@ -663,10 +671,11 @@ where
                 visit!(op.right());
                 visit!(op.carry());
             }
-            Add(ref op) | Sub(ref op) | And(ref op) | Or(ref op) | Xor(ref op) | Lsl(ref op)
-            | Lsr(ref op) | Asr(ref op) | Rol(ref op) | Ror(ref op) | Mul(ref op)
-            | MulsDp(ref op) | MuluDp(ref op) | Divu(ref op) | Divs(ref op) | Modu(ref op)
-            | Mods(ref op) | Fadd(ref op) | Fsub(ref op) | Fmul(ref op) | Fdiv(ref op) => {
+            Add(ref op) | AddOverflow(ref op) | Sub(ref op) | And(ref op) | Or(ref op)
+            | Xor(ref op) | Lsl(ref op) | Lsr(ref op) | Asr(ref op) | Rol(ref op) | Ror(ref op)
+            | Mul(ref op) | MulsDp(ref op) | MuluDp(ref op) | Divu(ref op) | Divs(ref op)
+            | Modu(ref op) | Mods(ref op) | Fadd(ref op) | Fsub(ref op) | Fmul(ref op)
+            | Fdiv(ref op) | TestBit(ref op) => {
                 visit!(op.left());
                 visit!(op.right());
             }
@@ -703,8 +712,8 @@ where
             // Do not have any sub expressions.
             Pop(_) | Reg(_) | RegSsa(_) | RegPartialSsa(_) | RegSplit(_) | RegSplitSsa(_)
             | Const(_) | ConstPtr(_) | Flag(_) | FlagBit(_) | ExternPtr(_) | FlagCond(_)
-            | FlagGroup(_) | Unimpl(_) | Undef(_) | RegStackPop(_) | CallOutputSsa(_)
-            | CallStackSsa(_) | FloatConst(_) => {}
+            | FlagGroup(_) | Unimpl(_) | Undef(_) | RegStackPop(_) | RegStackFreeReg(_)
+            | CallOutputSsa(_) | CallStackSsa(_) | FloatConst(_) => {}
         }
 
         VisitorAction::Sibling
@@ -753,6 +762,7 @@ where
             ExternPtr(ref op) => &op.op,
 
             RegStackPop(ref op) => &op.op,
+            RegStackFreeReg(ref op) => &op.op,
 
             CallOutputSsa(ref op) => &op.op,
             CallParamSsa(ref op) => &op.op,
@@ -760,10 +770,11 @@ where
 
             Adc(ref op) | Sbb(ref op) | Rlc(ref op) | Rrc(ref op) => &op.op,
 
-            Add(ref op) | Sub(ref op) | And(ref op) | Or(ref op) | Xor(ref op) | Lsl(ref op)
-            | Lsr(ref op) | Asr(ref op) | Rol(ref op) | Ror(ref op) | Mul(ref op)
-            | MulsDp(ref op) | MuluDp(ref op) | Divu(ref op) | Divs(ref op) | Modu(ref op)
-            | Mods(ref op) | Fadd(ref op) | Fsub(ref op) | Fmul(ref op) | Fdiv(ref op) => &op.op,
+            Add(ref op) | AddOverflow(ref op) | Sub(ref op) | And(ref op) | Or(ref op)
+            | Xor(ref op) | Lsl(ref op) | Lsr(ref op) | Asr(ref op) | Rol(ref op) | Ror(ref op)
+            | Mul(ref op) | MulsDp(ref op) | MuluDp(ref op) | Divu(ref op) | Divs(ref op)
+            | Modu(ref op) | Mods(ref op) | Fadd(ref op) | Fsub(ref op) | Fmul(ref op)
+            | Fdiv(ref op) | TestBit(ref op) => &op.op,
 
             DivuDp(ref op) | DivsDp(ref op) | ModuDp(ref op) | ModsDp(ref op) => &op.op,
 
@@ -775,7 +786,6 @@ where
             SeparateParamListSsa(ref op) => &op.op,
 
             UnimplMem(ref op) => &op.op,
-            //TestBit(Operation<'func, M, F, operation::TestBit>), // TODO
         }
     }
 }
@@ -825,6 +835,7 @@ impl LowLevelILExpressionKind<'_, Mutable, NonSSA> {
             ExternPtr(ref op) => op.flag_write(),
 
             RegStackPop(ref op) => op.flag_write(),
+            RegStackFreeReg(ref op) => op.flag_write(),
 
             CallOutputSsa(ref op) => op.flag_write(),
             CallParamSsa(ref op) => op.flag_write(),
@@ -832,12 +843,11 @@ impl LowLevelILExpressionKind<'_, Mutable, NonSSA> {
 
             Adc(ref op) | Sbb(ref op) | Rlc(ref op) | Rrc(ref op) => op.flag_write(),
 
-            Add(ref op) | Sub(ref op) | And(ref op) | Or(ref op) | Xor(ref op) | Lsl(ref op)
-            | Lsr(ref op) | Asr(ref op) | Rol(ref op) | Ror(ref op) | Mul(ref op)
-            | MulsDp(ref op) | MuluDp(ref op) | Divu(ref op) | Divs(ref op) | Modu(ref op)
-            | Mods(ref op) | Fadd(ref op) | Fsub(ref op) | Fmul(ref op) | Fdiv(ref op) => {
-                op.flag_write()
-            }
+            Add(ref op) | AddOverflow(ref op) | Sub(ref op) | And(ref op) | Or(ref op)
+            | Xor(ref op) | Lsl(ref op) | Lsr(ref op) | Asr(ref op) | Rol(ref op) | Ror(ref op)
+            | Mul(ref op) | MulsDp(ref op) | MuluDp(ref op) | Divu(ref op) | Divs(ref op)
+            | Modu(ref op) | Mods(ref op) | Fadd(ref op) | Fsub(ref op) | Fmul(ref op)
+            | Fdiv(ref op) | TestBit(ref op) => op.flag_write(),
 
             DivuDp(ref op) | DivsDp(ref op) | ModuDp(ref op) | ModsDp(ref op) => op.flag_write(),
 
@@ -849,7 +859,6 @@ impl LowLevelILExpressionKind<'_, Mutable, NonSSA> {
             SeparateParamListSsa(ref op) => op.flag_write(),
 
             UnimplMem(ref op) => op.flag_write(),
-            //TestBit(Operation<'func, M, F, operation::TestBit>), // TODO
         }
     }
 }

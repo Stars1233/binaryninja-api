@@ -975,6 +975,41 @@ where
     }
 }
 
+// LLIL_REG_STACK_FREE_REG
+pub struct RegStackFreeReg;
+
+impl<M, F> Operation<'_, M, F, RegStackFreeReg>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    pub fn size(&self) -> usize {
+        self.op.size
+    }
+
+    pub fn dest_reg(&self) -> CoreRegister {
+        let raw_id = self.op.operands[0] as u32;
+        self.function
+            .arch()
+            .register_from_id(RegisterId(raw_id))
+            .expect("Bad register ID")
+    }
+}
+
+impl<M, F> Debug for Operation<'_, M, F, RegStackFreeReg>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("RegStackFreeReg")
+            .field("address", &self.address())
+            .field("size", &self.size())
+            .field("dest_reg", &self.dest_reg())
+            .finish()
+    }
+}
+
 // LLIL_FLAG, LLIL_FLAG_SSA
 pub struct Flag;
 
@@ -2222,6 +2257,7 @@ impl OperationArguments for RegSplit {}
 impl OperationArguments for RegSplitSsa {}
 impl OperationArguments for RegStackPush {}
 impl OperationArguments for RegStackPop {}
+impl OperationArguments for RegStackFreeReg {}
 impl OperationArguments for Flag {}
 impl OperationArguments for FlagBit {}
 impl OperationArguments for Jump {}

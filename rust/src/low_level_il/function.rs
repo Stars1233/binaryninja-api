@@ -93,6 +93,31 @@ where
         }
     }
 
+    /// Get all the contiguous instructions for a given location.
+    ///
+    /// NOTE: This won't get you every instruction for a location, only the instructions
+    /// that are sequential from the starting instruction.
+    pub fn instructions_at<L: Into<Location>>(&self, loc: L) -> Vec<LowLevelILInstruction<M, F>> {
+        let loc = loc.into();
+        // TODO: Instructions sharing the same address are not always sequential.
+        // Gather all of the sequential instructions with the same address and same block.
+        self.instruction_index_at(loc)
+            .map(|mut idx| {
+                let mut instructions = Vec::new();
+                let block = self.basic_block_containing_index(idx);
+                while idx.0 < self.instruction_count() {
+                    let instr = LowLevelILInstruction::new(self, idx);
+                    if instr.address() != loc.addr || instr.basic_block() != block {
+                        break;
+                    }
+                    instructions.push(instr);
+                    idx = idx.next();
+                }
+                instructions
+            })
+            .unwrap_or_default()
+    }
+
     pub fn instruction_at<L: Into<Location>>(&self, loc: L) -> Option<LowLevelILInstruction<M, F>> {
         Some(LowLevelILInstruction::new(
             self,

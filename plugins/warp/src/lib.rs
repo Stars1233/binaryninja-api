@@ -155,7 +155,7 @@ pub fn basic_block_guid<M: FunctionMutability>(
             instr_bytes.truncate(instr_info.length);
 
             // Find variant and blacklisted instructions using lifted il.
-            if let Some(lifted_il_instr) = lifted_il.instruction_at(instr_addr) {
+            for lifted_il_instr in lifted_il.instructions_at(instr_addr) {
                 // If instruction is blacklisted, don't include the bytes.
                 if is_blacklisted_instruction(&lifted_il_instr) {
                     continue;
@@ -164,6 +164,7 @@ pub fn basic_block_guid<M: FunctionMutability>(
                 if is_variant_instruction(relocatable_regions, &lifted_il_instr) {
                     // Found a variant instruction, mask off the entire instruction.
                     instr_bytes.fill(0);
+                    break;
                 }
             }
 
@@ -177,10 +178,11 @@ pub fn basic_block_guid<M: FunctionMutability>(
             // TODO: A "mapped llil" or having some simple data flow, the simple data flow is the most attractive
             // TODO: "solution", but it would require
             if let Ok(llil) = &low_level_il {
-                if let Some(low_level_instr) = llil.instruction_at(instr_addr) {
+                for low_level_instr in llil.instructions_at(instr_addr) {
                     if is_computed_variant_instruction(relocatable_regions, &low_level_instr) {
                         // Found a computed variant instruction, mask off the entire instruction.
                         instr_bytes.fill(0);
+                        break;
                     }
                 }
             }

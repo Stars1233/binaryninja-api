@@ -51,7 +51,7 @@ impl HighlightRenderLayer {
         let relocatable_regions = relocatable_regions(&lifted_il.function().view());
         for line in lines {
             // We use address here instead of index since it's more reliable for other IL's.
-            if let Some(lifted_il_instr) = lifted_il.instruction_at(line.address) {
+            for lifted_il_instr in lifted_il.instructions_at(line.address) {
                 if is_blacklisted_instruction(&lifted_il_instr) {
                     line.highlight = self.blacklist;
                 } else if is_variant_instruction(&relocatable_regions, &lifted_il_instr) {
@@ -59,7 +59,7 @@ impl HighlightRenderLayer {
                 }
             }
 
-            if let Some(llil_instr) = llil.instruction_at(line.address) {
+            for llil_instr in llil.instructions_at(line.address) {
                 if is_computed_variant_instruction(&relocatable_regions, &llil_instr) {
                     line.highlight = self.computed_variant;
                 }

@@ -70,7 +70,7 @@ impl Command for RunMatcher {
 pub fn run_matcher(view: &BinaryView) {
     // Alert the user if we have no actual regions (one comes from the synthetic section).
     let regions = relocatable_regions(view);
-    if regions.len() <= 1 {
+    if regions.len() <= 1 && view.memory_map().is_activated() {
         log::warn!(
             "No relocatable regions found, for best results please define sections for the binary!"
         );

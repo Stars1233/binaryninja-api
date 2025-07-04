@@ -487,6 +487,9 @@ std::optional<VirtualFunctionTableInfo> MicrosoftRTTIProcessor::ProcessVFT(uint6
     std::vector<std::pair<uint64_t, std::optional<Ref<Function>>>> virtualFunctions = {};
     while (true)
     {
+        uint64_t readOffset = reader.GetOffset();
+        if (!m_view->IsValidOffset(readOffset))
+            break;
         uint64_t vFuncAddr = reader.ReadPointer();
         auto funcs = m_view->GetAnalysisFunctionsForAddress(vFuncAddr);
         if (funcs.empty())

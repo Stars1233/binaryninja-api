@@ -561,6 +561,9 @@ std::optional<VirtualFunctionTableInfo> ItaniumRTTIProcessor::ProcessVFT(uint64_
     std::vector<VirtualFunctionInfo> virtualFunctions = {};
     while (true)
     {
+        uint64_t readOffset = reader.GetOffset();
+        if (!m_view->IsValidOffset(readOffset))
+            break;
         uint64_t vFuncAddr = reader.ReadPointer();
         auto funcs = m_view->GetAnalysisFunctionsForAddress(vFuncAddr);
         if (funcs.empty())

@@ -519,7 +519,7 @@ impl MediumLevelILFunction {
     pub fn live_instruction_for_variable(
         &self,
         variable: &Variable,
-        include_last_user: bool,
+        include_last_use: bool,
     ) -> Array<MediumLevelILInstruction> {
         let mut count = 0;
         let raw_var = BNVariable::from(variable);
@@ -527,7 +527,7 @@ impl MediumLevelILFunction {
             BNGetMediumLevelILLiveInstructionsForVariable(
                 self.handle,
                 &raw_var,
-                include_last_user,
+                include_last_use,
                 &mut count,
             )
         };

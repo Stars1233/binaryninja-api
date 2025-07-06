@@ -18,12 +18,12 @@ use crate::rc::*;
 use crate::string::*;
 use binaryninjacore_sys::{
     BNBeginUndoActions, BNCloseFile, BNCommitUndoActions, BNCreateDatabase, BNCreateFileMetadata,
-    BNFileMetadata, BNFileMetadataGetSessionId, BNFreeFileMetadata, BNGetCurrentOffset,
-    BNGetCurrentView, BNGetExistingViews, BNGetFileMetadataDatabase, BNGetFileViewOfType,
-    BNGetFilename, BNGetProjectFile, BNIsAnalysisChanged, BNIsBackedByDatabase, BNIsFileModified,
-    BNMarkFileModified, BNMarkFileSaved, BNNavigate, BNNewFileReference,
-    BNOpenDatabaseForConfiguration, BNOpenExistingDatabase, BNRedo, BNRevertUndoActions,
-    BNSaveAutoSnapshot, BNSetFilename, BNUndo,
+    BNFileMetadata, BNFileMetadataGetSessionId, BNForgetUndoActions, BNFreeFileMetadata,
+    BNGetCurrentOffset, BNGetCurrentView, BNGetExistingViews, BNGetFileMetadataDatabase,
+    BNGetFileViewOfType, BNGetFilename, BNGetProjectFile, BNIsAnalysisChanged,
+    BNIsBackedByDatabase, BNIsFileModified, BNMarkFileModified, BNMarkFileSaved, BNNavigate,
+    BNNewFileReference, BNOpenDatabaseForConfiguration, BNOpenExistingDatabase, BNRedo,
+    BNRevertUndoActions, BNSaveAutoSnapshot, BNSetFilename, BNUndo,
 };
 use binaryninjacore_sys::{BNCreateDatabaseWithProgress, BNOpenExistingDatabaseWithProgress};
 use std::ffi::c_void;
@@ -177,6 +177,20 @@ impl FileMetadata {
         let id = id.to_cstr();
         unsafe {
             BNRevertUndoActions(self.handle, id.as_ref().as_ptr() as *const _);
+        }
+    }
+
+    /// Forgets the undo actions committed in the undo entry.
+    ///
+    /// NOTE: This is **NOT** thread safe, if you are holding any locks that might be held by both the main thread
+    /// and the thread executing this function, you can deadlock. You should also never call this function
+    /// on multiple threads at a time. See the following issues:
+    ///  - <https://github.com/Vector35/binaryninja-api/issues/6289>
+    ///  - <https://github.com/Vector35/binaryninja-api/issues/6325>
+    pub fn forget_undo_actions(&self, id: &str) {
+        let id = id.to_cstr();
+        unsafe {
+            BNForgetUndoActions(self.handle, id.as_ref().as_ptr() as *const _);
         }
     }
 

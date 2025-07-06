@@ -5,10 +5,30 @@ use binaryninja::function::Comment as BNComment;
 use binaryninja::function::Function as BNFunction;
 use binaryninja::platform::Platform;
 use binaryninja::rc::Ref;
+use binaryninja::variable::{Variable as BNVariable, VariableSourceType};
 pub use symbol::*;
 pub use types::*;
+use warp::r#type::class::function::{Location, RegisterLocation, StackLocation};
 use warp::signature::comment::FunctionComment;
 use warp::target::Target;
+
+pub fn bn_var_to_location(bn_variable: BNVariable) -> Option<Location> {
+    match bn_variable.ty {
+        VariableSourceType::StackVariableSourceType => {
+            let stack_loc = StackLocation {
+                offset: bn_variable.storage,
+            };
+            Some(Location::Stack(stack_loc))
+        }
+        VariableSourceType::RegisterVariableSourceType => {
+            let reg_loc = RegisterLocation {
+                id: bn_variable.storage as u64,
+            };
+            Some(Location::Register(reg_loc))
+        }
+        VariableSourceType::FlagVariableSourceType => None,
+    }
+}
 
 pub fn bn_comment_to_comment(func: &BNFunction, bn_comment: BNComment) -> FunctionComment {
     let offset = (bn_comment.addr as i64) - (func.start() as i64);

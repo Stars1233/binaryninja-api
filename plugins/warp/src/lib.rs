@@ -1,5 +1,5 @@
 use crate::cache::{cached_constraints, cached_function_guid};
-use crate::convert::{bn_comment_to_comment, from_bn_symbol, from_bn_type};
+use crate::convert::{bn_comment_to_comment, bn_var_to_location, from_bn_symbol, from_bn_type};
 use binaryninja::architecture::{
     Architecture, ImplicitRegisterExtend, Register as BNRegister, RegisterInfo,
 };
@@ -16,13 +16,15 @@ use binaryninja::low_level_il::instruction::{
 };
 use binaryninja::low_level_il::{LowLevelILRegisterKind, VisitorAction};
 use binaryninja::rc::{Ref as BNRef, Ref};
+use binaryninja::tags::TagType;
+use binaryninja::variable::RegisterValueType;
+use itertools::Itertools;
 use std::ops::Range;
 use std::path::PathBuf;
 use warp::signature::basic_block::BasicBlockGUID;
 use warp::signature::function::{Function, FunctionGUID};
+use warp::signature::variable::FunctionVariable;
 
-use binaryninja::tags::TagType;
-use binaryninja::variable::RegisterValueType;
 /// Re-export the warp crate that is used, this is useful for consumers of this crate.
 pub use warp;
 
@@ -71,6 +73,38 @@ pub fn user_signature_dir() -> PathBuf {
     binaryninja::user_directory().join("signatures/")
 }
 
+pub fn build_variables(func: &BNFunction) -> Vec<FunctionVariable> {
+    let func_start = func.start();
+    let mut variables = vec![];
+    if let Ok(mlil) = func.medium_level_il() {
+        let bn_vars = func.variables();
+        for bn_var in &bn_vars {
+            if mlil.is_var_user_defined(&bn_var.variable) {
+                // TODO: live_instruction_for_variable only works for register types.
+                if let Some(first_instr) = mlil
+                    .live_instruction_for_variable(&bn_var.variable, true)
+                    .iter()
+                    .sorted_by_key(|i| i.instr_index)
+                    .next()
+                {
+                    if let Some(var_loc) = bn_var_to_location(bn_var.variable) {
+                        let var_name = bn_var.name;
+                        let var_type =
+                            from_bn_type(&func.view(), &bn_var.ty.contents, bn_var.ty.confidence);
+                        variables.push(FunctionVariable {
+                            offset: (first_instr.address as i64) - (func_start as i64),
+                            location: var_loc,
+                            name: Some(var_name),
+                            ty: Some(var_type),
+                        })
+                    }
+                }
+            }
+        }
+    }
+    variables
+}
+
 pub fn build_function<M: FunctionMutability>(
     func: &BNFunction,
     lifted_il: &LowLevelILFunction<M, NonSSA>,
@@ -97,10 +131,7 @@ pub fn build_function<M: FunctionMutability>(
         // NOTE: We do not filter out adjacent functions here.
         constraints: cached_constraints(func, |_| true),
         comments,
-        // TODO: Gather relevant variables (only user?).
-        // TODO: Will need MLIL SSA for this to locate def sites.
-        // TODO: Add this info in a second pass?
-        variables: vec![],
+        variables: build_variables(func),
     }
 }
 

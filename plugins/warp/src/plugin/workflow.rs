@@ -8,6 +8,7 @@ use crate::convert::{
 };
 use crate::matcher::{Matcher, MatcherSettings};
 use crate::{get_warp_tag_type, relocatable_regions};
+use binaryninja::architecture::RegisterId;
 use binaryninja::background_task::BackgroundTask;
 use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::command::Command;
@@ -16,6 +17,7 @@ use binaryninja::workflow::{Activity, AnalysisContext, Workflow};
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::time::Instant;
+use warp::r#type::class::function::{Location, RegisterLocation, StackLocation};
 use warp::signature::function::{Function, FunctionGUID};
 use warp::target::Target;
 
@@ -68,6 +70,9 @@ impl Command for RunMatcher {
 }
 
 pub fn run_matcher(view: &BinaryView) {
+    // TODO: Create the tag type so we dont have UB in the apply function workflow.
+    let _ = get_warp_tag_type(view);
+
     // Alert the user if we have no actual regions (one comes from the synthetic section).
     let regions = relocatable_regions(view);
     if regions.len() <= 1 && view.memory_map().is_activated() {
@@ -174,17 +179,41 @@ pub fn insert_workflow() {
                 let bn_comment = comment_to_bn_comment(&function, comment);
                 function.set_comment_at(bn_comment.addr, &bn_comment.comment);
             }
-            // TODO: Fix this before release.
-            // TODO: Any attempt to add a tag type will create a undo action
-            // TODO: Those are currently not thread safe when running in headless python.
-            // TODO: See Mason for more lore.
-            // function.add_tag(
-            //     &get_warp_tag_type(&view),
-            //     &matched_function.guid.to_string(),
-            //     None,
-            //     false,
-            //     None,
-            // );
+            if let Some(mlil) = ctx.mlil_function() {
+                for variable in matched_function.variables {
+                    let decl_addr = ((function.start() as i64) + variable.offset) as u64;
+                    if let Some(decl_instr) = mlil.instruction_at(decl_addr) {
+                        let decl_var = match variable.location {
+                            Location::Register(RegisterLocation { id, .. }) => {
+                                decl_instr.variable_for_register_after(RegisterId(id as u32))
+                            }
+                            Location::Stack(StackLocation { offset, .. }) => {
+                                decl_instr.variable_for_stack_location_after(offset)
+                            }
+                        };
+                        let decl_ty = match variable.ty {
+                            Some(decl_ty) => to_bn_type(&function.arch(), &decl_ty),
+                            None => {
+                                let Some(existing_var) = function.variable_type(&decl_var) else {
+                                    continue;
+                                };
+                                existing_var.contents
+                            }
+                        };
+                        let decl_name = variable
+                            .name
+                            .unwrap_or_else(|| function.variable_name(&decl_var));
+                        mlil.create_auto_var(&decl_var, &decl_ty, &decl_name, false)
+                    }
+                }
+            }
+            function.add_tag(
+                &get_warp_tag_type(&view),
+                &matched_function.guid.to_string(),
+                None,
+                false,
+                None,
+            );
         }
     };
 
@@ -208,12 +237,13 @@ pub fn insert_workflow() {
         .register_activity(&guid_activity)
         .unwrap();
     // Because we are going to impact analysis with application we must make sure the function update is triggered to continue to update analysis.
-    // TODO: need to ask why i cant do core.function.update like in the rtti plugin.
     function_meta_workflow
-        .register_activity_with_subactivities::<Vec<String>>(&apply_activity, vec![])
+        .register_activity(&apply_activity)
         .unwrap();
-    function_meta_workflow.insert("core.function.runFunctionRecognizers", [GUID_ACTIVITY_NAME]);
-    function_meta_workflow.insert("core.function.generateMediumLevelIL", [APPLY_ACTIVITY_NAME]);
+    function_meta_workflow
+        .insert_after("core.function.runFunctionRecognizers", [GUID_ACTIVITY_NAME]);
+    function_meta_workflow
+        .insert_after("core.function.generateMediumLevelIL", [APPLY_ACTIVITY_NAME]);
     function_meta_workflow.register().unwrap();
 
     let old_module_meta_workflow = Workflow::instance("core.module.metaAnalysis");

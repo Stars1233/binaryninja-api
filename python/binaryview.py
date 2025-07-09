@@ -7810,9 +7810,9 @@ class BinaryView:
 		finally:
 			core.BNFreeQualifiedNameAndType(result)
 
-	def parse_types_from_string(self, text: str, options: Optional[List[str]] = None, include_dirs: Optional[List[str]] = None, import_dependencies: bool = True) -> '_types.TypeParserResult':
+	def parse_types_from_string(self, text: str, options: Optional[List[str]] = None, include_dirs: Optional[List[str]] = None, import_dependencies: bool = True) -> '_types.BasicTypeParserResult':
 		"""
-		``parse_types_from_string`` parses string containing C into a :py:class:`TypeParserResult` objects. This API
+		``parse_types_from_string`` parses string containing C into a :py:class:`BasicTypeParserResult` objects. This API
 		unlike the :py:func:`~binaryninja.platform.Platform.parse_types_from_source` allows the reference of types already defined
 		in the BinaryView.
 
@@ -7820,8 +7820,8 @@ class BinaryView:
 		:param options: Optional list of string options to be passed into the type parser
 		:param include_dirs: Optional list of header search directories
 		:param import_dependencies: If Type Library types should be imported during parsing
-		:return: :py:class:`~binaryninja.typeparser.TypeParserResult` (a SyntaxError is thrown on parse error)
-		:rtype: TypeParserResult
+		:return: :py:class:`~binaryninja.typeparser.BasicTypeParserResult` (a SyntaxError is thrown on parse error)
+		:rtype: BasicTypeParserResult
 		:Example:
 
 			>>> bv.parse_types_from_string('int foo;\\nint bar(int x);\\nstruct bas{int x,y;};\\n')
@@ -7876,7 +7876,7 @@ class BinaryView:
 				functions[name] = _types.Type.create(
 				    core.BNNewTypeReference(parse.functions[i].type), platform=self.platform
 				)
-			return _types.TypeParserResult(type_dict, variables, functions)
+			return _types.BasicTypeParserResult(type_dict, variables, functions)
 		finally:
 			core.BNFreeTypeParserResult(parse)
 

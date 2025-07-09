@@ -53,6 +53,7 @@ SomeType = Union['TypeBuilder', 'Type']
 TypeContainerType = Union['binaryview.BinaryView', 'typelibrary.TypeLibrary']
 NameSpaceType = Optional[Union[str, List[str], 'NameSpace']]
 TypeParserResult = typeparser.TypeParserResult
+BasicTypeParserResult = typeparser.BasicTypeParserResult
 ResolveMemberCallback = Callable[['NamedTypeReferenceType', 'StructureType', int, int, int, 'StructureMember'], None]
 # The following are needed to prevent the type checker from getting
 # confused as we have member functions in `Type` named the same thing

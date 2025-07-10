@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use crate::{
+    functions::FrameBase,
     helpers::{get_uid, resolve_specification, DieReference},
     ReaderType,
 };
@@ -52,7 +53,7 @@ pub(crate) struct FunctionInfoBuilder {
     pub(crate) platform: Option<Ref<Platform>>,
     pub(crate) variable_arguments: bool,
     pub(crate) stack_variables: Vec<NamedVariableWithType>,
-    pub(crate) use_cfa: bool, //TODO actually store more info about the frame base
+    pub(crate) frame_base: Option<FrameBase>,
 }
 
 impl FunctionInfoBuilder {
@@ -63,6 +64,7 @@ impl FunctionInfoBuilder {
         return_type: Option<TypeUID>,
         address: Option<u64>,
         parameters: &Vec<Option<(String, TypeUID)>>,
+        frame_base: Option<FrameBase>,
     ) {
         if full_name.is_some() {
             self.full_name = full_name;
@@ -90,6 +92,10 @@ impl FunctionInfoBuilder {
                 // Some(Some((_, uid))) if *uid == 0 => self.parameters[i] = new_parameter, // TODO : This is a placebo....void types aren't actually UID 0
                 _ => self.parameters.push(new_parameter.clone()),
             }
+        }
+
+        if frame_base.is_some() {
+            self.frame_base = frame_base;
         }
     }
 }
@@ -229,7 +235,7 @@ impl DebugInfoBuilder {
         address: Option<u64>,
         parameters: &Vec<Option<(String, TypeUID)>>,
         variable_arguments: bool,
-        use_cfa: bool,
+        frame_base: Option<FrameBase>,
     ) -> Option<usize> {
         // Returns the index of the function
         // Raw names should be the primary key, but if they don't exist, use the full name
@@ -254,7 +260,14 @@ impl DebugInfoBuilder {
                         .remove(function.full_name.as_ref().unwrap());
                 }
 
-                function.update(full_name, raw_name, return_type, address, parameters);
+                function.update(
+                    full_name,
+                    raw_name,
+                    return_type,
+                    address,
+                    parameters,
+                    frame_base,
+                );
 
                 if function.full_name.is_some() {
                     self.full_function_name_indices
@@ -276,7 +289,14 @@ impl DebugInfoBuilder {
                         .remove(function.raw_name.as_ref().unwrap());
                 }
 
-                function.update(full_name, raw_name, return_type, address, parameters);
+                function.update(
+                    full_name,
+                    raw_name,
+                    return_type,
+                    address,
+                    parameters,
+                    frame_base,
+                );
 
                 if function.raw_name.is_some() {
                     self.raw_function_name_indices
@@ -299,7 +319,7 @@ impl DebugInfoBuilder {
             platform: None,
             variable_arguments,
             stack_variables: vec![],
-            use_cfa,
+            frame_base,
         };
 
         if let Some(n) = &function.full_name {
@@ -367,7 +387,7 @@ impl DebugInfoBuilder {
         offset: i64,
         name: Option<String>,
         type_uid: Option<TypeUID>,
-        lexical_block: Option<&iset::IntervalSet<u64>>,
+        _lexical_block: Option<&iset::IntervalSet<u64>>,
     ) {
         let name = match name {
             Some(x) => {
@@ -377,11 +397,11 @@ impl DebugInfoBuilder {
                 } else {
                     x
                 }
-            }
+            },
             None => {
                 // Anonymous variable, generate name
                 format!("debug_var_{}", offset)
-            }
+            },
         };
 
         let Some(function_index) = fn_idx else {
@@ -407,50 +427,56 @@ impl DebugInfoBuilder {
             return;
         };
 
-        let Some(adjustment_at_variable_lifetime_start) = lexical_block
-            .and_then(|block_ranges| {
-                block_ranges
-                    .unsorted_iter()
-                    .find_map(|x| self.range_data_offsets.values_overlap(x.start).next().cloned())
+        let Some(frame_base) = &function.frame_base else {
+            error!("Trying to add a local variable ({}) to a function ({:#x}) without a frame base. Please report this issue.", name, func_addr);
+            return;
+        };
+
+        // TODO: use lexical block information when we support stack variable lifetimes
+        /*
+        let lexical_block_adjustment = lexical_block.and_then(|block_ranges| {
+            block_ranges.unsorted_iter().find_map(|x| {
+                self.range_data_offsets
+                    .values_overlap(x.start)
+                    .next()
+                    .cloned()
             })
-            .or_else(|| {
-                // Try using the offset at the adjustment 5 bytes after the function start, in case the function starts with a stack adjustment
-                // Calculate final offset as (offset after initial stack adjustment) - (entry offset)
-                // TODO: This is a decent heuristic but not perfect, since further adjustments could still be made
-                if let Some(offset_after_stack_adjust) = self.range_data_offsets.values_overlap(func_addr + 5).next() {
-                    if let Some(entry_offset) = self.range_data_offsets.values_overlap(func_addr).next() {
-                        return Some(offset_after_stack_adjust - entry_offset);
-                    }
-                }
-                // No entry offset or no initial stack adjustment, fall through
-                None
-            })
-            .or_else(|| {
-                // If all else fails, use the function start address
-                self.range_data_offsets.values_overlap(func_addr).next().cloned()
-            })
+        });
+        */
+
+        let Some(entry_cfa_offset) = self
+            .range_data_offsets
+            .values_overlap(func_addr)
+            .next()
+            .cloned()
         else {
             // Unknown why, but this is happening with MachO + external dSYM
-            debug!("Refusing to add a local variable ({}@{}) to function at {} without a known CIE offset.", name, offset, func_addr);
+            debug!("Refusing to add a local variable ({}@{}) to function at {} without a known CFA adjustment.", name, offset, func_addr);
             return;
         };
 
         // TODO: handle non-sp-based locations
-        // TODO: if not in a lexical block these can be wrong, see https://github.com/Vector35/binaryninja-api/issues/5882#issuecomment-2406065057
-        let adjusted_offset = if function.use_cfa {
+        let adjusted_offset = match frame_base {
             // Apply CFA offset to variable storage offset if DW_AT_frame_base is DW_OP_call_frame_cfa
-            offset + adjustment_at_variable_lifetime_start
-        } else {
-            // If it's using SP, we know the SP offset is <SP offset> + (<entry SP CFA offset> - <SP CFA offset>)
-            let Some(adjustment_at_entry) =
-                self.range_data_offsets.values_overlap(func_addr).next()
-            else {
-                // Unknown why, but this is happening with MachO + external dSYM
-                debug!("Refusing to add a local variable ({}@{}) to function at {} without a known CIE offset for function start.", name, offset, func_addr);
-                return;
-            };
+            FrameBase::CFA => offset + entry_cfa_offset,
+            FrameBase::Register(_reg) => {
+                // TODO: if not using SP, do not add var
+                // TODO: if not in a lexical block this can be wrong, see https://github.com/Vector35/binaryninja-api/issues/5882#issuecomment-2406065057
+                // If it's using SP, we know the SP offset is <SP offset> + (<entry SP CFA offset> - <SP CFA offset>)
 
-            offset + (adjustment_at_entry - adjustment_at_variable_lifetime_start)
+                // Try using the offset at the adjustment 5 bytes after the function start, in case the function starts with a stack adjustment
+                // Calculate final offset as (offset after initial stack adjustment) - (entry offset)
+                // TODO: This is a decent heuristic but not perfect, since further adjustments could still be made
+                let guessed_sp_adjustment = self
+                    .range_data_offsets
+                    .values_overlap(func_addr + 5)
+                    .next()
+                    .and_then(|cfa_offset_after_stack_adjust| {
+                        Some(entry_cfa_offset - cfa_offset_after_stack_adjust)
+                    });
+
+                offset + guessed_sp_adjustment.unwrap_or(0)
+            },
         };
 
         if adjusted_offset > 0 {
@@ -563,7 +589,7 @@ impl DebugInfoBuilder {
         let return_type = match function.return_type {
             Some(return_type_id) => {
                 Conf::new(self.get_type(return_type_id).unwrap().ty.clone(), 128)
-            }
+            },
             _ => Conf::new(Type::void(), 0),
         };
 
@@ -643,11 +669,11 @@ impl DebugInfoBuilder {
                     match existing_functions.len().cmp(&1) {
                         Ordering::Greater => {
                             warn!("Multiple existing functions at address {address:08x}. One or more functions at this address may have the wrong platform information. Please report this binary.");
-                        }
+                        },
                         Ordering::Equal => {
                             func.platform = Some(existing_functions.get(0).platform())
-                        }
-                        Ordering::Less => {}
+                        },
+                        Ordering::Less => {},
                     }
                 }
             }

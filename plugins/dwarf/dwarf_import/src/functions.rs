@@ -24,6 +24,12 @@ use gimli::{constants, AttributeValue, DebuggingInformationEntry, Dwarf, Operati
 use log::{debug, error};
 use regex::Regex;
 
+#[derive(PartialEq, Eq, Hash)]
+pub enum FrameBase {
+    Register(gimli::Register),
+    CFA,
+}
+
 fn get_parameters<R: ReaderType>(
     dwarf: &Dwarf<R>,
     unit: &Unit<R>,
@@ -65,7 +71,7 @@ fn get_parameters<R: ReaderType>(
                 } else {
                     result.push(None)
                 }
-            }
+            },
             constants::DW_TAG_unspecified_parameters => variable_arguments = true,
             _ => (),
         }
@@ -136,17 +142,17 @@ pub(crate) fn parse_function_entry<R: ReaderType>(
         return None;
     }
 
-    let use_cfa;
+    let frame_base;
     if let Ok(Some(AttributeValue::Exprloc(mut expression))) =
         entry.attr_value(constants::DW_AT_frame_base)
     {
-        use_cfa = match Operation::parse(&mut expression.0, unit.encoding()) {
-            Ok(Operation::Register { register: _ }) => false, // TODO: handle register-relative encodings later
-            Ok(Operation::CallFrameCFA) => true,
-            _ => false,
+        frame_base = match Operation::parse(&mut expression.0, unit.encoding()) {
+            Ok(Operation::Register { register: reg }) => Some(FrameBase::Register(reg)),
+            Ok(Operation::CallFrameCFA) => Some(FrameBase::CFA),
+            _ => None, // TODO: warn?
         };
     } else {
-        use_cfa = false;
+        frame_base = None;
     }
 
     debug_info_builder.insert_function(
@@ -156,7 +162,7 @@ pub(crate) fn parse_function_entry<R: ReaderType>(
         address,
         &parameters,
         variable_arguments,
-        use_cfa,
+        frame_base,
     )
 }
 

@@ -2093,10 +2093,74 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 		if (objcProcessor)
 			objcProcessor->AddRelocatedPointer(relocationLocation, slidTarget);
 	}
-	for (auto& [relocation, name] : header.externalRelocations)
+	for (auto& [relocation, name, ordinal] : header.bindingRelocations)
 	{
-		if (auto symbol = GetSymbolByRawName(name, GetExternalNameSpace()); symbol)
-			DefineRelocation(m_arch, relocation, symbol, relocation.address);
+		bool handled = false;
+
+		switch (ordinal)
+		{
+		case BindSpecialDylibSelf:
+			if (auto symbol = GetSymbolByRawName(name, GetInternalNameSpace()); symbol)
+			{
+				DefineRelocation(m_arch, relocation, symbol, relocation.address);
+				if (objcProcessor)
+					objcProcessor->AddRelocatedPointer(relocation.address, symbol->GetAddress());
+				handled = true;
+			}
+			break;
+
+		case BindSpecialDylibMainExecutable:
+		case BindSpecialDylibFlatLookup:
+		case BindSpecialDylibWeakLookup:
+			// In cases where we are the primary executable, flat lookup should find us first,
+			//		it seems like our best course of action is to try and find internally first on
+			//		executables, and externally on libraries.
+			if (header.ident.filetype == MH_EXECUTE)
+			{
+				if (auto symbol = GetSymbolByRawName(name, GetInternalNameSpace()); symbol)
+				{
+					DefineRelocation(m_arch, relocation, symbol, relocation.address);
+					if (objcProcessor)
+						objcProcessor->AddRelocatedPointer(relocation.address, symbol->GetAddress());
+					handled = true;
+				}
+				else if (auto symbol = GetSymbolByRawName(name, GetExternalNameSpace()); symbol)
+				{
+					DefineRelocation(m_arch, relocation, symbol, relocation.address);
+					handled = true;
+				}
+			}
+			else
+			{
+				if (auto symbol = GetSymbolByRawName(name, GetExternalNameSpace()); symbol)
+				{
+					DefineRelocation(m_arch, relocation, symbol, relocation.address);
+					handled = true;
+				}
+				else if (auto symbol = GetSymbolByRawName(name, GetInternalNameSpace()); symbol)
+				{
+					DefineRelocation(m_arch, relocation, symbol, relocation.address);
+					if (objcProcessor)
+						objcProcessor->AddRelocatedPointer(relocation.address, symbol->GetAddress());
+					handled = true;
+				}
+			}
+			break;
+
+		default:
+			if (ordinal > 0)
+			{
+				if (auto symbol = GetSymbolByRawName(name, GetExternalNameSpace()); symbol)
+				{
+					DefineRelocation(m_arch, relocation, symbol, relocation.address);
+					handled = true;
+				}
+			}
+			break;
+		}
+
+		if (!handled)
+			m_logger->LogError("Failed to find external symbol '%s', couldn't bind symbol at 0x%llx", name.c_str(), relocation.address);
 	}
 
 	auto relocationHandler = m_arch->GetRelocationHandler("Mach-O");
@@ -2848,7 +2912,7 @@ void MachoView::ParseDynamicTable(BinaryReader& reader, MachOHeader& header, BNS
 		BNRelocationInfo externReloc;
 
 		BNSymbolType symtype = incomingType;
-		// uint64_t ordinal = 0;
+		uint64_t ordinal = 0;
 		// int64_t addend = 0;
 		uint64_t segmentIndex = 0;
 		uint64_t address = 0;
@@ -2866,7 +2930,7 @@ void MachoView::ParseDynamicTable(BinaryReader& reader, MachOHeader& header, BNS
 			switch (opcode)
 			{
 				case BindOpcodeDone:
-					// ordinal = 0;
+					ordinal = 0;
 					// addend  = 0;
 					segmentIndex = 0;
 					address = 0;
@@ -2876,9 +2940,9 @@ void MachoView::ParseDynamicTable(BinaryReader& reader, MachOHeader& header, BNS
 					type = 0;
 					symtype = incomingType;
 					break;
-				case BindOpcodeSetDylibOrdinalImmediate: /* ordinal = imm; */ break;
-				case BindOpcodeSetDylibOrdinalULEB: /* ordinal = */ readLEB128(table, tableSize, i); break;
-				case BindOpcodeSetDylibSpecialImmediate: /* ordinal = -imm; */ break;
+				case BindOpcodeSetDylibOrdinalImmediate: ordinal = imm;break;
+				case BindOpcodeSetDylibOrdinalULEB: ordinal = readLEB128(table, tableSize, i); break;
+				case BindOpcodeSetDylibSpecialImmediate: ordinal = -imm;  break;
 				case BindOpcodeSetSymbolTrailingFlagsImmediate:
 					/* flags = imm; */
 					name = (char*)&table[i];
@@ -2911,8 +2975,7 @@ void MachoView::ParseDynamicTable(BinaryReader& reader, MachOHeader& header, BNS
 					externReloc.size = m_addressSize;
 					externReloc.pcRelative = false;
 					externReloc.external = true;
-					header.externalRelocations.emplace_back(externReloc, string(name));
-
+					header.bindingRelocations.emplace_back(externReloc, string(name), ordinal);
 					address += m_addressSize;
 					break;
 				case BindOpcodeDoBindAddAddressULEB:
@@ -2925,7 +2988,7 @@ void MachoView::ParseDynamicTable(BinaryReader& reader, MachOHeader& header, BNS
 					externReloc.size = m_addressSize;
 					externReloc.pcRelative = false;
 					externReloc.external = true;
-					header.externalRelocations.emplace_back(externReloc, string(name));
+					header.bindingRelocations.emplace_back(externReloc, string(name), ordinal);
 
 					address += m_addressSize;
 					address += readLEB128(table, tableSize, i);
@@ -2940,7 +3003,7 @@ void MachoView::ParseDynamicTable(BinaryReader& reader, MachOHeader& header, BNS
 					externReloc.size = m_addressSize;
 					externReloc.pcRelative = false;
 					externReloc.external = true;
-					header.externalRelocations.emplace_back(externReloc, string(name));
+					header.bindingRelocations.emplace_back(externReloc, string(name), ordinal);
 					address += m_addressSize;
 					address += (imm * m_addressSize);
 					break;
@@ -2959,7 +3022,7 @@ void MachoView::ParseDynamicTable(BinaryReader& reader, MachOHeader& header, BNS
 						externReloc.size = m_addressSize;
 						externReloc.pcRelative = false;
 						externReloc.external = true;
-						header.externalRelocations.emplace_back(externReloc, string(name));
+						header.bindingRelocations.emplace_back(externReloc, string(name), ordinal);
 
 						address += skip + m_addressSize;
 					}
@@ -3288,7 +3351,7 @@ void MachoView::ParseChainedFixups(
 				{
 					uint32_t importEntry = parentReader.Read32();
 					dyld_chained_import import = *(reinterpret_cast<dyld_chained_import*>(&importEntry));
-					processChainedImport(import.lib_ordinal, 0, import.name_offset, import.weak_import, parentReader);
+					processChainedImport(static_cast<int8_t>(import.lib_ordinal), 0, import.name_offset, import.weak_import, parentReader);
 				}
 				break;
 			}
@@ -3298,7 +3361,7 @@ void MachoView::ParseChainedFixups(
 				{
 					dyld_chained_import_addend import;
 					parentReader.Read(&import, sizeof(import));
-					processChainedImport(import.lib_ordinal, import.addend, import.name_offset, import.weak_import, parentReader);
+					processChainedImport(static_cast<int8_t>(import.lib_ordinal), import.addend, import.name_offset, import.weak_import, parentReader);
 				}
 				break;
 			}
@@ -3308,7 +3371,7 @@ void MachoView::ParseChainedFixups(
 				{
 					dyld_chained_import_addend64 import;
 					parentReader.Read(&import, sizeof(import));
-					processChainedImport(import.lib_ordinal, import.addend, import.name_offset, import.weak_import, parentReader);
+					processChainedImport(static_cast<int16_t>(import.lib_ordinal), import.addend, import.name_offset, import.weak_import, parentReader);
 				}
 				break;
 			}
@@ -3521,7 +3584,7 @@ void MachoView::ParseChainedFixups(
 								chainEntryAddress += (nextEntryStrideCount * strideSize);
 								if (chainEntryAddress > pageAddress + starts.page_size)
 								{
-									m_logger->LogDebug("Chained Fixups: Pointer at %llx left page",
+									m_logger->LogError("Chained Fixups: Pointer at %llx left page",
 										GetStart() + ((chainEntryAddress - (nextEntryStrideCount * strideSize))) - m_universalImageOffset);
 									fixupsDone = true;
 								}
@@ -3546,9 +3609,8 @@ void MachoView::ParseChainedFixups(
 									externReloc.address = targetAddress;
 									externReloc.size = m_addressSize;
 									externReloc.pcRelative = false;
-									externReloc.external = true;
 									externReloc.addend = entry.addend;
-									header.externalRelocations.emplace_back(externReloc, entry.name);
+									header.bindingRelocations.emplace_back(externReloc, entry.name, entry.lib_ordinal);
 								}
 								else
 								{

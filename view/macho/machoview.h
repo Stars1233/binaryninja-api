@@ -818,6 +818,13 @@ namespace BinaryNinja
 		RebaseOpcodeDoRebaseUlebTimesSkippingUleb   = 0x80u, // REBASE_OPCODE_DO_REBASE_ULEB_TIMES_SKIPPING_ULEB
 	};
 
+	enum BindSpecial {
+		BindSpecialDylibSelf = 0, // BIND_SPECIAL_DYLIB_SELF
+		BindSpecialDylibMainExecutable = -1, // BIND_SPECIAL_DYLIB_MAIN_EXECUTABLE
+		BindSpecialDylibFlatLookup = -2, // BIND_SPECIAL_DYLIB_FLAT_LOOKUP
+		BindSpecialDylibWeakLookup = -3 // BIND_SPECIAL_DYLIB_WEAK_LOOKUP
+	};
+
 	enum BindOpcode {
 		BindOpcodeMask                            = 0xF0u, // BIND_OPCODE_MASK
 		BindImmediateMask                         = 0x0Fu, // BIND_IMMEDIATE_MASK
@@ -1375,6 +1382,13 @@ namespace BinaryNinja
 		uint32_t reserved;
 	};
 
+	struct BoundRelocation
+	{
+		BNRelocationInfo info;
+		std::string name;
+		int64_t ordinal;
+	};
+
 	struct MachOHeader {
 		bool isMainHeader = false;
 
@@ -1386,7 +1400,7 @@ namespace BinaryNinja
 		std::vector<std::pair<uint64_t, bool>> entryPoints;
 		std::vector<uint64_t> m_entryPoints; //list of entrypoints
 
-		std::vector<std::pair<BNRelocationInfo, std::string>> externalRelocations;
+		std::vector<BoundRelocation> bindingRelocations;
 		std::vector<BNRelocationInfo> rebaseRelocations;
 
 		symtab_command symtab;

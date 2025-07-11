@@ -26,6 +26,7 @@ The previous tools are used in the generation of our documentation, but are not 
 
 * Core
     - [abseil-cpp] ([abseil-cpp license] - Apache 2.0)
+    - [BinExport] ([binexport license] - Apache 2.0) - Google project, [Vector 35 fork]
     - [jsoncpp] ([jsoncpp] - Public Domain / MIT)
     - [llvm] ([llvm license] - BSD-style)
     - [lzf] ([lzf license] - BSD)
@@ -307,6 +308,9 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [Qt 6.8]: https://www.qt.io/licensing/open-source-lgpl-obligations
 [abseil-cpp]: https://github.com/abseil/abseil-cpp
 [abseil-cpp license]: https://github.com/abseil/abseil-cpp/blob/master/LICENSE
+[BinExport]: https://github.com/google/binexport
+[binexport license]: https://github.com/google/binexport/blob/main/LICENSE
+[Vector 35 fork]: https://github.com/Vector35/binexport
 [capstone]: https://github.com/aquynh/capstone
 [capstone license]: https://github.com/aquynh/capstone/blob/master/LICENSE.TXT
 [breathe license]: https://github.com/michaeljones/breathe/blob/master/LICENSE

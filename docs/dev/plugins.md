@@ -363,7 +363,7 @@ and use command-line lldb or gdb to debug their code. Shout-outs to people tryin
 
 ## Submitting to the plugin manager
 
-While native plugins are not supported in the plugin manager at this time, it's possible to work around this limitation by pre-building a native plugin for all three platforms and using a python plugin that acts as a loader for the native plugin. There aren't any good examples of automated workflows for this, but [binexport](https://github.com/google/binexport) has supposedly got it working. But given that the people you're distributing your plugin to may have a different version of the API, you will likely want to just distribute the source code and build setup, and have them build against whatever version of Binary Ninja they have installed.
+While native plugins are not fully supported in the plugin manager at this time, it's possible to work around this limitation by pre-building a native plugin for all three platforms and using a python plugin that acts as a loader for the native plugin. Additionally, you can submit a plugin as "view_only" which helps with discoverability.
 
 ## Examples
 
@@ -372,7 +372,7 @@ Several native plugin examples exist:
  - [Triage](https://github.com/Vector35/binaryninja-api/tree/dev/examples/triage)
  - [Debugger](https://github.com/Vector35/debugger)
  - [ObjectiveNinja](https://github.com/jonpalmisc/ObjectiveNinja)
- - [BinExport](https://github.com/google/binexport#binary-ninja) (Used with BinDiff)
+ - [BinExport](https://github.com/vector35/binexport#binary-ninja) (Used with BinDiff)
  - [Binliner](https://github.com/holmesmr/binliner)
 
 ## Contributing to Official Plugins

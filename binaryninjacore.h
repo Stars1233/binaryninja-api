@@ -474,7 +474,8 @@ extern "C"
 	{
 		NoAnalysisWarningAction = 0,
 		ForceAnalysisWarningAction = 1,
-		ShowStackGraphWarningAction = 2
+		ShowStackGraphWarningAction = 2,
+		DisableGuidedAnalysisWarningAction = 3
 	} BNAnalysisWarningActionType;
 
 	typedef enum BNSymbolType

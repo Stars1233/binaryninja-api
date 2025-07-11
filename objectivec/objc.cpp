@@ -1342,10 +1342,13 @@ void ObjCProcessor::PostProcessObjCSections(ObjCReader* reader)
 	{
 		auto start = ivars->GetStart();
 		auto end = ivars->GetEnd();
-		auto ivarSectionEntryTypeBuilder = new TypeBuilder(Type::IntegerType(8, false));
+		// The ivar section contains entries of type `long` for for all architectures
+		// except arm64, which uses `int` for the ivar offset.
+		size_t ivarOffsetSize = m_data->GetDefaultArchitecture()->GetName() == "aarch64" ? 4 : ptrSize;
+		auto ivarSectionEntryTypeBuilder = new TypeBuilder(Type::IntegerType(ivarOffsetSize, false));
 		ivarSectionEntryTypeBuilder->SetConst(true);
 		auto type = ivarSectionEntryTypeBuilder->Finalize();
-		for (view_ptr_t i = start; i < end; i += ptrSize)
+		for (view_ptr_t i = start; i < end; i += ivarOffsetSize)
 		{
 			m_data->DefineDataVariable(i, type);
 		}

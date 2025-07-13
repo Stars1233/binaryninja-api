@@ -33,7 +33,7 @@ MediumLevelILLabel::MediumLevelILLabel()
 
 MediumLevelILFunction::MediumLevelILFunction(Architecture* arch, Function* func, LowLevelILFunction* lowLevelIL)
 {
-	m_object = BNCreateMediumLevelILFunction(arch->GetObject(), func->GetObject(), lowLevelIL->GetObject());
+	m_object = BNCreateMediumLevelILFunction(arch->GetObject(), func ? func->GetObject() : nullptr, lowLevelIL ? lowLevelIL->GetObject() : nullptr);
 }
 
 

@@ -3307,15 +3307,18 @@ class MediumLevelILFunction:
 			if _arch is None:
 				_arch = _source_function.arch
 		else:
+			if low_level_il is None and source_func is None:
+				raise ValueError("IL functions must be created with an associated function or LLIL function")
+
 			if low_level_il is None:
-				raise ValueError("MLIL functions must be created with an associated LLIL function")
-			_source_function = low_level_il.source_function
-			if _source_function is None:
-				raise ValueError("IL functions must be created with an associated function")
+				_source_function = source_func
+			else:
+				_source_function = low_level_il.source_function
+
 			if _arch is None:
 				_arch = low_level_il.arch
 			func_handle = _source_function.handle
-			llil_handle = low_level_il.handle
+			llil_handle = low_level_il.handle if low_level_il is not None else None
 			_handle = core.BNCreateMediumLevelILFunction(_arch.handle, func_handle, llil_handle)
 		assert _source_function is not None
 		assert _arch is not None

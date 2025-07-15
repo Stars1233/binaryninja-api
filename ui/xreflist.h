@@ -350,7 +350,7 @@ class BINARYNINJAUIAPI CrossReferenceTreeModel : public QAbstractItemModel
 	std::optional<BinaryNinja::FunctionViewType> m_graphType;
 	SelectionInfoForXref m_curRef;
 
-  public:
+public:
 	CrossReferenceTreeModel(QWidget* parent, BinaryViewRef data, ViewFrame* view);
 	virtual ~CrossReferenceTreeModel();
 
@@ -460,8 +460,9 @@ class BINARYNINJAUIAPI CrossReferenceItemDelegate : public QStyledItemDelegate
 	QImage m_xrefTo, m_xrefFrom;
 	bool m_table;
 	size_t m_maxUIItems;
+	bool m_dependentRefsExceeded = false;
 
-  public:
+public:
 	CrossReferenceItemDelegate(QWidget* parent, bool table);
 
 	void updateFonts();
@@ -472,6 +473,7 @@ class BINARYNINJAUIAPI CrossReferenceItemDelegate : public QStyledItemDelegate
 	virtual QImage DrawArrow(bool direction) const;
 	void updateMaxUIItems(size_t count);
 	size_t getMaxUIItems() const { return m_maxUIItems; }
+	void setDependentRefsExceeded(bool value) { m_dependentRefsExceeded = value; }
 };
 
 /*!
@@ -532,7 +534,8 @@ class BINARYNINJAUIAPI CrossReferenceContainer
 	virtual QModelIndex prevIndex() = 0;
 	virtual QModelIndexList selectedRows() const = 0;
 	virtual bool hasSelection() const = 0;
-	virtual void setNewSelection(std::vector<XrefItem>& refs, bool newRefTarget, const SelectionInfoForXref& ref) = 0;
+	virtual void setNewSelection(std::vector<XrefItem>& refs, bool newRefTarget, const SelectionInfoForXref& ref,
+		bool dependentRefsExceeded) = 0;
 	virtual void updateFonts() = 0;
 	virtual int leafCount() const = 0;
 	virtual int filteredCount() const = 0;
@@ -560,7 +563,8 @@ public:
 	CrossReferenceTree(CrossReferenceWidget* parent, ViewFrame* view, BinaryViewRef data);
 	virtual ~CrossReferenceTree();
 
-	void setNewSelection(std::vector<XrefItem>& refs, bool newRefTarget, const SelectionInfoForXref& ref) override;
+	void setNewSelection(std::vector<XrefItem>& refs, bool newRefTarget, const SelectionInfoForXref& ref,
+		bool dependentRefsExceeded) override;
 	virtual QModelIndex nextIndex() override;
 	virtual QModelIndex prevIndex() override;
 	virtual bool hasSelection() const override { return selectionModel()->selectedRows().size() != 0; }
@@ -606,7 +610,8 @@ class BINARYNINJAUIAPI CrossReferenceTable : public QTableView, public CrossRefe
 	virtual ~CrossReferenceTable();
 
 	void updateFontAndHeaderSize();
-	void setNewSelection(std::vector<XrefItem>& refs, bool newRefTarget, const SelectionInfoForXref& ref) override;
+	void setNewSelection(std::vector<XrefItem>& refs, bool newRefTarget, const SelectionInfoForXref& ref,
+		bool dependentRefsExceeded) override;
 	virtual QModelIndex nextIndex() override;
 	virtual QModelIndex prevIndex() override;
 	virtual bool hasSelection() const override { return selectionModel()->selectedRows().size() != 0; }

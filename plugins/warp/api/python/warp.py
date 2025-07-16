@@ -87,7 +87,7 @@ class WarpFunctionComment:
     @staticmethod
     def from_api(comment: warpcore.BNWARPFunctionComment) -> 'WarpFunctionComment':
         return WarpFunctionComment(
-            text=comment.text.decode('utf-8'),
+            text=comment.text,
             offset=comment.offset
         )
 

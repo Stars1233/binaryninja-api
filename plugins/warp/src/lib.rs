@@ -105,34 +105,44 @@ pub fn build_variables(func: &BNFunction) -> Vec<FunctionVariable> {
     variables
 }
 
+// TODO: Get rid of the minimal bool.
 pub fn build_function<M: FunctionMutability>(
     func: &BNFunction,
     lifted_il: &LowLevelILFunction<M, NonSSA>,
+    minimal: bool,
 ) -> Function {
-    let comments = func
+    let mut function = Function {
+        guid: cached_function_guid(func, lifted_il),
+        symbol: from_bn_symbol(&func.symbol()),
+        // NOTE: Adding adjacent only works if analysis is complete.
+        // NOTE: We do not filter out adjacent functions here.
+        constraints: cached_constraints(func, |_| true),
+        ty: None,
+        comments: vec![],
+        variables: vec![],
+    };
+
+    if minimal {
+        return function;
+    }
+
+    // Currently we only store the type if its a user type.
+    // TODO: In the future we might want to make this configurable.
+    function.ty = match func.has_user_type() || func.has_explicitly_defined_type() {
+        true => Some(from_bn_type(
+            &func.view(),
+            &func.function_type(),
+            MAX_CONFIDENCE,
+        )),
+        false => None,
+    };
+    function.comments = func
         .comments()
         .iter()
         .map(|c| bn_comment_to_comment(func, c))
         .collect();
-    Function {
-        guid: cached_function_guid(func, lifted_il),
-        symbol: from_bn_symbol(&func.symbol()),
-        // Currently we only store the type if its a user type.
-        // TODO: In the future we might want to make this configurable.
-        ty: match func.has_user_type() || func.has_explicitly_defined_type() {
-            true => Some(from_bn_type(
-                &func.view(),
-                &func.function_type(),
-                MAX_CONFIDENCE,
-            )),
-            false => None,
-        },
-        // NOTE: Adding adjacent only works if analysis is complete.
-        // NOTE: We do not filter out adjacent functions here.
-        constraints: cached_constraints(func, |_| true),
-        comments,
-        variables: build_variables(func),
-    }
+    function.variables = build_variables(func);
+    function
 }
 
 /// Basic blocks sorted from high to low.

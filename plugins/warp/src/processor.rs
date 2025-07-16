@@ -816,11 +816,11 @@ impl WarpFileProcessor {
             .filter_map(|func| {
                 let lifted_il = func.lifted_il().ok()?;
                 let target = platform_to_target(&func.platform());
-                let mut built_function = build_function(&func, &lifted_il);
-                // User asked to only save symbols, so we will remove the function type.
-                if self.file_data == FileDataKindField::Symbols {
-                    built_function.ty = None;
-                }
+                let built_function = build_function(
+                    &func,
+                    &lifted_il,
+                    self.file_data == FileDataKindField::Symbols,
+                );
                 Some((target, built_function))
             })
             .fold(

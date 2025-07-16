@@ -21,7 +21,7 @@ pub fn function_benchmark(c: &mut Criterion) {
         c.bench_function("signature all functions", |b| {
             b.iter(|| {
                 for func in &functions {
-                    let _ = build_function(&func, &func.lifted_il().unwrap());
+                    let _ = build_function(&func, &func.lifted_il().unwrap(), false);
                 }
             })
         });
@@ -33,7 +33,7 @@ pub fn function_benchmark(c: &mut Criterion) {
                     .par_iter()
                     .filter_map(|func| {
                         let llil = func.lifted_il().ok()?;
-                        Some(build_function(func.as_ref(), llil.as_ref()))
+                        Some(build_function(func.as_ref(), llil.as_ref(), false))
                     })
                     .collect::<Vec<_>>()
             })

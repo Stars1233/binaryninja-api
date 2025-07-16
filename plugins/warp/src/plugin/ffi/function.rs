@@ -40,7 +40,7 @@ pub unsafe extern "C" fn BNWARPGetFunction(
     let Ok(lifted_il) = function.lifted_il() else {
         return std::ptr::null_mut();
     };
-    let function = build_function(&function, &lifted_il);
+    let function = build_function(&function, &lifted_il, false);
     Arc::into_raw(Arc::new(function)) as *mut BNWARPFunction
 }
 

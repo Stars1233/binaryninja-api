@@ -10,7 +10,7 @@ pub struct DebugFunction;
 impl FunctionCommand for DebugFunction {
     fn action(&self, _view: &BinaryView, func: &Function) {
         if let Ok(lifted_il) = func.lifted_il() {
-            log::info!("{:#?}", build_function(func, &lifted_il));
+            log::info!("{:#?}", build_function(func, &lifted_il, false));
         }
     }
 

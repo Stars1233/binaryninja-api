@@ -392,20 +392,20 @@ Workflow::Workflow(const string& name)
 
 Workflow::Workflow(BNWorkflow* workflow)
 {
-	m_object = BNNewWorkflowReference(workflow);
+	m_object = workflow;
 }
 
 
 Workflow::Workflow(BNWorkflow* workflow, Ref<BinaryView> view)
 {
-	m_object = BNNewWorkflowReference(workflow);
+	m_object = workflow;
 	m_machine = make_unique<WorkflowMachine>(view);
 }
 
 
 Workflow::Workflow(BNWorkflow* workflow, Ref<Function> function)
 {
-	m_object = BNNewWorkflowReference(workflow);
+	m_object = workflow;
 	m_machine = make_unique<WorkflowMachine>(function);
 }
 

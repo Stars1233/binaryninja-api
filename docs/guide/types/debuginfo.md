@@ -8,7 +8,7 @@ Currently debug info plugins are limited to types, function signatures, and data
 
 We currently support [PDBs](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/pdb-ng) and [DWARF](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/dwarf/dwarf_import) (which are both open source), though you can also [register your own debug info parser through the API](https://api.binary.ninja/binaryninja.debuginfo-module.html#binaryninja.debuginfo.DebugInfoParser).
 
-For PDBs, Binary Ninja will automatically try to source from specified local folders and Microsoft's symbol server ([see the PDB settings for more information](../settings.md#all-settings)).
+For PDBs, Binary Ninja will automatically try to source from specified local folders and Microsoft's symbol server ([see the PDB settings for more information](../settings.md#settings-reference)).
 
 DWARF supports information compiled in to ELF binaries, information from external ELF files (`.dwo`, `.debug`, etc), information compiled in to Mach-O's, and information from external `.dSYM` files as well. Support for DWARF information in PEs is [planned](https://github.com/Vector35/binaryninja-api/issues/1555).
 

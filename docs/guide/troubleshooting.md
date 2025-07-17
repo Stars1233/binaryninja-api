@@ -261,7 +261,7 @@ By default, Binary Ninja does full analysis of the binary and decompiles every f
 * Changing `analysis.mode` to an option less than `full` will prevent Binary Ninja from doing full decompilation for every function.
 * Turning on `analysis.suppressNewAutoFunctionAnalysis` will prevent new functions from being analyzed at all until they are accessed.
 
-Other [analysis settings](settings.md#all-settings) can also help. Check the descriptions to see what they do.
+Other [analysis settings](settings.md#settings-reference) can also help. Check the descriptions to see what they do.
 
 
 ## Collaboration Issues

@@ -18,7 +18,12 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
+#include <algorithm>
+#include <array>
 #include <cstring>
+
+#include "sharedilinstruction.h"
+
 #ifdef BINARYNINJACORE_LIBRARY
 	#include "mediumlevelilfunction.h"
 	#include "mediumlevelilssafunction.h"
@@ -35,276 +40,263 @@ using namespace BinaryNinja;
 using namespace std;
 #endif
 
+namespace {
 
-unordered_map<MediumLevelILOperandUsage, MediumLevelILOperandType> MediumLevelILInstructionBase::operandTypeForUsage = {
-    {SourceExprMediumLevelOperandUsage, ExprMediumLevelOperand},
-    {SourceVariableMediumLevelOperandUsage, VariableMediumLevelOperand},
-    {SourceSSAVariableMediumLevelOperandUsage, SSAVariableMediumLevelOperand},
-    {PartialSSAVariableSourceMediumLevelOperandUsage, SSAVariableMediumLevelOperand},
-    {DestExprMediumLevelOperandUsage, ExprMediumLevelOperand},
-    {DestVariableMediumLevelOperandUsage, VariableMediumLevelOperand},
-    {DestSSAVariableMediumLevelOperandUsage, SSAVariableMediumLevelOperand},
-    {LeftExprMediumLevelOperandUsage, ExprMediumLevelOperand},
-    {RightExprMediumLevelOperandUsage, ExprMediumLevelOperand},
-    {CarryExprMediumLevelOperandUsage, ExprMediumLevelOperand},
-    {StackExprMediumLevelOperandUsage, ExprMediumLevelOperand},
-    {ConditionExprMediumLevelOperandUsage, ExprMediumLevelOperand},
-    {HighVariableMediumLevelOperandUsage, VariableMediumLevelOperand},
-    {LowVariableMediumLevelOperandUsage, VariableMediumLevelOperand},
-    {HighSSAVariableMediumLevelOperandUsage, VariableMediumLevelOperand},
-    {LowSSAVariableMediumLevelOperandUsage, VariableMediumLevelOperand},
-    {OffsetMediumLevelOperandUsage, IntegerMediumLevelOperand},
-    {ConstantMediumLevelOperandUsage, IntegerMediumLevelOperand},
-    {ConstantDataMediumLevelOperandUsage, ConstantDataMediumLevelOperand},
-    {VectorMediumLevelOperandUsage, IntegerMediumLevelOperand},
-    {IntrinsicMediumLevelOperandUsage, IntrinsicMediumLevelOperand},
-    {TargetMediumLevelOperandUsage, IndexMediumLevelOperand},
-    {TrueTargetMediumLevelOperandUsage, IndexMediumLevelOperand},
-    {FalseTargetMediumLevelOperandUsage, IndexMediumLevelOperand},
-    {DestMemoryVersionMediumLevelOperandUsage, IndexMediumLevelOperand},
-    {SourceMemoryVersionMediumLevelOperandUsage, IndexMediumLevelOperand},
-    {TargetsMediumLevelOperandUsage, IndexMapMediumLevelOperand},
-    {SourceMemoryVersionsMediumLevelOperandUsage, IndexListMediumLevelOperand},
-    {OutputVariablesMediumLevelOperandUsage, VariableListMediumLevelOperand},
-    {OutputVariablesSubExprMediumLevelOperandUsage, VariableListMediumLevelOperand},
-    {OutputSSAVariablesMediumLevelOperandUsage, SSAVariableListMediumLevelOperand},
-    {OutputSSAVariablesSubExprMediumLevelOperandUsage, SSAVariableListMediumLevelOperand},
-    {OutputSSAMemoryVersionMediumLevelOperandUsage, IndexMediumLevelOperand},
-    {ParameterExprsMediumLevelOperandUsage, ExprListMediumLevelOperand},
-    {SourceExprsMediumLevelOperandUsage, ExprListMediumLevelOperand},
-    {UntypedParameterExprsMediumLevelOperandUsage, ExprListMediumLevelOperand},
-    {UntypedParameterSSAExprsMediumLevelOperandUsage, ExprListMediumLevelOperand},
-    {ParameterSSAMemoryVersionMediumLevelOperandUsage, IndexMediumLevelOperand},
-    {SourceSSAVariablesMediumLevelOperandUsages, SSAVariableListMediumLevelOperand},
-    {ConstraintMediumLevelOperandUsage, ConstraintMediumLevelOperand}};
-
-
-unordered_map<BNMediumLevelILOperation, vector<MediumLevelILOperandUsage>>
-    MediumLevelILInstructionBase::operationOperandUsage = {{MLIL_NOP, {}}, {MLIL_NORET, {}}, {MLIL_BP, {}},
-        {MLIL_UNDEF, {}}, {MLIL_UNIMPL, {}},
-        {MLIL_SET_VAR, {DestVariableMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
-        {MLIL_SET_VAR_FIELD,
-            {DestVariableMediumLevelOperandUsage, OffsetMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
-        {MLIL_SET_VAR_SPLIT, {HighVariableMediumLevelOperandUsage, LowVariableMediumLevelOperandUsage,
-                                 SourceExprMediumLevelOperandUsage}},
-        {MLIL_SET_VAR_SSA, {DestSSAVariableMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
-        {MLIL_SET_VAR_SSA_FIELD,
-            {DestSSAVariableMediumLevelOperandUsage, PartialSSAVariableSourceMediumLevelOperandUsage,
-                OffsetMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
-        {MLIL_SET_VAR_SPLIT_SSA, {HighSSAVariableMediumLevelOperandUsage, LowSSAVariableMediumLevelOperandUsage,
-                                     SourceExprMediumLevelOperandUsage}},
-        {MLIL_SET_VAR_ALIASED, {DestSSAVariableMediumLevelOperandUsage, PartialSSAVariableSourceMediumLevelOperandUsage,
-                                   SourceExprMediumLevelOperandUsage}},
-        {MLIL_SET_VAR_ALIASED_FIELD,
-            {DestSSAVariableMediumLevelOperandUsage, PartialSSAVariableSourceMediumLevelOperandUsage,
-                OffsetMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
-				{MLIL_FORCE_VER, {DestVariableMediumLevelOperandUsage, SourceVariableMediumLevelOperandUsage}},
-				{MLIL_FORCE_VER_SSA, {DestSSAVariableMediumLevelOperandUsage, SourceSSAVariableMediumLevelOperandUsage}},
-				{MLIL_ASSERT, {SourceVariableMediumLevelOperandUsage, ConstraintMediumLevelOperandUsage}},
-				{MLIL_ASSERT_SSA, {SourceSSAVariableMediumLevelOperandUsage, ConstraintMediumLevelOperandUsage}},
-        {MLIL_LOAD, {SourceExprMediumLevelOperandUsage}},
-        {MLIL_LOAD_STRUCT, {SourceExprMediumLevelOperandUsage, OffsetMediumLevelOperandUsage}},
-        {MLIL_LOAD_SSA, {SourceExprMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage}},
-        {MLIL_LOAD_STRUCT_SSA, {SourceExprMediumLevelOperandUsage, OffsetMediumLevelOperandUsage,
-                                   SourceMemoryVersionMediumLevelOperandUsage}},
-        {MLIL_STORE, {DestExprMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
-        {MLIL_STORE_STRUCT,
-            {DestExprMediumLevelOperandUsage, OffsetMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
-        {MLIL_STORE_SSA, {DestExprMediumLevelOperandUsage, DestMemoryVersionMediumLevelOperandUsage,
-                             SourceMemoryVersionMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
-        {MLIL_STORE_STRUCT_SSA,
-            {DestExprMediumLevelOperandUsage, OffsetMediumLevelOperandUsage, DestMemoryVersionMediumLevelOperandUsage,
-                SourceMemoryVersionMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
-        {MLIL_VAR, {SourceVariableMediumLevelOperandUsage}},
-        {MLIL_VAR_FIELD, {SourceVariableMediumLevelOperandUsage, OffsetMediumLevelOperandUsage}},
-        {MLIL_VAR_SPLIT, {HighVariableMediumLevelOperandUsage, LowVariableMediumLevelOperandUsage}},
-        {MLIL_VAR_SSA, {SourceSSAVariableMediumLevelOperandUsage}},
-        {MLIL_VAR_SSA_FIELD, {SourceSSAVariableMediumLevelOperandUsage, OffsetMediumLevelOperandUsage}},
-        {MLIL_VAR_ALIASED, {SourceSSAVariableMediumLevelOperandUsage}},
-        {MLIL_VAR_ALIASED_FIELD, {SourceSSAVariableMediumLevelOperandUsage, OffsetMediumLevelOperandUsage}},
-        {MLIL_VAR_SPLIT_SSA, {HighSSAVariableMediumLevelOperandUsage, LowSSAVariableMediumLevelOperandUsage}},
-        {MLIL_ADDRESS_OF, {SourceVariableMediumLevelOperandUsage}},
-        {MLIL_ADDRESS_OF_FIELD, {SourceVariableMediumLevelOperandUsage, OffsetMediumLevelOperandUsage}},
-        {MLIL_JUMP, {DestExprMediumLevelOperandUsage}},
-        {MLIL_JUMP_TO, {DestExprMediumLevelOperandUsage, TargetsMediumLevelOperandUsage}},
-        {MLIL_RET_HINT, {DestExprMediumLevelOperandUsage}},
-        {MLIL_CALL, {OutputVariablesMediumLevelOperandUsage, DestExprMediumLevelOperandUsage,
-                        ParameterExprsMediumLevelOperandUsage}},
-        {MLIL_CALL_UNTYPED, {OutputVariablesSubExprMediumLevelOperandUsage, DestExprMediumLevelOperandUsage,
-                                UntypedParameterExprsMediumLevelOperandUsage}},
-        {MLIL_SYSCALL, {OutputVariablesMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage}},
-        {MLIL_SYSCALL_UNTYPED, {OutputVariablesSubExprMediumLevelOperandUsage,
-                                   UntypedParameterExprsMediumLevelOperandUsage, StackExprMediumLevelOperandUsage}},
-        {MLIL_TAILCALL, {OutputVariablesMediumLevelOperandUsage, DestExprMediumLevelOperandUsage,
-                            ParameterExprsMediumLevelOperandUsage}},
-        {MLIL_TAILCALL_UNTYPED, {OutputVariablesSubExprMediumLevelOperandUsage, DestExprMediumLevelOperandUsage,
-                                    UntypedParameterExprsMediumLevelOperandUsage}},
-        {MLIL_CALL_SSA, {OutputSSAVariablesSubExprMediumLevelOperandUsage,
-                            OutputSSAMemoryVersionMediumLevelOperandUsage, DestExprMediumLevelOperandUsage,
-                            ParameterExprsMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage}},
-        {MLIL_CALL_UNTYPED_SSA,
-            {OutputSSAVariablesSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage,
-                DestExprMediumLevelOperandUsage, UntypedParameterSSAExprsMediumLevelOperandUsage,
-                ParameterSSAMemoryVersionMediumLevelOperandUsage, StackExprMediumLevelOperandUsage}},
-        {MLIL_SYSCALL_SSA,
-            {OutputSSAVariablesSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage,
-                ParameterExprsMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage}},
-        {MLIL_SYSCALL_UNTYPED_SSA,
-            {OutputSSAVariablesSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage,
-                UntypedParameterSSAExprsMediumLevelOperandUsage, ParameterSSAMemoryVersionMediumLevelOperandUsage,
-                StackExprMediumLevelOperandUsage}},
-        {MLIL_TAILCALL_SSA, {OutputSSAVariablesSubExprMediumLevelOperandUsage,
-                                OutputSSAMemoryVersionMediumLevelOperandUsage, DestExprMediumLevelOperandUsage,
-                                ParameterExprsMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage}},
-        {MLIL_TAILCALL_UNTYPED_SSA,
-            {OutputSSAVariablesSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage,
-                DestExprMediumLevelOperandUsage, UntypedParameterSSAExprsMediumLevelOperandUsage,
-                ParameterSSAMemoryVersionMediumLevelOperandUsage, StackExprMediumLevelOperandUsage}},
-		{MLIL_SEPARATE_PARAM_LIST, {ParameterExprsMediumLevelOperandUsage}},
-		{MLIL_SHARED_PARAM_SLOT, {ParameterExprsMediumLevelOperandUsage}},
-        {MLIL_RET, {SourceExprsMediumLevelOperandUsage}},
-        {MLIL_IF, {ConditionExprMediumLevelOperandUsage, TrueTargetMediumLevelOperandUsage,
-                      FalseTargetMediumLevelOperandUsage}},
-        {MLIL_GOTO, {TargetMediumLevelOperandUsage}},
-        {MLIL_INTRINSIC, {OutputVariablesMediumLevelOperandUsage, IntrinsicMediumLevelOperandUsage,
-                             ParameterExprsMediumLevelOperandUsage}},
-        {MLIL_INTRINSIC_SSA, {OutputSSAVariablesMediumLevelOperandUsage, IntrinsicMediumLevelOperandUsage,
-                                 ParameterExprsMediumLevelOperandUsage}},
-        {MLIL_MEMORY_INTRINSIC_SSA, {OutputSSAVariablesSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage, IntrinsicMediumLevelOperandUsage,
-													 ParameterExprsMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage}},
-        {MLIL_FREE_VAR_SLOT, {DestVariableMediumLevelOperandUsage}},
-        {MLIL_FREE_VAR_SLOT_SSA,
-            {DestSSAVariableMediumLevelOperandUsage, PartialSSAVariableSourceMediumLevelOperandUsage}},
-        {MLIL_TRAP, {VectorMediumLevelOperandUsage}},
-        {MLIL_VAR_PHI, {DestSSAVariableMediumLevelOperandUsage, SourceSSAVariablesMediumLevelOperandUsages}},
-        {MLIL_MEM_PHI, {DestMemoryVersionMediumLevelOperandUsage, SourceMemoryVersionsMediumLevelOperandUsage}},
-        {MLIL_CONST, {ConstantMediumLevelOperandUsage}},
-        {MLIL_CONST_PTR, {ConstantMediumLevelOperandUsage}},
-        {MLIL_EXTERN_PTR, {ConstantMediumLevelOperandUsage, OffsetMediumLevelOperandUsage}},
-        {MLIL_FLOAT_CONST, {ConstantMediumLevelOperandUsage}}, {MLIL_IMPORT, {ConstantMediumLevelOperandUsage}},
-        {MLIL_CONST_DATA, {ConstantDataMediumLevelOperandUsage}},
-        {MLIL_ADD, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_SUB, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_AND, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_OR, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_XOR, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_LSL, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_LSR, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_ASR, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_ROL, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_ROR, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_MUL, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_MULU_DP, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_MULS_DP, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_DIVU, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_DIVS, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_MODU, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_MODS, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_CMP_E, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_CMP_NE, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_CMP_SLT, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_CMP_ULT, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_CMP_SLE, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_CMP_ULE, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_CMP_SGE, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_CMP_UGE, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_CMP_SGT, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_CMP_UGT, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_TEST_BIT, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_ADD_OVERFLOW, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_ADC,
-            {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage, CarryExprMediumLevelOperandUsage}},
-        {MLIL_SBB,
-            {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage, CarryExprMediumLevelOperandUsage}},
-        {MLIL_RLC,
-            {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage, CarryExprMediumLevelOperandUsage}},
-        {MLIL_RRC,
-            {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage, CarryExprMediumLevelOperandUsage}},
-        {MLIL_DIVU_DP, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_DIVS_DP, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_MODU_DP, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_MODS_DP, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_NEG, {SourceExprMediumLevelOperandUsage}}, {MLIL_NOT, {SourceExprMediumLevelOperandUsage}},
-        {MLIL_SX, {SourceExprMediumLevelOperandUsage}}, {MLIL_ZX, {SourceExprMediumLevelOperandUsage}},
-        {MLIL_LOW_PART, {SourceExprMediumLevelOperandUsage}}, {MLIL_BOOL_TO_INT, {SourceExprMediumLevelOperandUsage}},
-        {MLIL_UNIMPL_MEM, {SourceExprMediumLevelOperandUsage}},
-        {MLIL_FADD, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_FSUB, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_FMUL, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_FDIV, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_FSQRT, {SourceExprMediumLevelOperandUsage}}, {MLIL_FNEG, {SourceExprMediumLevelOperandUsage}},
-        {MLIL_FABS, {SourceExprMediumLevelOperandUsage}}, {MLIL_FLOAT_TO_INT, {SourceExprMediumLevelOperandUsage}},
-        {MLIL_INT_TO_FLOAT, {SourceExprMediumLevelOperandUsage}},
-        {MLIL_FLOAT_CONV, {SourceExprMediumLevelOperandUsage}},
-        {MLIL_ROUND_TO_INT, {SourceExprMediumLevelOperandUsage}}, {MLIL_FLOOR, {SourceExprMediumLevelOperandUsage}},
-        {MLIL_CEIL, {SourceExprMediumLevelOperandUsage}}, {MLIL_FTRUNC, {SourceExprMediumLevelOperandUsage}},
-        {MLIL_FCMP_E, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_FCMP_NE, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_FCMP_LT, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_FCMP_LE, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_FCMP_GE, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_FCMP_GT, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_FCMP_O, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-        {MLIL_FCMP_UO, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}}};
-
-
-static unordered_map<BNMediumLevelILOperation, unordered_map<MediumLevelILOperandUsage, size_t>>
-    GetOperandIndexForOperandUsages()
+struct OperandUsageType
 {
-	unordered_map<BNMediumLevelILOperation, unordered_map<MediumLevelILOperandUsage, size_t>> result;
-	result.reserve(MediumLevelILInstructionBase::operationOperandUsage.size());
-	for (auto& operation : MediumLevelILInstructionBase::operationOperandUsage)
+	MediumLevelILOperandUsage usage;
+	MediumLevelILOperandType type;
+
+	constexpr auto operator<=>(const OperandUsageType& other) const
 	{
-		result[operation.first] = unordered_map<MediumLevelILOperandUsage, size_t>();
-		result[operation.first].reserve(operation.second.size());
-		size_t operand = 0;
-		for (auto usage : operation.second)
+		return usage <=> other.usage;
+	}
+};
+
+static constexpr std::array s_operandTypeForUsage = {
+	OperandUsageType{SourceExprMediumLevelOperandUsage, ExprMediumLevelOperand},
+	OperandUsageType{SourceVariableMediumLevelOperandUsage, VariableMediumLevelOperand},
+	OperandUsageType{SourceSSAVariableMediumLevelOperandUsage, SSAVariableMediumLevelOperand},
+	OperandUsageType{PartialSSAVariableSourceMediumLevelOperandUsage, SSAVariableMediumLevelOperand},
+	OperandUsageType{DestExprMediumLevelOperandUsage, ExprMediumLevelOperand},
+	OperandUsageType{DestVariableMediumLevelOperandUsage, VariableMediumLevelOperand},
+	OperandUsageType{DestSSAVariableMediumLevelOperandUsage, SSAVariableMediumLevelOperand},
+	OperandUsageType{LeftExprMediumLevelOperandUsage, ExprMediumLevelOperand},
+	OperandUsageType{RightExprMediumLevelOperandUsage, ExprMediumLevelOperand},
+	OperandUsageType{CarryExprMediumLevelOperandUsage, ExprMediumLevelOperand},
+	OperandUsageType{StackExprMediumLevelOperandUsage, ExprMediumLevelOperand},
+	OperandUsageType{ConditionExprMediumLevelOperandUsage, ExprMediumLevelOperand},
+	OperandUsageType{HighVariableMediumLevelOperandUsage, VariableMediumLevelOperand},
+	OperandUsageType{LowVariableMediumLevelOperandUsage, VariableMediumLevelOperand},
+	OperandUsageType{HighSSAVariableMediumLevelOperandUsage, VariableMediumLevelOperand},
+	OperandUsageType{LowSSAVariableMediumLevelOperandUsage, VariableMediumLevelOperand},
+	OperandUsageType{OffsetMediumLevelOperandUsage, IntegerMediumLevelOperand},
+	OperandUsageType{ConstantMediumLevelOperandUsage, IntegerMediumLevelOperand},
+	OperandUsageType{ConstantDataMediumLevelOperandUsage, ConstantDataMediumLevelOperand},
+	OperandUsageType{VectorMediumLevelOperandUsage, IntegerMediumLevelOperand},
+	OperandUsageType{IntrinsicMediumLevelOperandUsage, IntrinsicMediumLevelOperand},
+	OperandUsageType{TargetMediumLevelOperandUsage, IndexMediumLevelOperand},
+	OperandUsageType{TrueTargetMediumLevelOperandUsage, IndexMediumLevelOperand},
+	OperandUsageType{FalseTargetMediumLevelOperandUsage, IndexMediumLevelOperand},
+	OperandUsageType{DestMemoryVersionMediumLevelOperandUsage, IndexMediumLevelOperand},
+	OperandUsageType{SourceMemoryVersionMediumLevelOperandUsage, IndexMediumLevelOperand},
+	OperandUsageType{TargetsMediumLevelOperandUsage, IndexMapMediumLevelOperand},
+	OperandUsageType{SourceMemoryVersionsMediumLevelOperandUsage, IndexListMediumLevelOperand},
+	OperandUsageType{OutputVariablesMediumLevelOperandUsage, VariableListMediumLevelOperand},
+	OperandUsageType{OutputVariablesSubExprMediumLevelOperandUsage, VariableListMediumLevelOperand},
+	OperandUsageType{OutputSSAVariablesMediumLevelOperandUsage, SSAVariableListMediumLevelOperand},
+	OperandUsageType{OutputSSAVariablesSubExprMediumLevelOperandUsage, SSAVariableListMediumLevelOperand},
+	OperandUsageType{OutputSSAMemoryVersionMediumLevelOperandUsage, IndexMediumLevelOperand},
+	OperandUsageType{ParameterExprsMediumLevelOperandUsage, ExprListMediumLevelOperand},
+	OperandUsageType{SourceExprsMediumLevelOperandUsage, ExprListMediumLevelOperand},
+	OperandUsageType{UntypedParameterExprsMediumLevelOperandUsage, ExprListMediumLevelOperand},
+	OperandUsageType{UntypedParameterSSAExprsMediumLevelOperandUsage, ExprListMediumLevelOperand},
+	OperandUsageType{ParameterSSAMemoryVersionMediumLevelOperandUsage, IndexMediumLevelOperand},
+	OperandUsageType{SourceSSAVariablesMediumLevelOperandUsages, SSAVariableListMediumLevelOperand},
+	OperandUsageType{ConstraintMediumLevelOperandUsage, ConstraintMediumLevelOperand},
+};
+
+static_assert(std::is_sorted(s_operandTypeForUsage.begin(), s_operandTypeForUsage.end()),
+			  "Operand type mapping array is not sorted by usage value");
+
+constexpr inline MediumLevelILOperandType OperandTypeForUsage(MediumLevelILOperandUsage usage)
+{
+	if (static_cast<size_t>(usage) < s_operandTypeForUsage.size())
+		return s_operandTypeForUsage[usage].type;
+
+	throw MediumLevelILInstructionAccessException();
+}
+
+struct MediumLevelILOperationTraits
+{
+	using ILOperation = BNMediumLevelILOperation;
+	using OperandUsage = MediumLevelILOperandUsage;
+	static constexpr size_t MaxOperands = 6;
+
+	static constexpr uint8_t GetOperandIndexAdvance(OperandUsage usage, size_t operandIndex)
+	{
+		switch (usage)
 		{
-			result[operation.first][usage] = operand;
-			switch (usage)
-			{
-			case PartialSSAVariableSourceMediumLevelOperandUsage:
-				// SSA variables are usually two slots, but this one has a previously defined
-				// variables and thus only takes one slot
-				operand++;
-				break;
-			case OutputVariablesSubExprMediumLevelOperandUsage:
-			case UntypedParameterExprsMediumLevelOperandUsage:
-				// Represented as subexpression, so only takes one slot even though it is a list
-				operand++;
-				break;
-			case OutputSSAVariablesSubExprMediumLevelOperandUsage:
-				// OutputSSAMemoryVersionMediumLevelOperandUsage follows at same operand
-				break;
-			case UntypedParameterSSAExprsMediumLevelOperandUsage:
-				// ParameterSSAMemoryVersionMediumLevelOperandUsage follows at same operand
-				break;
+		case PartialSSAVariableSourceMediumLevelOperandUsage:
+			// SSA variables are usually two slots, but this one has a previously defined
+			// variables and thus only takes one slot
+			return 1;
+		case OutputVariablesSubExprMediumLevelOperandUsage:
+		case UntypedParameterExprsMediumLevelOperandUsage:
+			// Represented as subexpression, so only takes one slot even though it is a list
+			return 1;
+		case OutputSSAVariablesSubExprMediumLevelOperandUsage:
+			// OutputSSAMemoryVersionMediumLevelOperandUsage follows at same operand
+			return 0;
+		case UntypedParameterSSAExprsMediumLevelOperandUsage:
+			// ParameterSSAMemoryVersionMediumLevelOperandUsage follows at same operand
+			return 0;
+		default:
+			switch (OperandTypeForUsage(usage)) {
+			case SSAVariableMediumLevelOperand:
+			case IndexListMediumLevelOperand:
+			case IndexMapMediumLevelOperand:
+			case VariableListMediumLevelOperand:
+			case SSAVariableListMediumLevelOperand:
+			case ExprListMediumLevelOperand:
+				return 2;
 			default:
-				switch (MediumLevelILInstructionBase::operandTypeForUsage[usage])
-				{
-				case SSAVariableMediumLevelOperand:
-				case IndexListMediumLevelOperand:
-				case IndexMapMediumLevelOperand:
-				case VariableListMediumLevelOperand:
-				case SSAVariableListMediumLevelOperand:
-				case ExprListMediumLevelOperand:
-					// SSA variables and lists take two operand slots
-					operand += 2;
-					break;
-				default:
-					operand++;
-					break;
-				}
-				break;
+				return 1;
 			}
 		}
 	}
-	return result;
-}
+};
+
+using OperandUsage = detail::ILInstructionOperandUsage<MediumLevelILOperationTraits>;
+static_assert(sizeof(OperandUsage) == 14);
 
 
-unordered_map<BNMediumLevelILOperation, unordered_map<MediumLevelILOperandUsage, size_t>>
-    MediumLevelILInstructionBase::operationOperandIndex = GetOperandIndexForOperandUsages();
+static constexpr std::array s_instructionOperandUsage = {
+	OperandUsage{MLIL_NOP},
+	OperandUsage{MLIL_SET_VAR, {DestVariableMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_SET_VAR_FIELD, {DestVariableMediumLevelOperandUsage, OffsetMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_SET_VAR_SPLIT, {HighVariableMediumLevelOperandUsage, LowVariableMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_ASSERT, {SourceVariableMediumLevelOperandUsage, ConstraintMediumLevelOperandUsage}},
+	OperandUsage{MLIL_FORCE_VER, {DestVariableMediumLevelOperandUsage, SourceVariableMediumLevelOperandUsage}},
+	OperandUsage{MLIL_LOAD, {SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_LOAD_STRUCT, {SourceExprMediumLevelOperandUsage, OffsetMediumLevelOperandUsage}},
+	OperandUsage{MLIL_STORE, {DestExprMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_STORE_STRUCT, {DestExprMediumLevelOperandUsage, OffsetMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_VAR, {SourceVariableMediumLevelOperandUsage}},
+	OperandUsage{MLIL_VAR_FIELD, {SourceVariableMediumLevelOperandUsage, OffsetMediumLevelOperandUsage}},
+	OperandUsage{MLIL_VAR_SPLIT, {HighVariableMediumLevelOperandUsage, LowVariableMediumLevelOperandUsage}},
+	OperandUsage{MLIL_ADDRESS_OF, {SourceVariableMediumLevelOperandUsage}},
+	OperandUsage{MLIL_ADDRESS_OF_FIELD, {SourceVariableMediumLevelOperandUsage, OffsetMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CONST, {ConstantMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CONST_DATA, {ConstantDataMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CONST_PTR, {ConstantMediumLevelOperandUsage}},
+	OperandUsage{MLIL_EXTERN_PTR, {ConstantMediumLevelOperandUsage, OffsetMediumLevelOperandUsage}},
+	OperandUsage{MLIL_FLOAT_CONST, {ConstantMediumLevelOperandUsage}},
+	OperandUsage{MLIL_IMPORT, {ConstantMediumLevelOperandUsage}},
+	OperandUsage{MLIL_ADD, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_ADC, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage, CarryExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_SUB, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_SBB, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage, CarryExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_AND, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_OR, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_XOR, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_LSL, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_LSR, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_ASR, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_ROL, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_RLC, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage, CarryExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_ROR, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_RRC, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage, CarryExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_MUL, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_MULU_DP, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_MULS_DP, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_DIVU, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_DIVU_DP, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_DIVS, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_DIVS_DP, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_MODU, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_MODU_DP, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_MODS, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_MODS_DP, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_NEG, {SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_NOT, {SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_SX, {SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_ZX, {SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_LOW_PART, {SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_JUMP, {DestExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_JUMP_TO, {DestExprMediumLevelOperandUsage, TargetsMediumLevelOperandUsage}},
+	OperandUsage{MLIL_RET_HINT, {DestExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CALL, {OutputVariablesMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CALL_UNTYPED, {OutputVariablesSubExprMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, UntypedParameterExprsMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CALL_OUTPUT, {OutputVariablesMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CALL_PARAM, {ParameterExprsMediumLevelOperandUsage}},
+	OperandUsage{MLIL_SEPARATE_PARAM_LIST, {ParameterExprsMediumLevelOperandUsage}},
+	OperandUsage{MLIL_SHARED_PARAM_SLOT, {ParameterExprsMediumLevelOperandUsage}},
+	OperandUsage{MLIL_RET, {SourceExprsMediumLevelOperandUsage}},
+	OperandUsage{MLIL_NORET},
+	OperandUsage{MLIL_IF, {ConditionExprMediumLevelOperandUsage, TrueTargetMediumLevelOperandUsage, FalseTargetMediumLevelOperandUsage}},
+	OperandUsage{MLIL_GOTO, {TargetMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CMP_E, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CMP_NE, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CMP_SLT, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CMP_ULT, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CMP_SLE, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CMP_ULE, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CMP_SGE, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CMP_UGE, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CMP_SGT, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CMP_UGT, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_TEST_BIT, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_BOOL_TO_INT, {SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_ADD_OVERFLOW, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_SYSCALL, {OutputVariablesMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage}},
+	OperandUsage{MLIL_SYSCALL_UNTYPED, {OutputVariablesSubExprMediumLevelOperandUsage, UntypedParameterExprsMediumLevelOperandUsage, StackExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_TAILCALL, {OutputVariablesMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage}},
+	OperandUsage{MLIL_TAILCALL_UNTYPED, {OutputVariablesSubExprMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, UntypedParameterExprsMediumLevelOperandUsage}},
+	OperandUsage{MLIL_INTRINSIC, {OutputVariablesMediumLevelOperandUsage, IntrinsicMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage}},
+	OperandUsage{MLIL_FREE_VAR_SLOT, {DestVariableMediumLevelOperandUsage}},
+	OperandUsage{MLIL_BP},
+	OperandUsage{MLIL_TRAP, {VectorMediumLevelOperandUsage}},
+	OperandUsage{MLIL_UNDEF},
+	OperandUsage{MLIL_UNIMPL},
+	OperandUsage{MLIL_UNIMPL_MEM, {SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_FADD, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_FSUB, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_FMUL, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_FDIV, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_FSQRT, {SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_FNEG, {SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_FABS, {SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_FLOAT_TO_INT, {SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_INT_TO_FLOAT, {SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_FLOAT_CONV, {SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_ROUND_TO_INT, {SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_FLOOR, {SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CEIL, {SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_FTRUNC, {SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_FCMP_E, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_FCMP_NE, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_FCMP_LT, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_FCMP_LE, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_FCMP_GE, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_FCMP_GT, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_FCMP_O, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_FCMP_UO, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_SET_VAR_SSA, {DestSSAVariableMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_SET_VAR_SSA_FIELD, {DestSSAVariableMediumLevelOperandUsage, PartialSSAVariableSourceMediumLevelOperandUsage, OffsetMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_SET_VAR_SPLIT_SSA, {HighSSAVariableMediumLevelOperandUsage, LowSSAVariableMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_SET_VAR_ALIASED, {DestSSAVariableMediumLevelOperandUsage, PartialSSAVariableSourceMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_SET_VAR_ALIASED_FIELD, {DestSSAVariableMediumLevelOperandUsage, PartialSSAVariableSourceMediumLevelOperandUsage, OffsetMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_VAR_SSA, {SourceSSAVariableMediumLevelOperandUsage}},
+	OperandUsage{MLIL_VAR_SSA_FIELD, {SourceSSAVariableMediumLevelOperandUsage, OffsetMediumLevelOperandUsage}},
+	OperandUsage{MLIL_VAR_ALIASED, {SourceSSAVariableMediumLevelOperandUsage}},
+	OperandUsage{MLIL_VAR_ALIASED_FIELD, {SourceSSAVariableMediumLevelOperandUsage, OffsetMediumLevelOperandUsage}},
+	OperandUsage{MLIL_VAR_SPLIT_SSA, {HighSSAVariableMediumLevelOperandUsage, LowSSAVariableMediumLevelOperandUsage}},
+	OperandUsage{MLIL_ASSERT_SSA, {SourceSSAVariableMediumLevelOperandUsage, ConstraintMediumLevelOperandUsage}},
+	OperandUsage{MLIL_FORCE_VER_SSA, {DestSSAVariableMediumLevelOperandUsage, SourceSSAVariableMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CALL_SSA, {OutputSSAVariablesSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CALL_UNTYPED_SSA, {OutputSSAVariablesSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, UntypedParameterSSAExprsMediumLevelOperandUsage, ParameterSSAMemoryVersionMediumLevelOperandUsage, StackExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_SYSCALL_SSA, {OutputSSAVariablesSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage}},
+	OperandUsage{MLIL_SYSCALL_UNTYPED_SSA, {OutputSSAVariablesSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage, UntypedParameterSSAExprsMediumLevelOperandUsage, ParameterSSAMemoryVersionMediumLevelOperandUsage, StackExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_TAILCALL_SSA, {OutputSSAVariablesSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage}},
+	OperandUsage{MLIL_TAILCALL_UNTYPED_SSA, {OutputSSAVariablesSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, UntypedParameterSSAExprsMediumLevelOperandUsage, ParameterSSAMemoryVersionMediumLevelOperandUsage, StackExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CALL_PARAM_SSA, {ParameterExprsMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CALL_OUTPUT_SSA, {OutputSSAVariablesMediumLevelOperandUsage}},
+	OperandUsage{MLIL_MEMORY_INTRINSIC_OUTPUT_SSA, {OutputSSAVariablesMediumLevelOperandUsage}},
+	OperandUsage{MLIL_LOAD_SSA, {SourceExprMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage}},
+	OperandUsage{MLIL_LOAD_STRUCT_SSA, {SourceExprMediumLevelOperandUsage, OffsetMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage}},
+	OperandUsage{MLIL_STORE_SSA, {DestExprMediumLevelOperandUsage, DestMemoryVersionMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_STORE_STRUCT_SSA, {DestExprMediumLevelOperandUsage, OffsetMediumLevelOperandUsage, DestMemoryVersionMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage, SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_INTRINSIC_SSA, {OutputSSAVariablesMediumLevelOperandUsage, IntrinsicMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage}},
+	OperandUsage{MLIL_MEMORY_INTRINSIC_SSA, {OutputSSAVariablesSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage, IntrinsicMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage}},
+	OperandUsage{MLIL_FREE_VAR_SLOT_SSA, {DestSSAVariableMediumLevelOperandUsage, PartialSSAVariableSourceMediumLevelOperandUsage}},
+	OperandUsage{MLIL_VAR_PHI, {DestSSAVariableMediumLevelOperandUsage, SourceSSAVariablesMediumLevelOperandUsages}},
+	OperandUsage{MLIL_MEM_PHI, {DestMemoryVersionMediumLevelOperandUsage, SourceMemoryVersionsMediumLevelOperandUsage}},
+};
+
+VALIDATE_INSTRUCTION_ORDER(s_instructionOperandUsage);
+
+} // anonymous namespace
 
 
 bool MediumLevelILIntegerList::ListIterator::operator==(const ListIterator& a) const
@@ -689,12 +681,8 @@ MediumLevelILInstructionList::operator vector<MediumLevelILInstruction>() const
 MediumLevelILOperand::MediumLevelILOperand(
     const MediumLevelILInstruction& instr, MediumLevelILOperandUsage usage, size_t operandIndex) :
     m_instr(instr),
-    m_usage(usage), m_operandIndex(operandIndex)
+    m_usage(usage), m_type(OperandTypeForUsage(usage)), m_operandIndex(operandIndex)
 {
-	auto i = MediumLevelILInstructionBase::operandTypeForUsage.find(m_usage);
-	if (i == MediumLevelILInstructionBase::operandTypeForUsage.end())
-		throw MediumLevelILInstructionAccessException();
-	m_type = i->second;
 }
 
 
@@ -809,19 +797,17 @@ MediumLevelILInstructionList MediumLevelILOperand::GetExprList() const
 
 const MediumLevelILOperand MediumLevelILOperandList::ListIterator::operator*()
 {
-	MediumLevelILOperandUsage usage = *pos;
-	auto i = owner->m_operandIndexMap.find(usage);
-	if (i == owner->m_operandIndexMap.end())
-		throw MediumLevelILInstructionAccessException();
-	return MediumLevelILOperand(owner->m_instr, usage, i->second);
+	MediumLevelILOperandUsage usage = owner->m_usages[index];
+	size_t operandIndex = owner->m_indices[index];
+	return MediumLevelILOperand(owner->m_instr, usage, operandIndex);
 }
 
 
 MediumLevelILOperandList::MediumLevelILOperandList(const MediumLevelILInstruction& instr,
-    const vector<MediumLevelILOperandUsage>& usageList,
-    const unordered_map<MediumLevelILOperandUsage, size_t>& operandIndexMap) :
+    const MediumLevelILOperandUsage* usages,
+    const uint8_t* indices, uint8_t count) :
     m_instr(instr),
-    m_usageList(usageList), m_operandIndexMap(operandIndexMap)
+    m_usages(usages), m_indices(indices), m_count(count)
 {}
 
 
@@ -829,7 +815,7 @@ MediumLevelILOperandList::const_iterator MediumLevelILOperandList::begin() const
 {
 	const_iterator result;
 	result.owner = this;
-	result.pos = m_usageList.begin();
+	result.index = 0;
 	return result;
 }
 
@@ -838,24 +824,24 @@ MediumLevelILOperandList::const_iterator MediumLevelILOperandList::end() const
 {
 	const_iterator result;
 	result.owner = this;
-	result.pos = m_usageList.end();
+	result.index = m_count;
 	return result;
 }
 
 
 size_t MediumLevelILOperandList::size() const
 {
-	return m_usageList.size();
+	return m_count;
 }
 
 
 const MediumLevelILOperand MediumLevelILOperandList::operator[](size_t i) const
 {
-	MediumLevelILOperandUsage usage = m_usageList[i];
-	auto indexMap = m_operandIndexMap.find(usage);
-	if (indexMap == m_operandIndexMap.end())
+	if (i >= m_count)
 		throw MediumLevelILInstructionAccessException();
-	return MediumLevelILOperand(m_instr, usage, indexMap->second);
+	MediumLevelILOperandUsage usage = m_usages[i];
+	size_t operandIndex = m_indices[i];
+	return MediumLevelILOperand(m_instr, usage, operandIndex);
 }
 
 
@@ -921,13 +907,11 @@ MediumLevelILInstruction::MediumLevelILInstruction(const MediumLevelILInstructio
 
 MediumLevelILOperandList MediumLevelILInstructionBase::GetOperands() const
 {
-	auto usage = operationOperandUsage.find(operation);
-	if (usage == operationOperandUsage.end())
+	if (operation >= s_instructionOperandUsage.size())
 		throw MediumLevelILInstructionAccessException();
-	auto operandIndex = operationOperandIndex.find(operation);
-	if (operandIndex == operationOperandIndex.end())
-		throw MediumLevelILInstructionAccessException();
-	return MediumLevelILOperandList(*(const MediumLevelILInstruction*)this, usage->second, operandIndex->second);
+	
+	const auto& info = s_instructionOperandUsage[operation];
+	return MediumLevelILOperandList(*(const MediumLevelILInstruction*)this, info.usages, info.indices, info.count);
 }
 
 
@@ -1919,14 +1903,19 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
 
 bool MediumLevelILInstruction::GetOperandIndexForUsage(MediumLevelILOperandUsage usage, size_t& operandIndex) const
 {
-	auto operationIter = MediumLevelILInstructionBase::operationOperandIndex.find(operation);
-	if (operationIter == MediumLevelILInstructionBase::operationOperandIndex.end())
+	if (operation >= s_instructionOperandUsage.size())
 		return false;
-	auto usageIter = operationIter->second.find(usage);
-	if (usageIter == operationIter->second.end())
-		return false;
-	operandIndex = usageIter->second;
-	return true;
+	
+	const auto& info = s_instructionOperandUsage[operation];
+	for (uint8_t i = 0; i < info.count; i++)
+	{
+		if (info.usages[i] == usage)
+		{
+			operandIndex = info.indices[i];
+			return true;
+		}
+	}
+	return false;
 }
 
 

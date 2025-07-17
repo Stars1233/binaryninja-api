@@ -18,7 +18,12 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
+#include <algorithm>
 #include <cstring>
+#include <array>
+
+#include "sharedilinstruction.h"
+
 #ifdef BINARYNINJACORE_LIBRARY
 	#include "lowlevelilfunction.h"
 	#include "lowlevelilssafunction.h"
@@ -36,279 +41,304 @@ using namespace std;
 #endif
 
 
-unordered_map<LowLevelILOperandUsage, LowLevelILOperandType> LowLevelILInstructionBase::operandTypeForUsage = {
-    {SourceExprLowLevelOperandUsage, ExprLowLevelOperand},
-    {SourceRegisterLowLevelOperandUsage, RegisterLowLevelOperand},
-    {SourceRegisterStackLowLevelOperandUsage, RegisterStackLowLevelOperand},
-    {SourceFlagLowLevelOperandUsage, FlagLowLevelOperand},
-    {SourceSSARegisterLowLevelOperandUsage, SSARegisterLowLevelOperand},
-    {SourceSSARegisterStackLowLevelOperandUsage, SSARegisterStackLowLevelOperand},
-    {SourceSSAFlagLowLevelOperandUsage, SSAFlagLowLevelOperand}, {DestExprLowLevelOperandUsage, ExprLowLevelOperand},
-    {DestRegisterLowLevelOperandUsage, RegisterLowLevelOperand},
-    {DestRegisterStackLowLevelOperandUsage, RegisterStackLowLevelOperand},
-    {DestFlagLowLevelOperandUsage, FlagLowLevelOperand},
-    {DestSSARegisterLowLevelOperandUsage, SSARegisterLowLevelOperand},
-    {DestSSARegisterStackLowLevelOperandUsage, SSARegisterStackLowLevelOperand},
-    {DestSSAFlagLowLevelOperandUsage, SSAFlagLowLevelOperand},
-    {SemanticFlagClassLowLevelOperandUsage, SemanticFlagClassLowLevelOperand},
-    {SemanticFlagGroupLowLevelOperandUsage, SemanticFlagGroupLowLevelOperand},
-    {PartialRegisterLowLevelOperandUsage, RegisterLowLevelOperand},
-    {PartialSSARegisterStackSourceLowLevelOperandUsage, SSARegisterStackLowLevelOperand},
-    {StackSSARegisterLowLevelOperandUsage, SSARegisterLowLevelOperand},
-    {StackMemoryVersionLowLevelOperandUsage, IndexLowLevelOperand},
-    {TopSSARegisterLowLevelOperandUsage, SSARegisterLowLevelOperand},
-    {LeftExprLowLevelOperandUsage, ExprLowLevelOperand}, {RightExprLowLevelOperandUsage, ExprLowLevelOperand},
-    {CarryExprLowLevelOperandUsage, ExprLowLevelOperand}, {ConditionExprLowLevelOperandUsage, ExprLowLevelOperand},
-    {HighRegisterLowLevelOperandUsage, RegisterLowLevelOperand},
-    {HighSSARegisterLowLevelOperandUsage, SSARegisterLowLevelOperand},
-    {LowRegisterLowLevelOperandUsage, RegisterLowLevelOperand},
-    {LowSSARegisterLowLevelOperandUsage, SSARegisterLowLevelOperand},
-    {IntrinsicLowLevelOperandUsage, IntrinsicLowLevelOperand}, {ConstantLowLevelOperandUsage, IntegerLowLevelOperand},
-    {VectorLowLevelOperandUsage, IntegerLowLevelOperand}, {StackAdjustmentLowLevelOperandUsage, IntegerLowLevelOperand},
-    {TargetLowLevelOperandUsage, IndexLowLevelOperand}, {TrueTargetLowLevelOperandUsage, IndexLowLevelOperand},
-    {FalseTargetLowLevelOperandUsage, IndexLowLevelOperand}, {BitIndexLowLevelOperandUsage, IndexLowLevelOperand},
-    {SourceMemoryVersionLowLevelOperandUsage, IndexLowLevelOperand},
-    {DestMemoryVersionLowLevelOperandUsage, IndexLowLevelOperand},
-    {FlagConditionLowLevelOperandUsage, FlagConditionLowLevelOperand},
-    {OutputSSARegistersLowLevelOperandUsage, SSARegisterListLowLevelOperand},
-    {OutputMemoryVersionLowLevelOperandUsage, IndexLowLevelOperand},
-    {ParameterExprsLowLevelOperandUsage, ExprListLowLevelOperand},
-    {SourceSSARegistersLowLevelOperandUsage, SSARegisterListLowLevelOperand},
-    {SourceSSARegisterStacksLowLevelOperandUsage, SSARegisterStackListLowLevelOperand},
-    {SourceSSAFlagsLowLevelOperandUsage, SSAFlagListLowLevelOperand},
-    {OutputRegisterOrFlagListLowLevelOperandUsage, RegisterOrFlagListLowLevelOperand},
-    {OutputSSARegisterOrFlagListLowLevelOperandUsage, SSARegisterOrFlagListLowLevelOperand},
-    {OutputMemoryIntrinsicLowLevelOperandUsage, SSARegisterOrFlagListLowLevelOperand},
-    {SourceMemoryVersionsLowLevelOperandUsage, IndexListLowLevelOperand},
-    {TargetsLowLevelOperandUsage, IndexMapLowLevelOperand},
-    {RegisterStackAdjustmentsLowLevelOperandUsage, RegisterStackAdjustmentsLowLevelOperand},
-		{ConstraintLowLevelOperandUsage, ConstraintLowLevelOperand}};
+namespace {
 
-
-unordered_map<BNLowLevelILOperation, vector<LowLevelILOperandUsage>> LowLevelILInstructionBase::operationOperandUsage =
-    {{LLIL_NOP, {}}, {LLIL_POP, {}}, {LLIL_NORET, {}}, {LLIL_SYSCALL, {}}, {LLIL_BP, {}}, {LLIL_UNDEF, {}},
-        {LLIL_UNIMPL, {}}, {LLIL_SET_REG, {DestRegisterLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
-        {LLIL_SET_REG_SPLIT,
-            {HighRegisterLowLevelOperandUsage, LowRegisterLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
-        {LLIL_SET_REG_SSA, {DestSSARegisterLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
-        {LLIL_SET_REG_SSA_PARTIAL,
-            {DestSSARegisterLowLevelOperandUsage, PartialRegisterLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
-        {LLIL_SET_REG_SPLIT_SSA,
-            {HighSSARegisterLowLevelOperandUsage, LowSSARegisterLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
-        {LLIL_SET_REG_STACK_REL,
-            {DestRegisterStackLowLevelOperandUsage, DestExprLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
-        {LLIL_REG_STACK_PUSH, {DestRegisterStackLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
-        {LLIL_SET_REG_STACK_REL_SSA,
-            {DestSSARegisterStackLowLevelOperandUsage, PartialSSARegisterStackSourceLowLevelOperandUsage,
-                DestExprLowLevelOperandUsage, TopSSARegisterLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
-        {LLIL_SET_REG_STACK_ABS_SSA,
-            {DestSSARegisterStackLowLevelOperandUsage, PartialSSARegisterStackSourceLowLevelOperandUsage,
-                DestRegisterLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
-        {LLIL_SET_FLAG, {DestFlagLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
-        {LLIL_SET_FLAG_SSA, {DestSSAFlagLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
-        {LLIL_FORCE_VER, {DestRegisterLowLevelOperandUsage}},
-        {LLIL_FORCE_VER_SSA, {DestSSARegisterLowLevelOperandUsage, SourceSSARegisterLowLevelOperandUsage}},
-        {LLIL_ASSERT, {SourceRegisterLowLevelOperandUsage, ConstraintLowLevelOperandUsage}},
-        {LLIL_ASSERT_SSA, {SourceSSARegisterLowLevelOperandUsage, ConstraintLowLevelOperandUsage}},
-        {LLIL_LOAD, {SourceExprLowLevelOperandUsage}},
-        {LLIL_LOAD_SSA, {SourceExprLowLevelOperandUsage, SourceMemoryVersionLowLevelOperandUsage}},
-        {LLIL_STORE, {DestExprLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
-        {LLIL_STORE_SSA, {DestExprLowLevelOperandUsage, DestMemoryVersionLowLevelOperandUsage,
-                             SourceMemoryVersionLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
-        {LLIL_REG, {SourceRegisterLowLevelOperandUsage}}, {LLIL_REG_SSA, {SourceSSARegisterLowLevelOperandUsage}},
-        {LLIL_REG_SSA_PARTIAL, {SourceSSARegisterLowLevelOperandUsage, PartialRegisterLowLevelOperandUsage}},
-        {LLIL_REG_SPLIT, {HighRegisterLowLevelOperandUsage, LowRegisterLowLevelOperandUsage}},
-        {LLIL_REG_SPLIT_SSA, {HighSSARegisterLowLevelOperandUsage, LowSSARegisterLowLevelOperandUsage}},
-        {LLIL_REG_STACK_REL, {SourceRegisterStackLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
-        {LLIL_REG_STACK_POP, {SourceRegisterStackLowLevelOperandUsage}},
-        {LLIL_REG_STACK_FREE_REG, {DestRegisterLowLevelOperandUsage}},
-        {LLIL_REG_STACK_FREE_REL, {DestRegisterStackLowLevelOperandUsage, DestExprLowLevelOperandUsage}},
-        {LLIL_REG_STACK_REL_SSA, {SourceSSARegisterStackLowLevelOperandUsage, TopSSARegisterLowLevelOperandUsage,
-                                     SourceExprLowLevelOperandUsage}},
-        {LLIL_REG_STACK_ABS_SSA, {SourceSSARegisterStackLowLevelOperandUsage, SourceRegisterLowLevelOperandUsage}},
-        {LLIL_REG_STACK_FREE_REL_SSA,
-            {DestSSARegisterStackLowLevelOperandUsage, PartialSSARegisterStackSourceLowLevelOperandUsage,
-                DestExprLowLevelOperandUsage, TopSSARegisterLowLevelOperandUsage}},
-        {LLIL_REG_STACK_FREE_ABS_SSA,
-            {DestSSARegisterStackLowLevelOperandUsage, PartialSSARegisterStackSourceLowLevelOperandUsage,
-                DestRegisterLowLevelOperandUsage}},
-        {LLIL_FLAG, {SourceFlagLowLevelOperandUsage}},
-        {LLIL_FLAG_BIT, {SourceFlagLowLevelOperandUsage, BitIndexLowLevelOperandUsage}},
-        {LLIL_FLAG_SSA, {SourceSSAFlagLowLevelOperandUsage}},
-        {LLIL_FLAG_BIT_SSA, {SourceSSAFlagLowLevelOperandUsage, BitIndexLowLevelOperandUsage}},
-        {LLIL_JUMP, {DestExprLowLevelOperandUsage}},
-        {LLIL_JUMP_TO, {DestExprLowLevelOperandUsage, TargetsLowLevelOperandUsage}},
-        {LLIL_CALL, {DestExprLowLevelOperandUsage}},
-        {LLIL_CALL_STACK_ADJUST, {DestExprLowLevelOperandUsage, StackAdjustmentLowLevelOperandUsage,
-                                     RegisterStackAdjustmentsLowLevelOperandUsage}},
-        {LLIL_TAILCALL, {DestExprLowLevelOperandUsage}}, {LLIL_RET, {DestExprLowLevelOperandUsage}},
-        {LLIL_IF, {ConditionExprLowLevelOperandUsage, TrueTargetLowLevelOperandUsage, FalseTargetLowLevelOperandUsage}},
-        {LLIL_GOTO, {TargetLowLevelOperandUsage}},
-        {LLIL_FLAG_COND, {FlagConditionLowLevelOperandUsage, SemanticFlagClassLowLevelOperandUsage}},
-        {LLIL_FLAG_GROUP, {SemanticFlagGroupLowLevelOperandUsage}}, {LLIL_TRAP, {VectorLowLevelOperandUsage}},
-        {LLIL_CALL_SSA, {OutputSSARegistersLowLevelOperandUsage, OutputMemoryVersionLowLevelOperandUsage,
-                            DestExprLowLevelOperandUsage, StackSSARegisterLowLevelOperandUsage,
-                            StackMemoryVersionLowLevelOperandUsage, ParameterExprsLowLevelOperandUsage}},
-        {LLIL_SYSCALL_SSA, {OutputSSARegistersLowLevelOperandUsage, OutputMemoryVersionLowLevelOperandUsage,
-                               StackSSARegisterLowLevelOperandUsage, StackMemoryVersionLowLevelOperandUsage,
-                               ParameterExprsLowLevelOperandUsage}},
-        {LLIL_TAILCALL_SSA, {OutputSSARegistersLowLevelOperandUsage, OutputMemoryVersionLowLevelOperandUsage,
-                                DestExprLowLevelOperandUsage, StackSSARegisterLowLevelOperandUsage,
-                                StackMemoryVersionLowLevelOperandUsage, ParameterExprsLowLevelOperandUsage}},
-		{LLIL_SEPARATE_PARAM_LIST_SSA, {ParameterExprsLowLevelOperandUsage}},
-		{LLIL_SHARED_PARAM_SLOT_SSA, {ParameterExprsLowLevelOperandUsage}},
-        {LLIL_REG_PHI, {DestSSARegisterLowLevelOperandUsage, SourceSSARegistersLowLevelOperandUsage}},
-        {LLIL_REG_STACK_PHI, {DestSSARegisterStackLowLevelOperandUsage, SourceSSARegisterStacksLowLevelOperandUsage}},
-        {LLIL_FLAG_PHI, {DestSSAFlagLowLevelOperandUsage, SourceSSAFlagsLowLevelOperandUsage}},
-        {LLIL_MEM_PHI, {DestMemoryVersionLowLevelOperandUsage, SourceMemoryVersionsLowLevelOperandUsage}},
-        {LLIL_CONST, {ConstantLowLevelOperandUsage}}, {LLIL_CONST_PTR, {ConstantLowLevelOperandUsage}},
-        {LLIL_EXTERN_PTR, {ConstantLowLevelOperandUsage, OffsetLowLevelOperandUsage}},
-        {LLIL_FLOAT_CONST, {ConstantLowLevelOperandUsage}},
-        {LLIL_ADD, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_SUB, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_AND, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_OR, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_XOR, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_LSL, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_LSR, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_ASR, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_ROL, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_ROR, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_MUL, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_MULU_DP, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_MULS_DP, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_DIVU, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_DIVS, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_MODU, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_MODS, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_CMP_E, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_CMP_NE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_CMP_SLT, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_CMP_ULT, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_CMP_SLE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_CMP_ULE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_CMP_SGE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_CMP_UGE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_CMP_SGT, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_CMP_UGT, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_TEST_BIT, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_ADD_OVERFLOW, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_ADC, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage, CarryExprLowLevelOperandUsage}},
-        {LLIL_SBB, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage, CarryExprLowLevelOperandUsage}},
-        {LLIL_RLC, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage, CarryExprLowLevelOperandUsage}},
-        {LLIL_RRC, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage, CarryExprLowLevelOperandUsage}},
-        {LLIL_DIVU_DP, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_DIVS_DP, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_MODU_DP, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_MODS_DP, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_PUSH, {SourceExprLowLevelOperandUsage}}, {LLIL_NEG, {SourceExprLowLevelOperandUsage}},
-        {LLIL_NOT, {SourceExprLowLevelOperandUsage}}, {LLIL_SX, {SourceExprLowLevelOperandUsage}},
-        {LLIL_ZX, {SourceExprLowLevelOperandUsage}}, {LLIL_LOW_PART, {SourceExprLowLevelOperandUsage}},
-        {LLIL_BOOL_TO_INT, {SourceExprLowLevelOperandUsage}},
-        {LLIL_INTRINSIC, {OutputRegisterOrFlagListLowLevelOperandUsage, IntrinsicLowLevelOperandUsage,
-                             ParameterExprsLowLevelOperandUsage}},
-        {LLIL_INTRINSIC_SSA, {OutputSSARegisterOrFlagListLowLevelOperandUsage, IntrinsicLowLevelOperandUsage,
-                                 ParameterExprsLowLevelOperandUsage}},
-        {LLIL_MEMORY_INTRINSIC_SSA, {OutputMemoryIntrinsicLowLevelOperandUsage, OutputMemoryVersionLowLevelOperandUsage, IntrinsicLowLevelOperandUsage,
-                                 ParameterExprsLowLevelOperandUsage, SourceMemoryVersionLowLevelOperandUsage}},
-        {LLIL_UNIMPL_MEM, {SourceExprLowLevelOperandUsage}},
-        {LLIL_FADD, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_FSUB, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_FMUL, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_FDIV, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_FSQRT, {SourceExprLowLevelOperandUsage}}, {LLIL_FNEG, {SourceExprLowLevelOperandUsage}},
-        {LLIL_FABS, {SourceExprLowLevelOperandUsage}}, {LLIL_FLOAT_TO_INT, {SourceExprLowLevelOperandUsage}},
-        {LLIL_INT_TO_FLOAT, {SourceExprLowLevelOperandUsage}}, {LLIL_FLOAT_CONV, {SourceExprLowLevelOperandUsage}},
-        {LLIL_ROUND_TO_INT, {SourceExprLowLevelOperandUsage}}, {LLIL_FLOOR, {SourceExprLowLevelOperandUsage}},
-        {LLIL_CEIL, {SourceExprLowLevelOperandUsage}}, {LLIL_FTRUNC, {SourceExprLowLevelOperandUsage}},
-        {LLIL_FCMP_E, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_FCMP_NE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_FCMP_LT, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_FCMP_LE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_FCMP_GE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_FCMP_GT, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_FCMP_O, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
-        {LLIL_FCMP_UO, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}}};
-
-
-static unordered_map<BNLowLevelILOperation, unordered_map<LowLevelILOperandUsage, size_t>>
-    GetOperandIndexForOperandUsages()
+struct OperandUsageType
 {
-	unordered_map<BNLowLevelILOperation, unordered_map<LowLevelILOperandUsage, size_t>> result;
-	result.reserve(LowLevelILInstructionBase::operationOperandUsage.size());
-	for (auto& operation : LowLevelILInstructionBase::operationOperandUsage)
-	{
-		result[operation.first] = unordered_map<LowLevelILOperandUsage, size_t>();
+	LowLevelILOperandUsage usage;
+	LowLevelILOperandType type;
 
-		size_t operand = 0;
-		result[operation.first].reserve(operation.second.size());
-		for (auto usage : operation.second)
-		{
-			result[operation.first][usage] = operand;
-			switch (usage)
-			{
-			case HighSSARegisterLowLevelOperandUsage:
-			case LowSSARegisterLowLevelOperandUsage:
-			case PartialSSARegisterStackSourceLowLevelOperandUsage:
-			case TopSSARegisterLowLevelOperandUsage:
-				// Represented as subexpression, so only takes one slot even though it is an SSA register
-				operand++;
-				break;
-			case ParameterExprsLowLevelOperandUsage:
-				if (operand == 0)
-				{
-					// Represented as a counted list
-					operand += 2;
-				}
-				else
-				{
-					// Represented as subexpression, so only takes one slot even though it is a list
-					operand++;
-				}
-				break;
-			case OutputSSARegistersLowLevelOperandUsage:
-				// OutputMemoryVersionLowLevelOperandUsage follows at same operand
-				break;
-			case StackSSARegisterLowLevelOperandUsage:
-				// StackMemoryVersionLowLevelOperandUsage follows at same operand
-				break;
-			case DestSSARegisterStackLowLevelOperandUsage:
-				// PartialSSARegisterStackSourceLowLevelOperandUsage follows at same operand
-				break;
-			case OutputMemoryIntrinsicLowLevelOperandUsage:
-				// OutputMemoryVersionLowLevelOperandUsage follows at same operand
-				break;
-			default:
-				switch (LowLevelILInstructionBase::operandTypeForUsage[usage])
-				{
-				case SSARegisterLowLevelOperand:
-				case SSARegisterStackLowLevelOperand:
-				case SSAFlagLowLevelOperand:
-				case IndexListLowLevelOperand:
-				case IndexMapLowLevelOperand:
-				case SSARegisterListLowLevelOperand:
-				case SSARegisterStackListLowLevelOperand:
-				case SSAFlagListLowLevelOperand:
-				case RegisterStackAdjustmentsLowLevelOperand:
-				case RegisterOrFlagListLowLevelOperand:
-				case SSARegisterOrFlagListLowLevelOperand:
-					// SSA registers/flags and lists take two operand slots
-					operand += 2;
-					break;
-				default:
-					operand++;
-					break;
-				}
-				break;
-			}
-		}
+	constexpr auto operator<=>(const OperandUsageType& other) const
+	{
+		return usage <=> other.usage;
 	}
-	return result;
+};
+
+static constexpr std::array s_operandTypeForUsage = {
+	OperandUsageType{SourceExprLowLevelOperandUsage, ExprLowLevelOperand},
+	OperandUsageType{SourceRegisterLowLevelOperandUsage, RegisterLowLevelOperand},
+	OperandUsageType{SourceRegisterStackLowLevelOperandUsage, RegisterStackLowLevelOperand},
+	OperandUsageType{SourceFlagLowLevelOperandUsage, FlagLowLevelOperand},
+	OperandUsageType{SourceSSARegisterLowLevelOperandUsage, SSARegisterLowLevelOperand},
+	OperandUsageType{SourceSSARegisterStackLowLevelOperandUsage, SSARegisterStackLowLevelOperand},
+	OperandUsageType{SourceSSAFlagLowLevelOperandUsage, SSAFlagLowLevelOperand},
+	OperandUsageType{DestExprLowLevelOperandUsage, ExprLowLevelOperand},
+	OperandUsageType{DestRegisterLowLevelOperandUsage, RegisterLowLevelOperand},
+	OperandUsageType{DestRegisterStackLowLevelOperandUsage, RegisterStackLowLevelOperand},
+	OperandUsageType{DestFlagLowLevelOperandUsage, FlagLowLevelOperand},
+	OperandUsageType{DestSSARegisterLowLevelOperandUsage, SSARegisterLowLevelOperand},
+	OperandUsageType{DestSSARegisterStackLowLevelOperandUsage, SSARegisterStackLowLevelOperand},
+	OperandUsageType{DestSSAFlagLowLevelOperandUsage, SSAFlagLowLevelOperand},
+	OperandUsageType{SemanticFlagClassLowLevelOperandUsage, SemanticFlagClassLowLevelOperand},
+	OperandUsageType{SemanticFlagGroupLowLevelOperandUsage, SemanticFlagGroupLowLevelOperand},
+	OperandUsageType{PartialRegisterLowLevelOperandUsage, RegisterLowLevelOperand},
+	OperandUsageType{PartialSSARegisterStackSourceLowLevelOperandUsage, SSARegisterStackLowLevelOperand},
+	OperandUsageType{StackSSARegisterLowLevelOperandUsage, SSARegisterLowLevelOperand},
+	OperandUsageType{StackMemoryVersionLowLevelOperandUsage, IndexLowLevelOperand},
+	OperandUsageType{TopSSARegisterLowLevelOperandUsage, SSARegisterLowLevelOperand},
+	OperandUsageType{LeftExprLowLevelOperandUsage, ExprLowLevelOperand},
+	OperandUsageType{RightExprLowLevelOperandUsage, ExprLowLevelOperand},
+	OperandUsageType{CarryExprLowLevelOperandUsage, ExprLowLevelOperand},
+	OperandUsageType{ConditionExprLowLevelOperandUsage, ExprLowLevelOperand},
+	OperandUsageType{HighRegisterLowLevelOperandUsage, RegisterLowLevelOperand},
+	OperandUsageType{HighSSARegisterLowLevelOperandUsage, SSARegisterLowLevelOperand},
+	OperandUsageType{LowRegisterLowLevelOperandUsage, RegisterLowLevelOperand},
+	OperandUsageType{LowSSARegisterLowLevelOperandUsage, SSARegisterLowLevelOperand},
+	OperandUsageType{IntrinsicLowLevelOperandUsage, IntrinsicLowLevelOperand},
+	OperandUsageType{ConstantLowLevelOperandUsage, IntegerLowLevelOperand},
+	OperandUsageType{VectorLowLevelOperandUsage, IntegerLowLevelOperand},
+	OperandUsageType{StackAdjustmentLowLevelOperandUsage, IntegerLowLevelOperand},
+	OperandUsageType{TargetLowLevelOperandUsage, IndexLowLevelOperand},
+	OperandUsageType{TrueTargetLowLevelOperandUsage, IndexLowLevelOperand},
+	OperandUsageType{FalseTargetLowLevelOperandUsage, IndexLowLevelOperand},
+	OperandUsageType{BitIndexLowLevelOperandUsage, IndexLowLevelOperand},
+	OperandUsageType{SourceMemoryVersionLowLevelOperandUsage, IndexLowLevelOperand},
+	OperandUsageType{DestMemoryVersionLowLevelOperandUsage, IndexLowLevelOperand},
+	OperandUsageType{FlagConditionLowLevelOperandUsage, FlagConditionLowLevelOperand},
+	OperandUsageType{OutputSSARegistersLowLevelOperandUsage, SSARegisterListLowLevelOperand},
+	OperandUsageType{OutputMemoryVersionLowLevelOperandUsage, IndexLowLevelOperand},
+	OperandUsageType{ParameterExprsLowLevelOperandUsage, ExprListLowLevelOperand},
+	OperandUsageType{SourceSSARegistersLowLevelOperandUsage, SSARegisterListLowLevelOperand},
+	OperandUsageType{SourceSSARegisterStacksLowLevelOperandUsage, SSARegisterStackListLowLevelOperand},
+	OperandUsageType{SourceSSAFlagsLowLevelOperandUsage, SSAFlagListLowLevelOperand},
+	OperandUsageType{OutputRegisterOrFlagListLowLevelOperandUsage, RegisterOrFlagListLowLevelOperand},
+	OperandUsageType{OutputSSARegisterOrFlagListLowLevelOperandUsage, SSARegisterOrFlagListLowLevelOperand},
+	OperandUsageType{OutputMemoryIntrinsicLowLevelOperandUsage, SSARegisterOrFlagListLowLevelOperand},
+	OperandUsageType{SourceMemoryVersionsLowLevelOperandUsage, IndexListLowLevelOperand},
+	OperandUsageType{TargetsLowLevelOperandUsage, IndexMapLowLevelOperand},
+	OperandUsageType{RegisterStackAdjustmentsLowLevelOperandUsage, RegisterStackAdjustmentsLowLevelOperand},
+	OperandUsageType{OffsetLowLevelOperandUsage, IntegerLowLevelOperand},
+	OperandUsageType{ConstraintLowLevelOperandUsage, ConstraintLowLevelOperand}
+};
+
+static_assert(std::is_sorted(s_operandTypeForUsage.begin(), s_operandTypeForUsage.end()),
+	"Operand type mapping array is not sorted by usage value");
+
+
+constexpr inline LowLevelILOperandType OperandTypeForUsage(LowLevelILOperandUsage usage)
+{
+	if (static_cast<size_t>(usage) < s_operandTypeForUsage.size())
+		return s_operandTypeForUsage[usage].type;
+
+	throw LowLevelILInstructionAccessException();
 }
 
 
-unordered_map<BNLowLevelILOperation, unordered_map<LowLevelILOperandUsage, size_t>>
-    LowLevelILInstructionBase::operationOperandIndex = GetOperandIndexForOperandUsages();
+struct LowLevelILOperationTraits
+{
+	using ILOperation = BNLowLevelILOperation;
+	using OperandUsage = LowLevelILOperandUsage;
+	static constexpr size_t MaxOperands = 6;
+
+	static constexpr bool OperandTypeRequiresTwoSlots(LowLevelILOperandType type)
+	{
+		switch (type)
+		{
+		case SSARegisterLowLevelOperand:
+		case SSARegisterStackLowLevelOperand:
+		case SSAFlagLowLevelOperand:
+		case IndexListLowLevelOperand:
+		case IndexMapLowLevelOperand:
+		case SSARegisterListLowLevelOperand:
+		case SSARegisterStackListLowLevelOperand:
+		case SSAFlagListLowLevelOperand:
+		case RegisterStackAdjustmentsLowLevelOperand:
+		case RegisterOrFlagListLowLevelOperand:
+		case SSARegisterOrFlagListLowLevelOperand:
+		case ExprListLowLevelOperand:
+			return true;
+		default:
+			return false;
+		}
+	}
+
+	static constexpr uint8_t GetOperandIndexAdvance(OperandUsage usage, size_t operandIndex)
+	{
+		// ParameterExprs at index 0 is a counted list and takes two slots
+		if (operandIndex == 0 && usage == ParameterExprsLowLevelOperandUsage)
+			return 2;
+
+		switch (usage)
+		{
+		// Subexpressions take one slot
+		case HighSSARegisterLowLevelOperandUsage:
+		case LowSSARegisterLowLevelOperandUsage:
+		case PartialSSARegisterStackSourceLowLevelOperandUsage:
+		case TopSSARegisterLowLevelOperandUsage:
+			return 1;
+
+		// ParameterExprs takes one slot when not at index 0
+		case ParameterExprsLowLevelOperandUsage:
+			return 1;
+
+		// The next operand follows at same index
+		case OutputSSARegistersLowLevelOperandUsage:
+		case StackSSARegisterLowLevelOperandUsage:
+		case DestSSARegisterStackLowLevelOperandUsage:
+		case OutputMemoryIntrinsicLowLevelOperandUsage:
+			return 0;
+
+		default:
+			return OperandTypeRequiresTwoSlots(OperandTypeForUsage(usage)) ? 2 : 1;
+		}
+	}
+};
+
+using OperandUsage = detail::ILInstructionOperandUsage<LowLevelILOperationTraits>;
+static_assert(sizeof(OperandUsage) == 14);
+
+
+static constexpr std::array s_instructionOperandUsage = {
+	OperandUsage{LLIL_NOP},
+	OperandUsage{LLIL_SET_REG, {DestRegisterLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_SET_REG_SPLIT, {HighRegisterLowLevelOperandUsage, LowRegisterLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_SET_FLAG, {DestFlagLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_SET_REG_STACK_REL, {DestRegisterStackLowLevelOperandUsage, DestExprLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_REG_STACK_PUSH, {DestRegisterStackLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_ASSERT, {SourceRegisterLowLevelOperandUsage, ConstraintLowLevelOperandUsage}},
+	OperandUsage{LLIL_FORCE_VER, {DestRegisterLowLevelOperandUsage}},
+	OperandUsage{LLIL_LOAD, {SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_STORE, {DestExprLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_PUSH, {SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_POP},
+	OperandUsage{LLIL_REG, {SourceRegisterLowLevelOperandUsage}},
+	OperandUsage{LLIL_REG_SPLIT, {HighRegisterLowLevelOperandUsage, LowRegisterLowLevelOperandUsage}},
+	OperandUsage{LLIL_REG_STACK_REL, {SourceRegisterStackLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_REG_STACK_POP, {SourceRegisterStackLowLevelOperandUsage}},
+	OperandUsage{LLIL_REG_STACK_FREE_REG, {DestRegisterLowLevelOperandUsage}},
+	OperandUsage{LLIL_REG_STACK_FREE_REL, {DestRegisterStackLowLevelOperandUsage, DestExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_CONST, {ConstantLowLevelOperandUsage}},
+	OperandUsage{LLIL_CONST_PTR, {ConstantLowLevelOperandUsage}},
+	OperandUsage{LLIL_EXTERN_PTR, {ConstantLowLevelOperandUsage, OffsetLowLevelOperandUsage}},
+	OperandUsage{LLIL_FLOAT_CONST, {ConstantLowLevelOperandUsage}},
+	OperandUsage{LLIL_FLAG, {SourceFlagLowLevelOperandUsage}},
+	OperandUsage{LLIL_FLAG_BIT, {SourceFlagLowLevelOperandUsage, BitIndexLowLevelOperandUsage}},
+	OperandUsage{LLIL_ADD, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_ADC, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage, CarryExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_SUB, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_SBB, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage, CarryExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_AND, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_OR, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_XOR, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_LSL, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_LSR, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_ASR, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_ROL, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_RLC, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage, CarryExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_ROR, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_RRC, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage, CarryExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_MUL, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_MULU_DP, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_MULS_DP, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_DIVU, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_DIVU_DP, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_DIVS, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_DIVS_DP, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_MODU, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_MODU_DP, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_MODS, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_MODS_DP, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_NEG, {SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_NOT, {SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_SX, {SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_ZX, {SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_LOW_PART, {SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_JUMP, {DestExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_JUMP_TO, {DestExprLowLevelOperandUsage, TargetsLowLevelOperandUsage}},
+	OperandUsage{LLIL_CALL, {DestExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_CALL_STACK_ADJUST, {DestExprLowLevelOperandUsage, StackAdjustmentLowLevelOperandUsage, RegisterStackAdjustmentsLowLevelOperandUsage}},
+	OperandUsage{LLIL_TAILCALL, {DestExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_RET, {DestExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_NORET},
+	OperandUsage{LLIL_IF, {ConditionExprLowLevelOperandUsage, TrueTargetLowLevelOperandUsage, FalseTargetLowLevelOperandUsage}},
+	OperandUsage{LLIL_GOTO, {TargetLowLevelOperandUsage}},
+	OperandUsage{LLIL_FLAG_COND, {FlagConditionLowLevelOperandUsage, SemanticFlagClassLowLevelOperandUsage}},
+	OperandUsage{LLIL_FLAG_GROUP, {SemanticFlagGroupLowLevelOperandUsage}},
+	OperandUsage{LLIL_CMP_E, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_CMP_NE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_CMP_SLT, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_CMP_ULT, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_CMP_SLE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_CMP_ULE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_CMP_SGE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_CMP_UGE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_CMP_SGT, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_CMP_UGT, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_TEST_BIT, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_BOOL_TO_INT, {SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_ADD_OVERFLOW, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_SYSCALL},
+	OperandUsage{LLIL_BP},
+	OperandUsage{LLIL_TRAP, {VectorLowLevelOperandUsage}},
+	OperandUsage{LLIL_INTRINSIC, {OutputRegisterOrFlagListLowLevelOperandUsage, IntrinsicLowLevelOperandUsage, ParameterExprsLowLevelOperandUsage}},
+	OperandUsage{LLIL_UNDEF},
+	OperandUsage{LLIL_UNIMPL},
+	OperandUsage{LLIL_UNIMPL_MEM, {SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_FADD, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_FSUB, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_FMUL, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_FDIV, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_FSQRT, {SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_FNEG, {SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_FABS, {SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_FLOAT_TO_INT, {SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_INT_TO_FLOAT, {SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_FLOAT_CONV, {SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_ROUND_TO_INT, {SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_FLOOR, {SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_CEIL, {SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_FTRUNC, {SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_FCMP_E, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_FCMP_NE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_FCMP_LT, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_FCMP_LE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_FCMP_GE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_FCMP_GT, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_FCMP_O, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_FCMP_UO, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_SET_REG_SSA, {DestSSARegisterLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_SET_REG_SSA_PARTIAL, {DestSSARegisterLowLevelOperandUsage, PartialRegisterLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_SET_REG_SPLIT_SSA, {HighSSARegisterLowLevelOperandUsage, LowSSARegisterLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_SET_REG_STACK_REL_SSA, {DestSSARegisterStackLowLevelOperandUsage, PartialSSARegisterStackSourceLowLevelOperandUsage, DestExprLowLevelOperandUsage, TopSSARegisterLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_SET_REG_STACK_ABS_SSA, {DestSSARegisterStackLowLevelOperandUsage, PartialSSARegisterStackSourceLowLevelOperandUsage, DestRegisterLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_REG_SPLIT_DEST_SSA},
+	OperandUsage{LLIL_REG_STACK_DEST_SSA},
+	OperandUsage{LLIL_REG_SSA, {SourceSSARegisterLowLevelOperandUsage}},
+	OperandUsage{LLIL_REG_SSA_PARTIAL, {SourceSSARegisterLowLevelOperandUsage, PartialRegisterLowLevelOperandUsage}},
+	OperandUsage{LLIL_REG_SPLIT_SSA, {HighSSARegisterLowLevelOperandUsage, LowSSARegisterLowLevelOperandUsage}},
+	OperandUsage{LLIL_REG_STACK_REL_SSA, {SourceSSARegisterStackLowLevelOperandUsage, TopSSARegisterLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_REG_STACK_ABS_SSA, {SourceSSARegisterStackLowLevelOperandUsage, SourceRegisterLowLevelOperandUsage}},
+	OperandUsage{LLIL_REG_STACK_FREE_REL_SSA, {DestSSARegisterStackLowLevelOperandUsage, PartialSSARegisterStackSourceLowLevelOperandUsage, DestExprLowLevelOperandUsage, TopSSARegisterLowLevelOperandUsage}},
+	OperandUsage{LLIL_REG_STACK_FREE_ABS_SSA, {DestSSARegisterStackLowLevelOperandUsage, PartialSSARegisterStackSourceLowLevelOperandUsage, DestRegisterLowLevelOperandUsage}},
+	OperandUsage{LLIL_SET_FLAG_SSA, {DestSSAFlagLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_ASSERT_SSA, {SourceSSARegisterLowLevelOperandUsage, ConstraintLowLevelOperandUsage}},
+	OperandUsage{LLIL_FORCE_VER_SSA, {DestSSARegisterLowLevelOperandUsage, SourceSSARegisterLowLevelOperandUsage}},
+	OperandUsage{LLIL_FLAG_SSA, {SourceSSAFlagLowLevelOperandUsage}},
+	OperandUsage{LLIL_FLAG_BIT_SSA, {SourceSSAFlagLowLevelOperandUsage, BitIndexLowLevelOperandUsage}},
+	OperandUsage{LLIL_CALL_SSA, {OutputSSARegistersLowLevelOperandUsage, OutputMemoryVersionLowLevelOperandUsage, DestExprLowLevelOperandUsage, StackSSARegisterLowLevelOperandUsage, StackMemoryVersionLowLevelOperandUsage, ParameterExprsLowLevelOperandUsage}},
+	OperandUsage{LLIL_SYSCALL_SSA, {OutputSSARegistersLowLevelOperandUsage, OutputMemoryVersionLowLevelOperandUsage, StackSSARegisterLowLevelOperandUsage, StackMemoryVersionLowLevelOperandUsage, ParameterExprsLowLevelOperandUsage}},
+	OperandUsage{LLIL_TAILCALL_SSA, {OutputSSARegistersLowLevelOperandUsage, OutputMemoryVersionLowLevelOperandUsage, DestExprLowLevelOperandUsage, StackSSARegisterLowLevelOperandUsage, StackMemoryVersionLowLevelOperandUsage, ParameterExprsLowLevelOperandUsage}},
+	OperandUsage{LLIL_CALL_PARAM},
+	OperandUsage{LLIL_CALL_STACK_SSA},
+	OperandUsage{LLIL_CALL_OUTPUT_SSA},
+	OperandUsage{LLIL_SEPARATE_PARAM_LIST_SSA, {ParameterExprsLowLevelOperandUsage}},
+	OperandUsage{LLIL_SHARED_PARAM_SLOT_SSA, {ParameterExprsLowLevelOperandUsage}},
+	OperandUsage{LLIL_MEMORY_INTRINSIC_OUTPUT_SSA},
+	OperandUsage{LLIL_LOAD_SSA, {SourceExprLowLevelOperandUsage, SourceMemoryVersionLowLevelOperandUsage}},
+	OperandUsage{LLIL_STORE_SSA, {DestExprLowLevelOperandUsage, DestMemoryVersionLowLevelOperandUsage, SourceMemoryVersionLowLevelOperandUsage, SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_INTRINSIC_SSA, {OutputSSARegisterOrFlagListLowLevelOperandUsage, IntrinsicLowLevelOperandUsage, ParameterExprsLowLevelOperandUsage}},
+	OperandUsage{LLIL_MEMORY_INTRINSIC_SSA, {OutputMemoryIntrinsicLowLevelOperandUsage, OutputMemoryVersionLowLevelOperandUsage, IntrinsicLowLevelOperandUsage, ParameterExprsLowLevelOperandUsage, SourceMemoryVersionLowLevelOperandUsage}},
+	OperandUsage{LLIL_REG_PHI, {DestSSARegisterLowLevelOperandUsage, SourceSSARegistersLowLevelOperandUsage}},
+	OperandUsage{LLIL_REG_STACK_PHI, {DestSSARegisterStackLowLevelOperandUsage, SourceSSARegisterStacksLowLevelOperandUsage}},
+	OperandUsage{LLIL_FLAG_PHI, {DestSSAFlagLowLevelOperandUsage, SourceSSAFlagsLowLevelOperandUsage}},
+	OperandUsage{LLIL_MEM_PHI, {DestMemoryVersionLowLevelOperandUsage, SourceMemoryVersionsLowLevelOperandUsage}},
+};
+
+
+VALIDATE_INSTRUCTION_ORDER(s_instructionOperandUsage);
+
+
+} // unnamed namespace
 
 
 RegisterOrFlag::RegisterOrFlag() : isFlag(false), index(BN_INVALID_REGISTER) {}
@@ -1115,12 +1145,8 @@ LowLevelILSSARegisterOrFlagList::operator vector<SSARegisterOrFlag>() const
 LowLevelILOperand::LowLevelILOperand(
     const LowLevelILInstruction& instr, LowLevelILOperandUsage usage, size_t operandIndex) :
     m_instr(instr),
-    m_usage(usage), m_operandIndex(operandIndex)
+    m_usage(usage), m_type(OperandTypeForUsage(usage)), m_operandIndex(operandIndex)
 {
-	auto i = LowLevelILInstructionBase::operandTypeForUsage.find(m_usage);
-	if (i == LowLevelILInstructionBase::operandTypeForUsage.end())
-		throw LowLevelILInstructionAccessException();
-	m_type = i->second;
 }
 
 
@@ -1315,19 +1341,20 @@ map<uint32_t, int32_t> LowLevelILOperand::GetRegisterStackAdjustments() const
 
 const LowLevelILOperand LowLevelILOperandList::ListIterator::operator*()
 {
-	LowLevelILOperandUsage usage = *pos;
-	auto i = owner->m_operandIndexMap.find(usage);
-	if (i == owner->m_operandIndexMap.end())
+	if (index >= owner->m_count)
 		throw LowLevelILInstructionAccessException();
-	return LowLevelILOperand(owner->m_instr, usage, i->second);
+	LowLevelILOperandUsage usage = owner->m_usages[index];
+	size_t operandIndex = owner->m_indices[index];
+	return LowLevelILOperand(owner->m_instr, usage, operandIndex);
 }
 
 
 LowLevelILOperandList::LowLevelILOperandList(const LowLevelILInstruction& instr,
-    const vector<LowLevelILOperandUsage>& usageList,
-    const unordered_map<LowLevelILOperandUsage, size_t>& operandIndexMap) :
+    const LowLevelILOperandUsage* usages,
+    const uint8_t* indices,
+    uint8_t count) :
     m_instr(instr),
-    m_usageList(usageList), m_operandIndexMap(operandIndexMap)
+    m_usages(usages), m_indices(indices), m_count(count)
 {}
 
 
@@ -1335,7 +1362,7 @@ LowLevelILOperandList::const_iterator LowLevelILOperandList::begin() const
 {
 	const_iterator result;
 	result.owner = this;
-	result.pos = m_usageList.begin();
+	result.index = 0;
 	return result;
 }
 
@@ -1344,24 +1371,24 @@ LowLevelILOperandList::const_iterator LowLevelILOperandList::end() const
 {
 	const_iterator result;
 	result.owner = this;
-	result.pos = m_usageList.end();
+	result.index = m_count;
 	return result;
 }
 
 
 size_t LowLevelILOperandList::size() const
 {
-	return m_usageList.size();
+	return m_count;
 }
 
 
 const LowLevelILOperand LowLevelILOperandList::operator[](size_t i) const
 {
-	LowLevelILOperandUsage usage = m_usageList[i];
-	auto indexMap = m_operandIndexMap.find(usage);
-	if (indexMap == m_operandIndexMap.end())
+	if (i >= m_count)
 		throw LowLevelILInstructionAccessException();
-	return LowLevelILOperand(m_instr, usage, indexMap->second);
+	LowLevelILOperandUsage usage = m_usages[i];
+	size_t operandIndex = m_indices[i];
+	return LowLevelILOperand(m_instr, usage, operandIndex);
 }
 
 
@@ -1428,13 +1455,11 @@ LowLevelILInstruction::LowLevelILInstruction(const LowLevelILInstructionBase& in
 
 LowLevelILOperandList LowLevelILInstructionBase::GetOperands() const
 {
-	auto usage = operationOperandUsage.find(operation);
-	if (usage == operationOperandUsage.end())
+	if (operation >= s_instructionOperandUsage.size())
 		throw LowLevelILInstructionAccessException();
-	auto operandIndex = operationOperandIndex.find(operation);
-	if (operandIndex == operationOperandIndex.end())
-		throw LowLevelILInstructionAccessException();
-	return LowLevelILOperandList(*(const LowLevelILInstruction*)this, usage->second, operandIndex->second);
+	
+	const auto& info = s_instructionOperandUsage[operation];
+	return LowLevelILOperandList(*(const LowLevelILInstruction*)this, info.usages, info.indices, info.count);
 }
 
 
@@ -2384,14 +2409,19 @@ ExprId LowLevelILInstruction::CopyTo(
 
 bool LowLevelILInstruction::GetOperandIndexForUsage(LowLevelILOperandUsage usage, size_t& operandIndex) const
 {
-	auto operationIter = LowLevelILInstructionBase::operationOperandIndex.find(operation);
-	if (operationIter == LowLevelILInstructionBase::operationOperandIndex.end())
+	if (operation >= s_instructionOperandUsage.size())
 		return false;
-	auto usageIter = operationIter->second.find(usage);
-	if (usageIter == operationIter->second.end())
-		return false;
-	operandIndex = usageIter->second;
-	return true;
+	
+	const auto& info = s_instructionOperandUsage[operation];
+	for (uint8_t i = 0; i < info.count; i++)
+	{
+		if (info.usages[i] == usage)
+		{
+			operandIndex = info.indices[i];
+			return true;
+		}
+	}
+	return false;
 }
 
 

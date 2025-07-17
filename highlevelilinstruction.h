@@ -62,7 +62,7 @@ namespace BinaryNinja
 	/*!
 		\ingroup highlevelil
 	*/
-	enum HighLevelILOperandType
+	enum HighLevelILOperandType : uint8_t
 	{
 		IntegerHighLevelOperand,
 		ConstantDataHighLevelOperand,
@@ -79,7 +79,7 @@ namespace BinaryNinja
 	/*!
 		\ingroup highlevelil
 	*/
-	enum HighLevelILOperandUsage
+	enum HighLevelILOperandUsage : uint8_t
 	{
 		SourceExprHighLevelOperandUsage,
 		VariableHighLevelOperandUsage,
@@ -358,10 +358,6 @@ namespace BinaryNinja
 		size_t exprIndex, instructionIndex;
 		bool ast;
 
-		static _STD_UNORDERED_MAP<HighLevelILOperandUsage, HighLevelILOperandType> operandTypeForUsage;
-		static _STD_UNORDERED_MAP<BNHighLevelILOperation, _STD_VECTOR<HighLevelILOperandUsage>> operationOperandUsage;
-		static _STD_UNORDERED_MAP<BNHighLevelILOperation, _STD_UNORDERED_MAP<HighLevelILOperandUsage, size_t>>
-		    operationOperandIndex;
 
 		HighLevelILOperandList GetOperands() const;
 
@@ -856,28 +852,29 @@ namespace BinaryNinja
 			typedef value_type reference;
 
 			const HighLevelILOperandList* owner;
-			_STD_VECTOR<HighLevelILOperandUsage>::const_iterator pos;
-			bool operator==(const ListIterator& a) const { return pos == a.pos; }
-			bool operator!=(const ListIterator& a) const { return pos != a.pos; }
-			bool operator<(const ListIterator& a) const { return pos < a.pos; }
+			size_t index;
+			constexpr bool operator==(const ListIterator& a) const { return index == a.index; }
+			constexpr auto operator<=>(const ListIterator& a) const { return index <=> a.index; }
 			ListIterator& operator++()
 			{
-				++pos;
+				++index;
 				return *this;
 			}
 			const HighLevelILOperand operator*();
 		};
 
 		HighLevelILInstruction m_instr;
-		const _STD_VECTOR<HighLevelILOperandUsage>& m_usageList;
-		const _STD_UNORDERED_MAP<HighLevelILOperandUsage, size_t>& m_operandIndexMap;
+		const HighLevelILOperandUsage* m_usages;
+		const uint8_t* m_indices;
+		uint8_t m_count;
 
 	  public:
 		typedef ListIterator const_iterator;
 
 		HighLevelILOperandList(const HighLevelILInstruction& instr,
-		    const _STD_VECTOR<HighLevelILOperandUsage>& usageList,
-		    const _STD_UNORDERED_MAP<HighLevelILOperandUsage, size_t>& operandIndexMap);
+		    const HighLevelILOperandUsage* usages,
+		    const uint8_t* indices,
+		    uint8_t count);
 
 		const_iterator begin() const;
 		const_iterator end() const;

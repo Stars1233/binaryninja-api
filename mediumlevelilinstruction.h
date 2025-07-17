@@ -37,6 +37,10 @@ namespace BinaryNinjaCore
 namespace BinaryNinja
 #endif
 {
+#ifdef BINARYNINJACORE_LIBRARY
+	typedef size_t ExprId;
+#endif
+
 	class MediumLevelILFunction;
 
 	template <BNMediumLevelILOperation N>
@@ -85,7 +89,7 @@ namespace BinaryNinja
 	/*!
 		\ingroup mediumlevelil
 	*/
-	enum MediumLevelILOperandType
+	enum MediumLevelILOperandType : uint8_t
 	{
 		IntegerMediumLevelOperand,
 		ConstantDataMediumLevelOperand,
@@ -105,7 +109,7 @@ namespace BinaryNinja
 	/*!
 		\ingroup mediumlevelil
 	*/
-	enum MediumLevelILOperandUsage
+	enum MediumLevelILOperandUsage : uint8_t
 	{
 		SourceExprMediumLevelOperandUsage,
 		SourceVariableMediumLevelOperandUsage,
@@ -484,12 +488,6 @@ namespace BinaryNinja
 		Ref<MediumLevelILFunction> function;
 #endif
 		size_t exprIndex, instructionIndex;
-
-		static _STD_UNORDERED_MAP<MediumLevelILOperandUsage, MediumLevelILOperandType> operandTypeForUsage;
-		static _STD_UNORDERED_MAP<BNMediumLevelILOperation, _STD_VECTOR<MediumLevelILOperandUsage>>
-		    operationOperandUsage;
-		static _STD_UNORDERED_MAP<BNMediumLevelILOperation, _STD_UNORDERED_MAP<MediumLevelILOperandUsage, size_t>>
-		    operationOperandIndex;
 
 		MediumLevelILOperandList GetOperands() const;
 
@@ -932,28 +930,28 @@ namespace BinaryNinja
 			typedef value_type reference;
 
 			const MediumLevelILOperandList* owner;
-			_STD_VECTOR<MediumLevelILOperandUsage>::const_iterator pos;
-			bool operator==(const ListIterator& a) const { return pos == a.pos; }
-			bool operator!=(const ListIterator& a) const { return pos != a.pos; }
-			bool operator<(const ListIterator& a) const { return pos < a.pos; }
+			size_t index;
+			constexpr bool operator==(const ListIterator& a) const { return index == a.index; }
+			constexpr auto operator<=>(const ListIterator& a) const { return index <=> a.index; }
 			ListIterator& operator++()
 			{
-				++pos;
+				++index;
 				return *this;
 			}
 			const MediumLevelILOperand operator*();
 		};
 
 		MediumLevelILInstruction m_instr;
-		const _STD_VECTOR<MediumLevelILOperandUsage>& m_usageList;
-		const _STD_UNORDERED_MAP<MediumLevelILOperandUsage, size_t>& m_operandIndexMap;
+		const MediumLevelILOperandUsage* m_usages;
+		const uint8_t* m_indices;
+		uint8_t m_count;
 
 	  public:
 		typedef ListIterator const_iterator;
 
 		MediumLevelILOperandList(const MediumLevelILInstruction& instr,
-		    const _STD_VECTOR<MediumLevelILOperandUsage>& usageList,
-		    const _STD_UNORDERED_MAP<MediumLevelILOperandUsage, size_t>& operandIndexMap);
+		    const MediumLevelILOperandUsage* usages,
+		    const uint8_t* indices, uint8_t count);
 
 		const_iterator begin() const;
 		const_iterator end() const;

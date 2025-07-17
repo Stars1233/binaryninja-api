@@ -162,7 +162,7 @@ namespace BinaryNinja
 	/*!
 		\ingroup lowlevelil
 	*/
-	enum LowLevelILOperandType
+	enum LowLevelILOperandType : uint8_t
 	{
 		IntegerLowLevelOperand,
 		IndexLowLevelOperand,
@@ -192,7 +192,7 @@ namespace BinaryNinja
 	/*!
 		\ingroup lowlevelil
 	*/
-	enum LowLevelILOperandUsage
+	enum LowLevelILOperandUsage : uint8_t
 	{
 		SourceExprLowLevelOperandUsage,
 		SourceRegisterLowLevelOperandUsage,
@@ -750,11 +750,6 @@ namespace BinaryNinja
 #endif
 		size_t exprIndex, instructionIndex;
 
-		static _STD_UNORDERED_MAP<LowLevelILOperandUsage, LowLevelILOperandType> operandTypeForUsage;
-		static _STD_UNORDERED_MAP<BNLowLevelILOperation, _STD_VECTOR<LowLevelILOperandUsage>> operationOperandUsage;
-		static _STD_UNORDERED_MAP<BNLowLevelILOperation, _STD_UNORDERED_MAP<LowLevelILOperandUsage, size_t>>
-		    operationOperandIndex;
-
 		LowLevelILOperandList GetOperands() const;
 
 		uint64_t GetRawOperandAsInteger(size_t operand) const;
@@ -1290,27 +1285,27 @@ namespace BinaryNinja
 			typedef value_type reference;
 
 			const LowLevelILOperandList* owner;
-			_STD_VECTOR<LowLevelILOperandUsage>::const_iterator pos;
-			bool operator==(const ListIterator& a) const { return pos == a.pos; }
-			bool operator!=(const ListIterator& a) const { return pos != a.pos; }
-			bool operator<(const ListIterator& a) const { return pos < a.pos; }
+			size_t index;
+			constexpr bool operator==(const ListIterator& a) const { return index == a.index; }
+			constexpr auto operator<=>(const ListIterator& a) const { return index <=> a.index; }
 			ListIterator& operator++()
 			{
-				++pos;
+				++index;
 				return *this;
 			}
 			const LowLevelILOperand operator*();
 		};
 
 		LowLevelILInstruction m_instr;
-		const _STD_VECTOR<LowLevelILOperandUsage>& m_usageList;
-		const _STD_UNORDERED_MAP<LowLevelILOperandUsage, size_t>& m_operandIndexMap;
+		const LowLevelILOperandUsage* m_usages;
+		const uint8_t* m_indices;
+		uint8_t m_count;
 
 	  public:
 		typedef ListIterator const_iterator;
 
-		LowLevelILOperandList(const LowLevelILInstruction& instr, const _STD_VECTOR<LowLevelILOperandUsage>& usageList,
-		    const _STD_UNORDERED_MAP<LowLevelILOperandUsage, size_t>& operandIndexMap);
+		LowLevelILOperandList(const LowLevelILInstruction& instr, const LowLevelILOperandUsage* usages,
+		    const uint8_t* indices, uint8_t count);
 
 		const_iterator begin() const;
 		const_iterator end() const;

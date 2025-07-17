@@ -120,7 +120,7 @@ QVariant WarpFunctionItemModel::data(const QModelIndex &index, int role) const
             if (BNWARPFunctionsEqual(itemFunction->GetFunction()->m_object, m_matchedFunction->m_object))
             {
                 // TODO: Better color?
-                QColor matchedColor = getThemeColor(BlueStandardHighlightColor);
+                static QColor matchedColor = getThemeColor(BlueStandardHighlightColor);
                 matchedColor.setAlpha(128);
                 return matchedColor;
             }
@@ -201,6 +201,11 @@ WarpFunctionTableWidget::WarpFunctionTableWidget(QWidget *parent) : QWidget(pare
     m_table->horizontalHeader()->hide();
     // Decrease row height to make it look nice.
     m_table->verticalHeader()->setDefaultSectionSize(30);
+
+    // Make the highlight less bright.
+    QPalette palette = m_table->palette();
+    palette.setColor(QPalette::Highlight, getThemeColor(SelectionColor));
+    m_table->setPalette(palette);
 
     TokenDataDelegate *tokenDelegate = new TokenDataDelegate(this);
     // NOTE: Column 0 is assumed to be the function with the token data.

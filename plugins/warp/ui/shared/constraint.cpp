@@ -3,6 +3,8 @@
 #include <QGridLayout>
 #include <QHeaderView>
 
+#include "theme.h"
+
 WarpConstraintItem::WarpConstraintItem(const Warp::Constraint &constraint) : m_constraint(constraint)
 {
     QString guidStr = QString::fromStdString(constraint.guid.ToString());
@@ -39,11 +41,16 @@ QVariant WarpConstraintItemModel::data(const QModelIndex &index, int role) const
         {
             auto itemConstraint = item->GetConstraint();
             // TODO: We really should store the guid in a hashmap or something instead of looping over it for every item.
-            // TODO: A less intense green?
             // TODO: Take into account the constraint offset.
             for (const auto &constraint: m_matchedConstraints)
-                if (constraint.guid == itemConstraint.guid)
-                    return QBrush(Qt::green);
+            {
+                if (constraint.offset == itemConstraint.offset)
+                {
+                    static QColor matchedColor = getThemeColor(GreenStandardHighlightColor);
+                    matchedColor.setAlpha(128);
+                    return matchedColor;
+                }
+            }
         }
     }
 
@@ -83,6 +90,11 @@ WarpConstraintTableWidget::WarpConstraintTableWidget(QWidget *parent)
     m_table->horizontalHeader()->hide();
     // Decrease row height to make it look nice.
     m_table->verticalHeader()->setDefaultSectionSize(30);
+
+    // Make the highlight less bright.
+    QPalette palette = m_table->palette();
+    palette.setColor(QPalette::Highlight, getThemeColor(SelectionColor));
+    m_table->setPalette(palette);
 }
 
 void WarpConstraintTableWidget::SetConstraints(QVector<WarpConstraintItem *> constraints)

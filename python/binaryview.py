@@ -7161,7 +7161,7 @@ class BinaryView:
 		:rtype: None
 		"""
 		value = ctypes.c_char_p()
-		string_type = ctypes.c_int()
+		string_type = core.StringTypeEnum()
 		result = core.BNCheckForStringAnnotationType(self.handle, addr, value, string_type, allow_short_strings, allow_large_strings, child_width)
 		if result:
 			result = value.value.decode("utf-8")
@@ -10591,7 +10591,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		if not isinstance(buffer, databuffer.DataBuffer):
 			raise TypeError("buffer must be an instance of databuffer.DataBuffer")
 		string = ctypes.c_char_p()
-		string_type = ctypes.c_int()
+		string_type = core.StringTypeEnum()
 		if arch is not None:
 			arch = arch.handle
 		if not core.BNStringifyUnicodeData(self.handle, arch, buffer.handle, null_terminates, allow_short_strings, ctypes.byref(string), ctypes.byref(string_type)):

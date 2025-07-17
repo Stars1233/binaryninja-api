@@ -363,7 +363,23 @@ int main(int argc, char* argv[])
 			if (name.size() > 2 && name.substr(0, 2) == "BN")
 				name = name.substr(2);
 
-			fprintf(out, "%sEnum = ctypes.c_int\n", name.c_str());
+			const char* ctypesType = nullptr;
+			switch (i.second->GetWidth())
+			{
+			case 1:
+				ctypesType = i.second->IsSigned() ? "ctypes.c_int8" : "ctypes.c_uint8";
+				break;
+			case 2:
+				ctypesType = i.second->IsSigned() ? "ctypes.c_int16" : "ctypes.c_uint16";
+				break;
+			case 4:
+				ctypesType = i.second->IsSigned() ? "ctypes.c_int32" : "ctypes.c_uint32";
+				break;
+			default:
+				ctypesType = i.second->IsSigned() ? "ctypes.c_int64" : "ctypes.c_uint64";
+				break;
+			}
+			fprintf(out, "%sEnum = %s\n", name.c_str(), ctypesType);
 
 			fprintf(enums, "\n\nclass %s(enum.IntEnum):\n", name.c_str());
 			for (auto& j : i.second->GetEnumeration()->GetMembers())
@@ -465,9 +481,10 @@ int main(int argc, char* argv[])
 
 		// Check for a string result, these will be automatically wrapped to free the string
 		// memory and return a Python string
-		bool stringResult = (i.second->GetChildType()->GetClass() == PointerTypeClass)
-		                    && (i.second->GetChildType()->GetChildType()->GetWidth() == 1)
-		                    && (i.second->GetChildType()->GetChildType()->IsSigned());
+		bool stringResult = i.second->GetChildType()->GetClass() == PointerTypeClass
+		                    && i.second->GetChildType()->GetChildType()->GetClass() == IntegerTypeClass
+		                    && i.second->GetChildType()->GetChildType()->GetWidth() == 1
+		                    && i.second->GetChildType()->GetChildType()->IsSigned();
 		// Pointer returns will be automatically wrapped to return None on null pointer
 		bool pointerResult = (i.second->GetChildType()->GetClass() == PointerTypeClass);
 		// Enum returns will automatically cast to the enum type

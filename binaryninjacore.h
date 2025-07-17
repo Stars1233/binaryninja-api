@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 151
+#define BN_CURRENT_CORE_ABI_VERSION 152
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 147
+#define BN_MINIMUM_CORE_ABI_VERSION 152
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -76,6 +76,42 @@
 #else
 	#define PATH_SEP "/"
 #endif
+
+#ifndef __has_attribute
+#define __has_attribute(x) 0
+#endif
+
+#ifndef __has_extension
+#define __has_extension(x) 0
+#endif
+
+// Define attributes for enums based on compiler support
+#if __has_attribute(enum_extensibility)
+	#define __BN_ENUM_ATTRIBUTES __attribute__((enum_extensibility(open)))
+	#define __BN_OPTIONS_ATTRIBUTES __attribute__((flag_enum, enum_extensibility(open)))
+#else
+	#define __BN_ENUM_ATTRIBUTES
+	#define __BN_OPTIONS_ATTRIBUTES
+#endif
+
+// BN_ENUM macro for defining enums with explicit size in a C-compatible way
+// In C++, use an explicitly sized enum directly.
+// In C, add a typedef to the underlying type and use an unnamed enum to define the values.
+#if defined(__cplusplus) || __has_extension(c_fixed_enum)
+	#define BN_ENUM(type, name) enum __BN_ENUM_ATTRIBUTES name : type
+#else
+	#define BN_ENUM(type, name) typedef type name; enum __BN_ENUM_ATTRIBUTES
+#endif
+
+// BN_OPTIONS macro for defining flag enums with explicit size in a C-compatible way
+// In C++, use an explicitly sized enum directly.
+// In C, add a typedef to the underlying type and use an unnamed enum to define the values.
+#if defined(__cplusplus) || __has_extension(c_fixed_enum)
+	#define BN_OPTIONS(type, name) enum __BN_OPTIONS_ATTRIBUTES name : type
+#else
+	#define BN_OPTIONS(type, name) typedef type name; enum __BN_OPTIONS_ATTRIBUTES
+#endif
+
 
 /*!
     @addtogroup core
@@ -177,19 +213,19 @@
 extern "C"
 {
 #endif
-	typedef enum BNPluginLoadOrder
+	BN_ENUM(uint8_t, BNPluginLoadOrder)
 	{
 		EarlyPluginLoadOrder,
 		NormalPluginLoadOrder,
 		LatePluginLoadOrder
-	} BNPluginLoadOrder;
+	};
 
-	typedef enum PluginLoadStatus
+	BN_ENUM(uint8_t, PluginLoadStatus)
 	{
 		NotAttemptedStatus,
 		LoadSucceededStatus,
 		LoadFailedStatus
-	} PluginLoadStatus;
+	};
 
 	typedef bool (*BNCorePluginInitFunction)(void);
 	typedef void (*BNCorePluginDependencyFunction)(void);
@@ -326,29 +362,29 @@ extern "C"
 	typedef bool(*BNProgressFunction)(void*, size_t, size_t);
 
 	//! Console log levels
-	typedef enum BNLogLevel
+	BN_ENUM(uint8_t, BNLogLevel)
 	{
 		DebugLog = 0,    //! Debug logging level, most verbose logging level
 		InfoLog = 1,     //! Information logging level, default logging level
 		WarningLog = 2,  //! Warning logging level, messages show with warning icon in the UI
 		ErrorLog = 3,    //! Error logging level, messages show with error icon in the UI
 		AlertLog = 4     //! Alert logging level, messages are displayed with popup message box in the UI
-	} BNLogLevel;
+	};
 
-	typedef enum BNEndianness
+	BN_ENUM(uint8_t, BNEndianness)
 	{
 		LittleEndian = 0,
 		BigEndian = 1
-	} BNEndianness;
+	};
 
-	typedef enum BNModificationStatus
+	BN_ENUM(uint8_t, BNModificationStatus)
 	{
 		Original = 0,
 		Changed = 1,
 		Inserted = 2
-	} BNModificationStatus;
+	};
 
-	typedef enum BNTransformType
+	BN_ENUM(uint16_t, BNTransformType)
 	{
 		BinaryCodecTransform = 0,   // Two-way transform of data, binary input/output
 		TextCodecTransform = 1,     // Two-way transform of data, encoder output is text
@@ -359,31 +395,31 @@ extern "C"
 		EncryptTransform = 6,       // Two-way encryption
 		InvertingTransform = 7,     // Transform that can be undone by performing twice
 		HashTransform = 8           // Hash function
-	} BNTransformType;
+	};
 
-	typedef enum BNTransformCapabilities
+	BN_OPTIONS(uint8_t, BNTransformCapabilities)
 	{
 		TransformNoCapabilities = 0,
 		TransformSupportsDetection = 1,
 		TransformSupportsContext = 2
-	} BNTransformCapabilities;
+	};
 
-	typedef enum BNTransformSessionMode
+	BN_ENUM(uint8_t, BNTransformSessionMode)
 	{
 		TransformSessionModeDisabled = 0,   // Open the root file as-is (no unwrapping)
 		TransformSessionModeFull = 1,       // Discover all paths (build the full context tree)
 		TransformSessionModeInteractive = 2 // Interactively request selection at each level of the container hierarchy
-	} BNTransformSessionMode;
+	};
 
-	typedef enum BNTransformResult
+	BN_ENUM(uint8_t, BNTransformResult)
 	{
 		TransformSuccess = 0,
 		TransformNotAttempted = 1,
 		TransformFailure = 2,
 		TransformRequiresPassword = 3
-	} BNTransformResult;
+	};
 
-	typedef enum BNBranchType
+	BN_ENUM(uint8_t, BNBranchType)
 	{
 		UnconditionalBranch = 0,
 		FalseBranch = 1,
@@ -395,9 +431,9 @@ extern "C"
 		ExceptionBranch = 7,
 		UnresolvedBranch = 127,
 		UserDefinedBranch = 128
-	} BNBranchType;
+	};
 
-	typedef enum BNInstructionTextTokenType
+	BN_ENUM(uint8_t, BNInstructionTextTokenType)
 	{
 		TextToken = 0,
 		InstructionToken = 1,
@@ -453,9 +489,9 @@ extern "C"
 		CollapsedInformationToken = 73,
 		CollapseStateIndicatorToken = 74,
 		NewLineToken = 75
-	} BNInstructionTextTokenType;
+	};
 
-	typedef enum BNInstructionTextTokenContext
+	BN_ENUM(uint8_t, BNInstructionTextTokenContext)
 	{
 		NoTokenContext = 0,
 		LocalVariableTokenContext = 1,
@@ -472,9 +508,9 @@ extern "C"
 		ContentExpandedContext = 12,
 		ContentCollapsiblePadding = 13,
 		DerivedStringReferenceTokenContext = 14
-	} BNInstructionTextTokenContext;
+	};
 
-	typedef enum BNLinearDisassemblyLineType
+	BN_ENUM(uint8_t, BNLinearDisassemblyLineType)
 	{
 		BlankLineType,
 		BasicLineType,
@@ -497,25 +533,25 @@ extern "C"
 		NonContiguousSeparatorLineType,
 		AnalysisWarningLineType,
 		CollapsedFunctionEndLineType
-	} BNLinearDisassemblyLineType;
+	};
 
-	typedef enum BNTokenEscapingType
+	BN_ENUM(uint8_t, BNTokenEscapingType)
 	{
 		NoTokenEscapingType = 0,
 		BackticksTokenEscapingType = 1,
 		QuotedStringEscapingType = 2,
 		ReplaceInvalidCharsEscapingType = 3,
-	} BNTokenEscapingType;
+	};
 
-	typedef enum BNAnalysisWarningActionType
+	BN_ENUM(uint8_t, BNAnalysisWarningActionType)
 	{
 		NoAnalysisWarningAction = 0,
 		ForceAnalysisWarningAction = 1,
 		ShowStackGraphWarningAction = 2,
 		DisableGuidedAnalysisWarningAction = 3
-	} BNAnalysisWarningActionType;
+	};
 
-	typedef enum BNSymbolType
+	BN_ENUM(uint8_t, BNSymbolType)
 	{
 		FunctionSymbol = 0,
 		ImportAddressSymbol = 1,
@@ -526,25 +562,25 @@ extern "C"
 		LibraryFunctionSymbol = 6,
 		SymbolicFunctionSymbol = 7,
 		LocalLabelSymbol = 8,
-	} BNSymbolType;
+	};
 
-	typedef enum BNSymbolBinding
+	BN_ENUM(uint8_t, BNSymbolBinding)
 	{
 		NoBinding,
 		LocalBinding,
 		GlobalBinding,
 		WeakBinding
-	} BNSymbolBinding;
+	};
 
-	typedef enum BNActionType
+	BN_ENUM(uint8_t, BNActionType)
 	{
 		TemporaryAction = 0,
 		DataModificationAction = 1,
 		AnalysisAction = 2,
 		DataModificationAndAnalysisAction = 3
-	} BNActionType;
+	};
 
-	typedef enum BNLowLevelILOperation
+	BN_ENUM(uint8_t, BNLowLevelILOperation)
 	{
 		LLIL_NOP,
 		LLIL_SET_REG,             // Not valid in SSA form (see LLIL_SET_REG_SSA)
@@ -695,9 +731,9 @@ extern "C"
 		LLIL_REG_STACK_PHI,
 		LLIL_FLAG_PHI,
 		LLIL_MEM_PHI
-	} BNLowLevelILOperation;
+	};
 
-	typedef enum BNLowLevelILFlagCondition
+	BN_ENUM(uint8_t, BNLowLevelILFlagCondition)
 	{
 		LLFC_E,
 		LLFC_NE,
@@ -721,9 +757,9 @@ extern "C"
 		LLFC_FGT,
 		LLFC_FO,
 		LLFC_FUO
-	} BNLowLevelILFlagCondition;
+	};
 
-	typedef enum BNFlagRole
+	BN_ENUM(uint8_t, BNFlagRole)
 	{
 		SpecialFlagRole = 0,
 		ZeroFlagRole = 1,
@@ -737,9 +773,9 @@ extern "C"
 		OrderedFlagRole = 9,
 		UnorderedFlagRole = 10,
 		CarryFlagWithInvertedSubtractRole = 11,
-	} BNFlagRole;
+	};
 
-	typedef enum BNFunctionGraphType
+	BN_ENUM(int8_t, BNFunctionGraphType)
 	{
 		InvalidILViewType = -1,
 		NormalFunctionGraph = 0,
@@ -753,7 +789,7 @@ extern "C"
 		HighLevelILFunctionGraph = 8,
 		HighLevelILSSAFormFunctionGraph = 9,
 		HighLevelLanguageRepresentationFunctionGraph = 10,
-	} BNFunctionGraphType;
+	};
 
 	typedef struct BNFunctionViewType
 	{
@@ -761,7 +797,7 @@ extern "C"
 		const char* name;  // Only used for HighLevelLanguageRepresentationFunctionGraph
 	} BNFunctionViewType;
 
-	typedef enum BNDisassemblyOption
+	BN_ENUM(uint8_t, BNDisassemblyOption)
 	{
 		ShowAddress = 0,
 		ShowOpcode = 1,
@@ -786,9 +822,9 @@ extern "C"
 		ShowILTypes = 130,
 		ShowILOpcodes = 131,
 		ShowCollapseIndicators = 132,
-	} BNDisassemblyOption;
+	};
 
-	typedef enum BNDisassemblyAddressMode
+	BN_ENUM(uint32_t, BNDisassemblyAddressMode)
 	{
 		AbsoluteDisassemblyAddressMode,
 		RelativeToBinaryStartDisassemblyAddressMode,
@@ -802,23 +838,23 @@ extern "C"
 		IncludeNameDisassemblyAddressModeFlag = 0x10000,
 		DecimalDisassemblyAddressModeFlag = 0x20000,
 		DisassemblyAddressModeFlagsMask = 0xFFFF0000,
-	} BNDisassemblyAddressMode;
+	};
 
-	typedef enum BNDisassemblyCallParameterHints
+	BN_ENUM(uint8_t, BNDisassemblyCallParameterHints)
 	{
 		NeverShowMatchingParameterHints,
 		AlwaysShowParameterHints,
 		NeverShowParameterHints,
-	} BNDisassemblyCallParameterHints;
+	};
 
-	typedef enum BNDisassemblyBlockLabels
+	BN_ENUM(uint8_t, BNDisassemblyBlockLabels)
 	{
 		NeverShowDefaultBlockLabels,
 		AlwaysShowBlockLabels,
 		NeverShowBlockLabels,
-	} BNDisassemblyBlockLabels;
+	};
 
-	typedef enum BNTypeClass
+	BN_ENUM(uint8_t, BNTypeClass)
 	{
 		VoidTypeClass = 0,
 		BoolTypeClass = 1,
@@ -833,9 +869,9 @@ extern "C"
 		ValueTypeClass = 10,
 		NamedTypeReferenceClass = 11,
 		WideCharTypeClass = 12
-	} BNTypeClass;
+	};
 
-	typedef enum BNNamedTypeReferenceClass
+	BN_ENUM(uint8_t, BNNamedTypeReferenceClass)
 	{
 		UnknownNamedTypeClass = 0,
 		TypedefNamedTypeClass = 1,
@@ -843,60 +879,60 @@ extern "C"
 		StructNamedTypeClass = 3,
 		UnionNamedTypeClass = 4,
 		EnumNamedTypeClass = 5
-	} BNNamedTypeReferenceClass;
+	};
 
-	typedef enum BNStructureVariant
+	BN_ENUM(uint8_t, BNStructureVariant)
 	{
 		ClassStructureType = 0,
 		StructStructureType = 1,
 		UnionStructureType = 2
-	} BNStructureVariant;
+	};
 
-	typedef enum BNMemberScope
+	BN_ENUM(uint8_t, BNMemberScope)
 	{
 		NoScope,
 		StaticScope,
 		VirtualScope,
 		ThunkScope,
 		FriendScope
-	} BNMemberScope;
+	};
 
-	typedef enum BNMemberAccess
+	BN_ENUM(uint8_t, BNMemberAccess)
 	{
 		NoAccess,
 		PrivateAccess,
 		ProtectedAccess,
 		PublicAccess
-	} BNMemberAccess;
+	};
 
-	typedef enum BNReferenceType
+	BN_ENUM(uint8_t, BNReferenceType)
 	{
 		PointerReferenceType = 0,
 		ReferenceReferenceType = 1,
 		RValueReferenceType = 2,
 		NoReference = 3
-	} BNReferenceType;
+	};
 
-	typedef enum BNPointerSuffix
+	BN_ENUM(uint8_t, BNPointerSuffix)
 	{
 		Ptr64Suffix,
 		UnalignedSuffix,
 		RestrictSuffix,
 		ReferenceSuffix,
 		LvalueSuffix,
-	} BNPointerSuffix;
+	};
 
-	typedef enum BNPointerBaseType
+	BN_ENUM(uint8_t, BNPointerBaseType)
 	{
 		AbsolutePointerBaseType,
 		RelativeToConstantPointerBaseType,
 		RelativeToBinaryStartPointerBaseType,
 		RelativeToVariableAddressPointerBaseType,
-	} BNPointerBaseType;
+	};
 
 	// Caution: these enumeration values are used a lookups into the static NameTypeStrings in the core
 	// if you modify this you must also modify the string lookups as well
-	typedef enum BNNameType
+	BN_ENUM(uint8_t, BNNameType)
 	{
 		NoNameType,
 		ConstructorNameType,
@@ -988,9 +1024,9 @@ extern "C"
 		ManagedVectorCopyConstructorIteratorNameType,
 		LocalStaticThreadGuardNameType,
 		UserDefinedLiteralOperatorNameType,
-	} BNNameType;
+	};
 
-	typedef enum BNCallingConventionName
+	BN_ENUM(uint8_t, BNCallingConventionName)
 	{
 		NoCallingConvention,
 		CdeclCallingConvention,
@@ -1003,17 +1039,17 @@ extern "C"
 		VectorCallCallingConvention,
 		SwiftCallingConvention,
 		SwiftAsyncCallingConvention
-	} BNCallingConventionName;
+	};
 
-	typedef enum BNStringType
+	BN_ENUM(uint8_t, BNStringType)
 	{
 		AsciiString = 0,
 		Utf16String = 1,
 		Utf32String = 2,
 		Utf8String = 3
-	} BNStringType;
+	};
 
-	typedef enum BNIntegerDisplayType
+	BN_ENUM(uint8_t, BNIntegerDisplayType)
 	{
 		DefaultIntegerDisplayType,
 		BinaryDisplayType,
@@ -1029,9 +1065,9 @@ extern "C"
 		DoubleDisplayType,
 		EnumerationDisplayType,
 		InvertedCharacterConstantDisplayType,
-	} BNIntegerDisplayType;
+	};
 
-	typedef enum BNFlowGraphOption
+	BN_ENUM(uint8_t, BNFlowGraphOption)
 	{
 		FlowGraphUsesBlockHighlights,
 		FlowGraphUsesInstructionHighlights,
@@ -1041,9 +1077,9 @@ extern "C"
 		FlowGraphShowsSecondaryRegisterHighlighting,
 		FlowGraphIsAddressable,
 		FlowGraphIsWorkflowGraph
-	} BNFlowGraphOption;
+	};
 
-	typedef enum BNILInstructionAttribute
+	BN_OPTIONS(uint16_t, BNILInstructionAttribute)
 	{
 		// If present on a store instruction, allows elimination of variables associated with the store
 		ILAllowDeadStoreElimination = 1,
@@ -1084,13 +1120,13 @@ extern "C"
 
 		// Cue for use-def heuristics to follow through simple copies (e.g., register windowing for Xtensa)
 		ILTransparentCopy = 0x1000,
-	} BNILInstructionAttribute;
+	};
 
-	typedef enum BNIntrinsicClass
+	BN_ENUM(uint8_t, BNIntrinsicClass)
 	{
 		GeneralIntrinsicClass,
 		MemoryIntrinsicClass
-	} BNIntrinsicClass;
+	};
 
 	typedef struct BNLowLevelILInstruction
 	{
@@ -1110,12 +1146,12 @@ extern "C"
 		size_t operand;
 	} BNLowLevelILLabel;
 
-	typedef enum BNImplicitRegisterExtend
+	BN_ENUM(uint8_t, BNImplicitRegisterExtend)
 	{
 		NoExtend,
 		ZeroExtendToFullWidth,
 		SignExtendToFullWidth
-	} BNImplicitRegisterExtend;
+	};
 
 	typedef struct BNRegisterInfo
 	{
@@ -1132,7 +1168,7 @@ extern "C"
 		uint32_t stackTopReg;
 	} BNRegisterStackInfo;
 
-	typedef enum BNRegisterValueType
+	BN_ENUM(uint32_t, BNRegisterValueType)
 	{
 		UndeterminedValue,
 		EntryValue,
@@ -1155,23 +1191,23 @@ extern "C"
 		ConstantDataZeroExtendValue = ConstantDataValue | 0x1,
 		ConstantDataSignExtendValue = ConstantDataValue | 0x2,
 		ConstantDataAggregateValue = ConstantDataValue | 0x3
-	} BNRegisterValueType;
+	};
 
-	typedef enum BNDataFlowQueryOption
+	BN_ENUM(uint8_t, BNDataFlowQueryOption)
 	{
 		FromAddressesInLookupTableQueryOption, // Use addresses instead of index in the from list within
 		                                       // LookupTableValue results
 		AllowReadingWritableMemoryQueryOption,
-	} BNDataFlowQueryOption;
+	};
 
-	typedef enum BNPluginOrigin
+	BN_ENUM(uint8_t, BNPluginOrigin)
 	{
 		OfficialPluginOrigin,
 		CommunityPluginOrigin,
 		OtherPluginOrigin
-	} BNPluginOrigin;
+	};
 
-	typedef enum BNPluginStatus
+	BN_OPTIONS(uint32_t, BNPluginStatus)
 	{
 		NotInstalledPluginStatus = 0x00000000,
 		InstalledPluginStatus = 0x00000001,
@@ -1184,9 +1220,9 @@ extern "C"
 		BeingUpdatedPluginStatus = 0x00000400,
 		BeingDeletedPluginStatus = 0x00000800,
 		DependenciesBeingInstalledStatus = 0x00001000
-	} BNPluginStatus;
+	};
 
-	typedef enum BNPluginType
+	BN_ENUM(uint8_t, BNPluginType)
 	{
 		CorePluginType,
 		UiPluginType,
@@ -1194,7 +1230,7 @@ extern "C"
 		BinaryViewPluginType,
 		HelperPluginType,
 		SyncPluginType
-	} BNPluginType;
+	};
 
 	typedef struct BNLookupTableEntry
 	{
@@ -1269,7 +1305,7 @@ extern "C"
 		uint8_t typeConfidence;
 	} BNDataVariableAndNameAndDebugParser;
 
-	typedef enum BNMediumLevelILOperation
+	BN_ENUM(uint8_t, BNMediumLevelILOperation)
 	{
 		MLIL_NOP,
 		MLIL_SET_VAR,        // Not valid in SSA form (see MLIL_SET_VAR_SSA)
@@ -1419,7 +1455,7 @@ extern "C"
 		MLIL_FREE_VAR_SLOT_SSA,
 		MLIL_VAR_PHI,
 		MLIL_MEM_PHI
-	} BNMediumLevelILOperation;
+	};
 
 	typedef struct BNMediumLevelILInstruction
 	{
@@ -1438,12 +1474,12 @@ extern "C"
 		size_t operand;
 	} BNMediumLevelILLabel;
 
-	typedef enum BNVariableSourceType
+	BN_ENUM(uint8_t, BNVariableSourceType)
 	{
 		StackVariableSourceType,
 		RegisterVariableSourceType,
 		FlagVariableSourceType
-	} BNVariableSourceType;
+	};
 
 	typedef struct BNVariable
 	{
@@ -1452,7 +1488,7 @@ extern "C"
 		int64_t storage;
 	} BNVariable;
 
-	typedef enum BNHighLevelILOperation
+	BN_ENUM(uint8_t, BNHighLevelILOperation)
 	{
 		HLIL_NOP,
 
@@ -1589,7 +1625,7 @@ extern "C"
 		HLIL_INTRINSIC_SSA,
 		HLIL_VAR_PHI,
 		HLIL_MEM_PHI
-	} BNHighLevelILOperation;
+	};
 
 	typedef struct BNHighLevelILInstruction
 	{
@@ -1642,11 +1678,11 @@ extern "C"
 		size_t nameCount;
 	} BNQualifiedName;
 
-	typedef enum BNDerivedStringLocationType
+	BN_ENUM(uint8_t, BNDerivedStringLocationType)
 	{
 		DataBackedStringLocation,
 		CodeStringLocation
-	} BNDerivedStringLocationType;
+	};
 
 	typedef struct BNDerivedStringLocation
 	{
@@ -1829,7 +1865,7 @@ extern "C"
 		BNArchitecture* branchArch[BN_MAX_INSTRUCTION_BRANCHES];  // If null, same architecture as instruction
 	} BNInstructionInfo;
 
-	typedef enum BNRelocationType
+	BN_ENUM(uint8_t, BNRelocationType)
 	{
 		ELFGlobalRelocationType,
 		ELFCopyRelocationType,
@@ -1837,7 +1873,8 @@ extern "C"
 		StandardRelocationType,
 		IgnoredRelocation,
 		UnhandledRelocation
-	} BNRelocationType;
+	};
+
 #define MAX_RELOCATION_SIZE 8
 	typedef struct BNRelocationInfo
 	{
@@ -1883,7 +1920,7 @@ extern "C"
 		size_t count;
 	} BNInstructionTextLine;
 
-	typedef enum BNTypeDefinitionLineType
+	BN_ENUM(uint8_t, BNTypeDefinitionLineType)
 	{
 		TypedefLineType,
 		StructDefinitionLineType,
@@ -1896,7 +1933,7 @@ extern "C"
 		UndefinedXrefLineType,
 		CollapsedPaddingLineType,
 		EmptyLineType,
-	} BNTypeDefinitionLineType;
+	};
 
 	typedef struct BNTypeDefinitionLine
 	{
@@ -1933,12 +1970,12 @@ extern "C"
 		uint8_t confidence;
 	} BNTypeWithConfidence;
 
-	typedef enum BNFunctionAnalysisSkipOverride
+	BN_ENUM(uint8_t, BNFunctionAnalysisSkipOverride)
 	{
 		DefaultFunctionAnalysisSkip,
 		NeverSkipFunctionAnalysis,
 		AlwaysSkipFunctionAnalysis
-	} BNFunctionAnalysisSkipOverride;
+	};
 
 	typedef struct BNBasicBlockAnalysisContext
 	{
@@ -2123,7 +2160,7 @@ extern "C"
 		float y;
 	} BNPoint;
 
-	typedef enum BNThemeColor
+	BN_ENUM(uint8_t, BNThemeColor)
 	{
 		// Hex dump colors
 		AddressColor,
@@ -2277,10 +2314,10 @@ extern "C"
 		ValueTypeColor,
 		NamedTypeReferenceColor,
 		WideCharTypeColor,
-	} BNThemeColor;
+	};
 
 	// The following edge styles map to Qt's Qt::PenStyle enumeration
-	typedef enum BNEdgePenStyle
+	BN_ENUM(uint8_t, BNEdgePenStyle)
 	{
 		NoPen = 0,           // no line at all.
 		SolidLine = 1,       // A plain line (default)
@@ -2288,7 +2325,7 @@ extern "C"
 		DotLine = 3,         // Dots separated by a few pixels.
 		DashDotLine = 4,     // Alternate dots and dashes.
 		DashDotDotLine = 5,  // One dash, two dots, one dash, two dots.
-	} BNEdgePenStyle;
+	};
 
 	typedef struct BNEdgeStyle
 	{
@@ -2307,14 +2344,14 @@ extern "C"
 		BNEdgeStyle style;
 	} BNFlowGraphEdge;
 
-	typedef enum BNHighlightColorStyle
+	BN_ENUM(uint8_t, BNHighlightColorStyle)
 	{
 		StandardHighlightColor = 0,
 		MixedHighlightColor = 1,
 		CustomHighlightColor = 2
-	} BNHighlightColorStyle;
+	};
 
-	typedef enum BNHighlightStandardColor
+	BN_ENUM(uint8_t, BNHighlightStandardColor)
 	{
 		NoHighlightColor = 0,
 		BlueHighlightColor = 1,
@@ -2326,7 +2363,7 @@ extern "C"
 		OrangeHighlightColor = 7,
 		WhiteHighlightColor = 8,
 		BlackHighlightColor = 9
-	} BNHighlightStandardColor;
+	};
 
 	typedef struct BNHighlightColor
 	{
@@ -2416,7 +2453,7 @@ extern "C"
 	} BNTypeField;
 
 	// This describes how a type is referenced
-	typedef enum BNTypeReferenceType
+	BN_ENUM(uint8_t, BNTypeReferenceType)
 	{
 		// Type A contains type B
 		DirectTypeReferenceType,
@@ -2424,7 +2461,7 @@ extern "C"
 		IndirectTypeReferenceType,
 		// The nature of the reference is unknown
 		UnknownTypeReferenceType
-	} BNTypeReferenceType;
+	};
 
 	typedef struct BNTypeReferenceSource
 	{
@@ -2433,19 +2470,19 @@ extern "C"
 		BNTypeReferenceType type;
 	} BNTypeReferenceSource;
 
-	typedef enum BNTagTypeType
+	BN_ENUM(uint8_t, BNTagTypeType)
 	{
 		UserTagType,
 		NotificationTagType,
 		BookmarksTagType
-	} BNTagTypeType;
+	};
 
-	typedef enum BNTagReferenceType
+	BN_ENUM(uint8_t, BNTagReferenceType)
 	{
 		AddressTagReference,
 		FunctionTagReference,
 		DataTagReference
-	} BNTagReferenceType;
+	};
 
 	typedef struct BNTagReference
 	{
@@ -2565,11 +2602,11 @@ extern "C"
 		    BNLowLevelILFunction* il, BNRelocation* relocation);
 	} BNCustomRelocationHandler;
 
-	typedef enum BNTypeParserOption
+	BN_ENUM(uint8_t, BNTypeParserOption)
 	{
 		IncludeSystemTypes,
 		BuiltinMacros,
-	} BNTypeParserOption;
+	};
 
 	typedef struct BNParsedType
 	{
@@ -2586,7 +2623,7 @@ extern "C"
 		size_t typeCount, variableCount, functionCount;
 	} BNTypeParserResult;
 
-	typedef enum BNTypeParserErrorSeverity
+	BN_ENUM(uint8_t, BNTypeParserErrorSeverity)
 	{
 		IgnoredSeverity = 0,
 		NoteSeverity = 1,
@@ -2594,7 +2631,7 @@ extern "C"
 		WarningSeverity = 3,
 		ErrorSeverity = 4,
 		FatalSeverity = 5,
-	} BNTypeParserErrorSeverity;
+	};
 
 	typedef struct BNTypeParserError
 	{
@@ -2611,13 +2648,13 @@ extern "C"
 		size_t count;
 	} BNQualifiedNameList;
 
-	typedef enum BNUpdateResult
+	BN_ENUM(uint8_t, BNUpdateResult)
 	{
 		UpdateFailed = 0,
 		UpdateSuccess = 1,
 		AlreadyUpToDate = 2,
 		UpdateAvailable = 3
-	} BNUpdateResult;
+	};
 
 	typedef struct BNUpdateChannel
 	{
@@ -2669,7 +2706,7 @@ extern "C"
 		size_t length;
 	} BNStringReference;
 
-	typedef enum BNPluginCommandType
+	BN_ENUM(uint8_t, BNPluginCommandType)
 	{
 		DefaultPluginCommand,
 		AddressPluginCommand,
@@ -2682,7 +2719,7 @@ extern "C"
 		HighLevelILFunctionPluginCommand,
 		HighLevelILInstructionPluginCommand,
 		ProjectPluginCommand
-	} BNPluginCommandType;
+	};
 
 	typedef struct BNPluginCommand
 	{
@@ -2804,14 +2841,14 @@ extern "C"
 		BNFieldResolutionInfo* info;
 	} BNVariableFieldResolutionInfo;
 
-	typedef enum BNFunctionUpdateType
+	BN_ENUM(uint8_t, BNFunctionUpdateType)
 	{
 		UserFunctionUpdate,
 		FullAutoFunctionUpdate,
 		IncrementalAutoFunctionUpdate
-	} BNFunctionUpdateType;
+	};
 
-	typedef enum BNAnalysisState
+	BN_ENUM(uint8_t, BNAnalysisState)
 	{
 		InitialState,        // Entry point before any analysis begins
 		HoldState,           // Module-level analysis is deferred; On-demand function analysis is permitted
@@ -2820,7 +2857,7 @@ extern "C"
 		DisassembleState,    // Instruction decoding and control flow discovery
 		AnalyzeState,        // Core semantic and structural analysis
 		ExtendedAnalyzeState // Supplemental analysis: sweeping, type resolution, and pattern matching
-	} BNAnalysisState;
+	};
 
 	typedef struct BNActiveAnalysisInfo
 	{
@@ -2843,14 +2880,14 @@ extern "C"
 		BNAnalysisState state;
 		size_t count, total;
 	} BNAnalysisProgress;
-
-	typedef enum BNAnalysisMode
+	
+	BN_ENUM(uint8_t, BNAnalysisMode)
 	{
 		FullAnalysisMode,
 		IntermediateAnalysisMode,
 		BasicAnalysisMode,
 		ControlFlowAnalysisMode
-	} BNAnalysisMode;
+	};
 
 	typedef struct BNAnalysisParameters
 	{
@@ -2932,43 +2969,43 @@ extern "C"
 		BNWebsocketClient* (*createClient)(void* ctxt);
 	} BNWebsocketProviderCallbacks;
 
-	typedef enum BNFindFlag
+	BN_OPTIONS(uint8_t, BNFindFlag)
 	{
 		FindCaseSensitive = 0,
 		FindCaseInsensitive = 1,
 		FindIgnoreWhitespace = 2,
-	} BNFindFlag;
+	};
 
-	typedef enum BNFindRangeType
+	BN_ENUM(uint8_t, BNFindRangeType)
 	{
 		AllRangeType,
 		CustomRangeType,
 		CurrentFunctionRangeType
-	} BNFindRangeType;
+	};
 
-	typedef enum BNFindType
+	BN_ENUM(uint8_t, BNFindType)
 	{
 		FindTypeRawString,
 		FindTypeEscapedString,
 		FindTypeText,
 		FindTypeConstant,
 		FindTypeBytes
-	} BNFindType;
+	};
 
-	typedef enum BNScriptingProviderInputReadyState
+	BN_ENUM(uint8_t, BNScriptingProviderInputReadyState)
 	{
 		NotReadyForInput,
 		ReadyForScriptExecution,
 		ReadyForScriptProgramInput
-	} BNScriptingProviderInputReadyState;
+	};
 
-	typedef enum BNScriptingProviderExecuteResult
+	BN_ENUM(uint8_t, BNScriptingProviderExecuteResult)
 	{
 		InvalidScriptInput,
 		IncompleteScriptInput,
 		SuccessfulScriptExecution,
 		ScriptExecutionCancelled
-	} BNScriptingProviderExecuteResult;
+	};
 
 
 	typedef struct BNScriptingInstanceCallbacks
@@ -3087,37 +3124,37 @@ extern "C"
 		BNMetadata** values;
 	} BNMetadataValueStore;
 
-	typedef enum BNSaveOption
+	BN_OPTIONS(uint8_t, BNSaveOption)
 	{
 		RemoveUndoData,
 		TrimSnapshots,
 		PurgeOriginalFilenamePath
-	} BNSaveOption;
+	};
 
-	typedef enum BNMessageBoxIcon
+	BN_ENUM(uint8_t, BNMessageBoxIcon)
 	{
 		InformationIcon,
 		QuestionIcon,
 		WarningIcon,
 		ErrorIcon
-	} BNMessageBoxIcon;
+	};
 
-	typedef enum BNMessageBoxButtonSet
+	BN_ENUM(uint8_t, BNMessageBoxButtonSet)
 	{
 		OKButtonSet,
 		YesNoButtonSet,
 		YesNoCancelButtonSet
-	} BNMessageBoxButtonSet;
+	};
 
-	typedef enum BNMessageBoxButtonResult
+	BN_ENUM(uint8_t, BNMessageBoxButtonResult)
 	{
 		NoButton = 0,
 		YesButton = 1,
 		OKButton = 2,
 		CancelButton = 3
-	} BNMessageBoxButtonResult;
+	};
 
-	typedef enum BNFormInputFieldType
+	BN_ENUM(uint8_t, BNFormInputFieldType)
 	{
 		LabelFormField,
 		SeparatorFormField,
@@ -3130,7 +3167,7 @@ extern "C"
 		SaveFileNameFormField,
 		DirectoryNameFormField,
 		CheckboxFormField
-	} BNFormInputFieldType;
+	};
 
 	typedef struct BNFormInputField
 	{
@@ -3213,7 +3250,7 @@ extern "C"
 		void (*freeLines)(void* ctx, BNDisassemblyTextLine* lines, size_t count);
 	} BNCustomDataRenderer;
 
-	typedef enum BNSegmentFlag
+	BN_OPTIONS(uint8_t, BNSegmentFlag)
 	{
 		SegmentExecutable = 1,
 		SegmentWritable = 2,
@@ -3222,16 +3259,16 @@ extern "C"
 		SegmentContainsCode = 0x10,
 		SegmentDenyWrite = 0x20,
 		SegmentDenyExecute = 0x40
-	} BNSegmentFlag;
+	};
 
-	typedef enum BNSectionSemantics
+	BN_ENUM(uint8_t, BNSectionSemantics)
 	{
 		DefaultSectionSemantics,
 		ReadOnlyCodeSectionSemantics,
 		ReadOnlyDataSectionSemantics,
 		ReadWriteDataSectionSemantics,
 		ExternalSectionSemantics
-	} BNSectionSemantics;
+	};
 
 	typedef struct BNAddressRange
 	{
@@ -3252,12 +3289,12 @@ extern "C"
 		BNType* type;
 	} BNSystemCallInfo;
 
-	typedef enum BNILBranchDependence
+	BN_ENUM(uint8_t, BNILBranchDependence)
 	{
 		NotBranchDependent,
 		TrueBranchDependent,
 		FalseBranchDependent
-	} BNILBranchDependence;
+	};
 
 	typedef struct BNILBranchInstructionAndDependence
 	{
@@ -3277,7 +3314,7 @@ extern "C"
 		uint64_t value;
 	} BNMemoryUsageInfo;
 
-	typedef enum BNMetadataType
+	BN_ENUM(uint8_t, BNMetadataType)
 	{
 		InvalidDataType,
 		BooleanDataType,
@@ -3288,7 +3325,7 @@ extern "C"
 		RawDataType,
 		KeyValueDataType,
 		ArrayDataType
-	} BNMetadataType;
+	};
 
 	typedef struct BNRegisterStackAdjustment
 	{
@@ -3297,13 +3334,13 @@ extern "C"
 		uint8_t confidence;
 	} BNRegisterStackAdjustment;
 
-	typedef enum BNReportType
+	BN_ENUM(uint8_t, BNReportType)
 	{
 		PlainTextReportType,
 		MarkdownReportType,
 		HTMLReportType,
 		FlowGraphReportType
-	} BNReportType;
+	};
 
 	typedef struct BNCustomFlowGraph
 	{
@@ -3329,7 +3366,7 @@ extern "C"
 		uint64_t end;
 	} BNRange;
 
-	typedef enum BNAnalysisSkipReason
+	BN_ENUM(uint8_t, BNAnalysisSkipReason)
 	{
 		NoSkipReason,
 		AlwaysSkipReason,
@@ -3340,9 +3377,9 @@ extern "C"
 		BasicAnalysisSkipReason,
 		IntermediateAnalysisSkipReason,
 		AnalysisPipelineSuspendedReason
-	} BNAnalysisSkipReason;
+	};
 
-	typedef enum BNSettingsScope
+	BN_OPTIONS(uint8_t, BNSettingsScope)
 	{
 		SettingsInvalidScope = 0,
 		SettingsAutoScope = 1,
@@ -3350,14 +3387,14 @@ extern "C"
 		SettingsUserScope = 4,
 		SettingsProjectScope = 8,
 		SettingsResourceScope = 0x10
-	} BNSettingsScope;
+	};
 
-	typedef enum BNLinearViewObjectIdentifierType
+	BN_ENUM(uint8_t, BNLinearViewObjectIdentifierType)
 	{
 		SingleLinearViewObject,
 		AddressLinearViewObject,
 		AddressRangeLinearViewObject
-	} BNLinearViewObjectIdentifierType;
+	};
 
 	typedef struct BNLinearViewObjectIdentifier
 	{
@@ -3366,11 +3403,11 @@ extern "C"
 		uint64_t start, end;
 	} BNLinearViewObjectIdentifier;
 
-	typedef enum BNBinaryViewEventType
+	BN_ENUM(uint8_t, BNBinaryViewEventType)
 	{
 		BinaryViewFinalizationEvent,
 		BinaryViewInitialAnalysisCompletionEvent
-	} BNBinaryViewEventType;
+	};
 
 	typedef struct BNBinaryViewEvent
 	{
@@ -3379,35 +3416,35 @@ extern "C"
 		void* ctx;
 	} BNBinaryViewEvent;
 
-	typedef enum BNDeadStoreElimination
+	BN_ENUM(uint8_t, BNDeadStoreElimination)
 	{
 		DefaultDeadStoreElimination,
 		PreventDeadStoreElimination,
 		AllowDeadStoreElimination
-	} BNDeadStoreElimination;
+	};
 
-	typedef enum BNExprFolding
+	BN_ENUM(uint8_t, BNExprFolding)
 	{
 		DefaultExprFolding,
 		PreventExprFolding,
 		AllowExprFolding
-	} BNExprFolding;
+	};
 
-	typedef enum BNEarlyReturn
+	BN_ENUM(uint8_t, BNEarlyReturn)
 	{
 		DefaultEarlyReturn,
 		PreventEarlyReturn,
 		SmallestSideEarlyReturn,
 		TrueSideEarlyReturn,
 		FalseSideEarlyReturn
-	} BNEarlyReturn;
+	};
 
-	typedef enum BNSwitchRecovery
+	BN_ENUM(uint8_t, BNSwitchRecovery)
 	{
 		DefaultSwitchRecovery,
 		PreventSwitchRecovery,
 		AllowSwitchRecovery
-	} BNSwitchRecovery;
+	};
 
 	typedef struct BNDebugFunctionInfo
 	{
@@ -3454,7 +3491,7 @@ extern "C"
 		void (*typeDeleted)(void* ctxt, BNTypeArchive* archive, const char* id, BNType* definition);
 	} BNTypeArchiveNotification;
 
-	typedef enum BNTypeContainerType
+	BN_ENUM(uint8_t, BNTypeContainerType)
 	{
 		AnalysisTypeContainerType,
 		AnalysisAutoTypeContainerType,
@@ -3465,9 +3502,9 @@ extern "C"
 		PlatformTypeContainerType,
 		EmptyTypeContainerType,
 		OtherTypeContainerType
-	} BNTypeContainerType;
+	};
 
-	typedef enum BNSyncStatus
+	BN_ENUM(uint8_t, BNSyncStatus)
 	{
 		NotSyncedSyncStatus,
 		NoChangesSyncStatus,
@@ -3476,30 +3513,30 @@ extern "C"
 		CanPullSyncStatus,
 		CanPushAndPullSyncStatus,
 		ConflictSyncStatus
-	} BNSyncStatus;
+	};
 
-	typedef enum BNBaseAddressDetectionPOISetting
+	BN_ENUM(uint8_t, BNBaseAddressDetectionPOISetting)
 	{
 		POIAnalysisStringsOnly,
 		POIAnalysisFunctionsOnly,
 		POIAnalysisAll,
-	} BNBaseAddressDetectionPOISetting;
+	};
 
-	typedef enum BNBaseAddressDetectionPOIType
+	BN_ENUM(uint8_t, BNBaseAddressDetectionPOIType)
 	{
 		POIString,
 		POIFunction,
 		POIDataVariable,
 		POIFileStart,
 		POIFileEnd,
-	} BNBaseAddressDetectionPOIType;
+	};
 
-	typedef enum BNBaseAddressDetectionConfidence
+	BN_ENUM(uint8_t, BNBaseAddressDetectionConfidence)
 	{
 		NoConfidence,
 		LowConfidence,
 		HighConfidence,
-	} BNBaseAddressDetectionConfidence;
+	};
 
 	typedef struct BNBaseAddressDetectionSettings
 	{
@@ -3526,27 +3563,27 @@ extern "C"
 		uint64_t BaseAddress;
 	} BNBaseAddressDetectionScore;
 
-	typedef enum BNCollaborationPermissionLevel
+	BN_ENUM(uint8_t, BNCollaborationPermissionLevel)
 	{
 		AdminPermission = 1,
 		EditPermission = 2,
 		ViewPermission = 3
-	} BNCollaborationPermissionLevel;
+	};
 
-	typedef enum BNRemoteFileType
+	BN_ENUM(uint8_t, BNRemoteFileType)
 	{
 		RawDataFileType, // "RW"
 		BinaryViewAnalysisFileType, // "BV"
 		TypeArchiveFileType, // "TA"
 		UnknownFileType, // Others
-	} BNRemoteFileType;
+	};
 
-	typedef enum BNMergeConflictDataType
+	BN_ENUM(uint8_t, BNMergeConflictDataType)
 	{
 		TextConflictDataType,
 		JsonConflictDataType,
 		BinaryConflictDataType
-	} BNMergeConflictDataType;
+	};
 
 	typedef struct BNAnalysisMergeConflictSplitterCallbacks
 	{
@@ -3570,21 +3607,21 @@ extern "C"
 		void (*freeVarName)(void* ctxt, BNQualifiedName* name);
 	} BNDemanglerCallbacks;
 
-	typedef enum BNScopeType
+	BN_ENUM(uint8_t, BNScopeType)
 	{
 		OneLineScopeType,
 		HasSubScopeScopeType,
 		BlockScopeType,
 		SwitchScopeType,
 		CaseScopeType
-	} BNScopeType;
+	};
 
-	typedef enum BNBraceRequirement
+	BN_ENUM(uint8_t, BNBraceRequirement)
 	{
 		OptionalBraces,
 		BracesNotAllowed,
 		BracesAlwaysRequired
-	} BNBraceRequirement;
+	};
 
 	typedef struct BNTokenEmitterExpr
 	{
@@ -3594,7 +3631,7 @@ extern "C"
 		size_t instrIndex;
 	} BNTokenEmitterExpr;
 
-	typedef enum BNOperatorPrecedence
+	BN_ENUM(uint8_t, BNOperatorPrecedence)
 	{
 		TopLevelOperatorPrecedence = 0,
 		AssignmentOperatorPrecedence,
@@ -3616,21 +3653,21 @@ extern "C"
 		HighUnaryOperatorPrecedence,
 		MemberAndFunctionOperatorPrecedence,
 		ScopeOperatorPrecedence
-	} BNOperatorPrecedence;
+	};
 
-	typedef enum BNSymbolDisplayType
+	BN_ENUM(uint8_t, BNSymbolDisplayType)
 	{
 		DisplaySymbolOnly,
 		AddressOfDataSymbols,
 		DereferenceNonDataSymbols
-	} BNSymbolDisplayType;
+	};
 
-	typedef enum BNSymbolDisplayResult
+	BN_ENUM(uint8_t, BNSymbolDisplayResult)
 	{
 		NoSymbolAvailable,
 		DataSymbolResult,
 		OtherSymbolResult
-	} BNSymbolDisplayResult;
+	};
 
 	typedef struct BNCustomLanguageRepresentationFunction
 	{
@@ -3663,7 +3700,7 @@ extern "C"
 		void (*freeLines)(void* ctxt, BNDisassemblyTextLine* lines, size_t count);
 	} BNCustomLanguageRepresentationFunctionType;
 
-	typedef enum BNBuiltinType
+	BN_ENUM(uint8_t, BNBuiltinType)
 	{
 		BuiltinNone,
 		BuiltinMemcpy,
@@ -3672,7 +3709,7 @@ extern "C"
 		BuiltinStrcpy,
 		BuiltinWcscpy,
 		BuiltinWmemcpy
-	} BNBuiltinType;
+	};
 
 	typedef struct BNSegmentInfo {
 		uint64_t start;
@@ -3706,21 +3743,21 @@ extern "C"
 		char* info;
 	} BNFirmwareNinjaDevice;
 
-	typedef enum BNFirmwareNinjaSectionType
+	BN_ENUM(uint8_t, BNFirmwareNinjaSectionType)
 	{
 		CodeSectionType,
 		DataSectionType,
 		CompressionSectionType,
 		PaddingSectionType,
-	} BNFirmwareNinjaSectionType;
+	};
 
 
-	typedef enum BNFirmwareNinjaSectionAnalysisMode
+	BN_ENUM(uint8_t, BNFirmwareNinjaSectionAnalysisMode)
 	{
 		DefaultSectionAnalysisMode,
 		IgnorePaddingSectionAnalysisMode,
 		DetectStringsSectionAnalysisMode,
-	} BNFirmwareNinjaSectionAnalysisMode;
+	};
 
 	typedef struct BNFirmwareNinjaSection
 	{
@@ -3730,7 +3767,7 @@ extern "C"
 		float entropy;
 	} BNFirmwareNinjaSection;
 
-	typedef enum BNFirmwareNinjaMemoryHeuristic
+	BN_ENUM(uint8_t, BNFirmwareNinjaMemoryHeuristic)
 	{
 		NoMemoryHeuristic,
 		HasReadBarrierMemoryHeuristic,
@@ -3739,14 +3776,14 @@ extern "C"
 		LoadFromOOBMemoryMemoryHeuristic,
 		RepeatLoadStoreMemoryHeuristic,
 		CallParamOOBPointerMemoryHeuristic,
-	} BNFirmwareNinjaMemoryHeuristic;
+	};
 
-	typedef enum BNFirmwareNinjaMemoryAccessType
+	BN_ENUM(uint8_t, BNFirmwareNinjaMemoryAccessType)
 	{
 		NoMemoryAccessType,
 		ReadMemoryAccessType,
 		WriteMemoryAccessType,
-	} BNFirmwareNinjaMemoryAccessType;
+	};
 
 	typedef struct BNFirmwareNinjaMemoryAccess
 	{
@@ -3811,12 +3848,12 @@ extern "C"
 		void (*freeLines)(void* ctxt, BNLinearDisassemblyLine* lines, size_t count);
 	} BNRenderLayerCallbacks;
 
-	typedef enum BNRenderLayerDefaultEnableState
+	BN_ENUM(uint8_t, BNRenderLayerDefaultEnableState)
 	{
 		DisabledByDefaultRenderLayerDefaultEnableState,
 		EnabledByDefaultRenderLayerDefaultEnableState,
 		AlwaysEnabledRenderLayerDefaultEnableState,
-	} BNRenderLayerDefaultEnableState;
+	};
 
 	typedef struct BNExprMapInfo
 	{

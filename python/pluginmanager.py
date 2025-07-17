@@ -34,7 +34,7 @@ class RepoPlugin:
 	``RepoPlugin`` is mostly read-only, however you can install/uninstall enable/disable plugins. RepoPlugins are
 	created by parsing the plugins.json in a plugin repository.
 	"""
-	def __init__(self, handle: core.BNRepoPluginHandle):
+	def __init__(self, handle: 'core.BNRepoPluginHandle'):
 		self.handle = handle
 
 	def __del__(self):

@@ -822,7 +822,7 @@ class MediumLevelILInstruction(BaseILInstruction):
 		if options is None:
 			options = []
 		idx = 0
-		option_array = (ctypes.c_int * len(options))()
+		option_array = (core.DataFlowQueryOptionEnum * len(options))()
 		for option in options:
 			option_array[idx] = option
 			idx += 1

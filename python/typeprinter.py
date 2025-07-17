@@ -316,7 +316,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 			i += 1
 
 		result = ctypes.c_char_p()
-		core.BNTypePrinterDefaultPrintAllTypes(self.handle, cpp_names, cpp_types, len(types_), data.handle, padding_cols, ctypes.c_int(escaping), result)
+		core.BNTypePrinterDefaultPrintAllTypes(self.handle, cpp_names, cpp_types, len(types_), data.handle, padding_cols, core.TokenEscapingTypeEnum(escaping), result)
 		return core.pyNativeStr(result.value)
 
 	def get_type_tokens(self, type: types.Type, platform: Optional[_platform.Platform] = None, name: types.QualifiedNameType = "", base_confidence: int = core.max_confidence, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> List[_function.InstructionTextToken]:
@@ -451,7 +451,7 @@ class CoreTypePrinter(TypePrinter):
 		count = ctypes.c_ulonglong()
 		name_cpp = name._to_core_struct()
 		result_cpp = ctypes.POINTER(core.BNInstructionTextToken)()
-		if not core.BNGetTypePrinterTypeTokens(self.handle, type.handle, None if platform is None else platform.handle, name_cpp, base_confidence, ctypes.c_int(escaping), result_cpp, count):
+		if not core.BNGetTypePrinterTypeTokens(self.handle, type.handle, None if platform is None else platform.handle, name_cpp, base_confidence, core.TokenEscapingTypeEnum(escaping), result_cpp, count):
 			raise RuntimeError("BNGetTypePrinterTypeTokens returned False")
 
 		result = _function.InstructionTextToken._from_core_struct(result_cpp, count.value)
@@ -467,7 +467,7 @@ class CoreTypePrinter(TypePrinter):
 		parent_type_cpp = None
 		if parent_type is not None:
 			parent_type_cpp = parent_type.handle
-		if not core.BNGetTypePrinterTypeTokensBeforeName(self.handle, type.handle, None if platform is None else platform.handle, base_confidence, parent_type_cpp, ctypes.c_int(escaping), result_cpp, count):
+		if not core.BNGetTypePrinterTypeTokensBeforeName(self.handle, type.handle, None if platform is None else platform.handle, base_confidence, parent_type_cpp, core.TokenEscapingTypeEnum(escaping), result_cpp, count):
 			raise RuntimeError("BNGetTypePrinterTypeTokensBeforeName returned False")
 
 		result = _function.InstructionTextToken._from_core_struct(result_cpp, count.value)
@@ -483,7 +483,7 @@ class CoreTypePrinter(TypePrinter):
 		parent_type_cpp = None
 		if parent_type is not None:
 			parent_type_cpp = parent_type.handle
-		if not core.BNGetTypePrinterTypeTokensAfterName(self.handle, type.handle, None if platform is None else platform.handle, base_confidence, parent_type_cpp, ctypes.c_int(escaping), result_cpp, count):
+		if not core.BNGetTypePrinterTypeTokensAfterName(self.handle, type.handle, None if platform is None else platform.handle, base_confidence, parent_type_cpp, core.TokenEscapingTypeEnum(escaping), result_cpp, count):
 			raise RuntimeError("BNGetTypePrinterTypeTokensAfterName returned False")
 
 		result = _function.InstructionTextToken._from_core_struct(result_cpp, count.value)
@@ -496,7 +496,7 @@ class CoreTypePrinter(TypePrinter):
 		if not isinstance(name, types.QualifiedName):
 			name = types.QualifiedName(name)
 		result_cpp = ctypes.c_char_p()
-		if not core.BNGetTypePrinterTypeString(self.handle, type.handle, None if platform is None else platform.handle, name._to_core_struct(), ctypes.c_int(escaping), result_cpp):
+		if not core.BNGetTypePrinterTypeString(self.handle, type.handle, None if platform is None else platform.handle, name._to_core_struct(), core.TokenEscapingTypeEnum(escaping), result_cpp):
 			raise RuntimeError("BNGetTypePrinterTypeString returned False")
 
 		result = core.pyNativeStr(result_cpp.value)
@@ -506,7 +506,7 @@ class CoreTypePrinter(TypePrinter):
 	def get_type_string_before_name(self, type: types.Type, platform: Optional[_platform.Platform] = None,
 									escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> str:
 		result_cpp = ctypes.c_char_p()
-		if not core.BNGetTypePrinterTypeStringBeforeName(self.handle, type.handle, None if platform is None else platform.handle, ctypes.c_int(escaping), result_cpp):
+		if not core.BNGetTypePrinterTypeStringBeforeName(self.handle, type.handle, None if platform is None else platform.handle, core.TokenEscapingTypeEnum(escaping), result_cpp):
 			raise RuntimeError("BNGetTypePrinterTypeStringBeforeName returned False")
 
 		result = core.pyNativeStr(result_cpp.value)
@@ -516,7 +516,7 @@ class CoreTypePrinter(TypePrinter):
 	def get_type_string_after_name(self, type: types.Type, platform: Optional[_platform.Platform] = None,
 								   escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> str:
 		result_cpp = ctypes.c_char_p()
-		if not core.BNGetTypePrinterTypeStringAfterName(self.handle, type.handle, None if platform is None else platform.handle, ctypes.c_int(escaping), result_cpp):
+		if not core.BNGetTypePrinterTypeStringAfterName(self.handle, type.handle, None if platform is None else platform.handle, core.TokenEscapingTypeEnum(escaping), result_cpp):
 			raise RuntimeError("BNGetTypePrinterTypeStringAfterName returned False")
 
 		result = core.pyNativeStr(result_cpp.value)
@@ -532,7 +532,7 @@ class CoreTypePrinter(TypePrinter):
 			name = types.QualifiedName(name)
 		count = ctypes.c_ulonglong()
 		core_lines = ctypes.POINTER(core.BNTypeDefinitionLine)()
-		if not core.BNGetTypePrinterTypeLines(self.handle, type.handle, container.handle, name._to_core_struct(), padding_cols, collapsed, ctypes.c_int(escaping), core_lines, count):
+		if not core.BNGetTypePrinterTypeLines(self.handle, type.handle, container.handle, name._to_core_struct(), padding_cols, collapsed, core.TokenEscapingTypeEnum(escaping), core_lines, count):
 			raise RuntimeError("BNGetTypePrinterTypeLines returned False")
 		lines = []
 		for i in range(count.value):
@@ -552,5 +552,5 @@ class CoreTypePrinter(TypePrinter):
 			i += 1
 
 		result = ctypes.c_char_p()
-		core.BNTypePrinterPrintAllTypes(self.handle, cpp_names, cpp_types, len(types_), data.handle, padding_cols, ctypes.c_int(escaping), result)
+		core.BNTypePrinterPrintAllTypes(self.handle, cpp_names, cpp_types, len(types_), data.handle, padding_cols, core.TokenEscapingTypeEnum(escaping), result)
 		return core.pyNativeStr(result.value)

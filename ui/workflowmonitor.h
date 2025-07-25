@@ -26,7 +26,7 @@ class BINARYNINJAUIAPI WorkflowMonitorWidget : public QWidget
 	WorkflowRef m_workflow;
 
 	Menu* m_menu;
-	//ContextMenuManager* m_contextMenuManager;
+	ContextMenuManager* m_contextMenuManager;
 	UIActionHandler m_actionHandler;
 
 	QToolBar* m_toolbar;
@@ -47,6 +47,7 @@ class BINARYNINJAUIAPI WorkflowMonitorWidget : public QWidget
 	std::string m_lastState;
 	QColor m_lastStatusColor;
 	QColor m_labelColor;
+	std::string m_breakRequest;
 
 	QLabel* m_currentActivity;
 	QLabel* m_statusIndicator;
@@ -54,6 +55,8 @@ class BINARYNINJAUIAPI WorkflowMonitorWidget : public QWidget
 	qreal m_dotBrightness;
 	bool m_animationRunning;
 
+	void updateVisualState(const BinaryNinja::WorkflowMachine::Status& status, bool force);
+	void updateButtonStates(const BinaryNinja::WorkflowMachine::Status& status);
 	void updateToolbarActions(bool force = false);
 	void updateToolbarIcons();
 	void setupToolbar();

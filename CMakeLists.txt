@@ -73,6 +73,12 @@ if(BN_REF_COUNT_DEBUG)
     target_compile_definitions(binaryninjaapi PUBLIC BN_REF_COUNT_DEBUG)
 endif()
 
+if(CMAKE_BUILD_TYPE MATCHES Debug OR CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
+    target_compile_definitions(binaryninjaapi PRIVATE _DEBUG)
+else()
+    target_compile_definitions(binaryninjaapi PRIVATE NDEBUG)
+endif()
+
 add_subdirectory(vendor/fmt EXCLUDE_FROM_ALL)
 set_target_properties(fmt PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(binaryninjaapi PUBLIC fmt::fmt)

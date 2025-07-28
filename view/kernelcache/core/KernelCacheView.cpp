@@ -114,7 +114,7 @@ Ref<Settings> KernelCacheViewType::GetLoadSettingsForData(BinaryView* data)
 	Ref<BinaryView> viewRef = Parse(data);
 	if (!viewRef || !viewRef->Init())
 	{
-		LogWarn("Failed to initialize view of type '%s'. Generating default load settings.", GetName().c_str());
+		LogWarnF("Failed to initialize view of type {:?}. Generating default load settings.", GetName());
 		viewRef = data;
 	}
 
@@ -882,7 +882,7 @@ bool KernelCacheView::Init()
 	}
 	catch (ReadException&)
 	{
-		LogError("Error when applying Mach-O header types at %" PRIx64, textSegOffset);
+		LogErrorF("Error when applying Mach-O header types at {:#x}", textSegOffset);
 	}
 
 	return InitController();
@@ -943,7 +943,7 @@ bool KernelCacheView::InitController()
 			kernelCache.ProcessSymbols();
 			auto endTime = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<double> elapsed = endTime - startTime;
-			logger->LogInfo("Processing %zu symbols took %.3f seconds (separate thread)", kernelCache.GetSymbols().size(), elapsed.count());
+			logger->LogInfoF("Processing {} symbols took {:.3f} seconds (separate thread)", kernelCache.GetSymbols().size(), elapsed.count());
 		});
 	}
 
@@ -952,7 +952,7 @@ bool KernelCacheView::InitController()
 	std::string autoLoadPattern = ".*libsystem_c.dylib";
 	if (settings && settings->Contains("loader.kc.autoLoadPattern"))
 		autoLoadPattern = settings->Get<std::string>("loader.kc.autoLoadPattern", this);
-	m_logger->LogDebug("Loading images using pattern: %s", autoLoadPattern.c_str());
+	m_logger->LogDebugF("Loading images using pattern: {:?}", autoLoadPattern);
 
 	{
 		// TODO: Refusing to add undo action "Added section libsystem_c.dylib::__macho_header", there is literally
@@ -969,7 +969,7 @@ bool KernelCacheView::InitController()
 					++loadedImages;
 		auto endTime = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<double> elapsed = endTime - startTime;
-		m_logger->LogInfo("Automatically loading %zu images took %.3f seconds", loadedImages, elapsed.count());
+		m_logger->LogInfoF("Automatically loading {} images took {:.3f} seconds", loadedImages, elapsed.count());
 	}
 
 	if (auto loadedImageMetadata = GetParentView()->QueryMetadata("KernelCacheLoadedImages"))

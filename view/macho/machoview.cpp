@@ -332,7 +332,7 @@ MachOHeader MachoView::HeaderForAddress(BinaryView* data, uint64_t address, bool
 	// Parse segment commands
 	try
 	{
-		m_logger->LogDebug("ident.ncmds: %d\n", header.ident.ncmds);
+		m_logger->LogDebugF("ident.ncmds: {}", header.ident.ncmds);
 		for (size_t i = 0; i < header.ident.ncmds; i++)
 		{
 			load_command load;
@@ -343,7 +343,7 @@ MachOHeader MachoView::HeaderForAddress(BinaryView* data, uint64_t address, bool
 			load.cmd = reader.Read32();
 			load.cmdsize = reader.Read32();
 			size_t nextOffset = curOffset + load.cmdsize;
-			m_logger->LogDebug("Segment cmd: %08x - cmdsize: %08x - ", load.cmd, load.cmdsize);
+			m_logger->LogDebugF("Segment cmd: {:08x} - cmdsize: {:08x} - ", load.cmd, load.cmdsize);
 			if (load.cmdsize < sizeof(load_command))
 				throw MachoFormatException("unable to read header");
 
@@ -785,7 +785,7 @@ MachOHeader MachoView::HeaderForAddress(BinaryView* data, uint64_t address, bool
 							(void)reader.Read(&thread.stateppc64.r1, sizeof(thread.stateppc64) - (3 * 8));
 							break;
 						default:
-							m_logger->LogError("Unknown archid: %x", m_archId);
+							m_logger->LogErrorF("Unknown archid: {:#x}", m_archId);
 						}
 				}
 				break;
@@ -810,15 +810,15 @@ MachOHeader MachoView::HeaderForAddress(BinaryView* data, uint64_t address, bool
 				header.buildVersion.minos = reader.Read32();
 				header.buildVersion.sdk = reader.Read32();
 				header.buildVersion.ntools = reader.Read32();
-				m_logger->LogDebug("Platform: %s", BuildPlatformToString(header.buildVersion.platform).c_str());
-				m_logger->LogDebug("MinOS: %s", BuildToolVersionToString(header.buildVersion.minos).c_str());
-				m_logger->LogDebug("SDK: %s", BuildToolVersionToString(header.buildVersion.sdk).c_str());
+				m_logger->LogDebugF("Platform: {}", BuildPlatformToString(header.buildVersion.platform));
+				m_logger->LogDebugF("MinOS: {}", BuildToolVersionToString(header.buildVersion.minos));
+				m_logger->LogDebugF("SDK: {}", BuildToolVersionToString(header.buildVersion.sdk));
 				for (uint32_t i = 0; (i < header.buildVersion.ntools) && (i < 10); i++)
 				{
 						uint32_t tool = reader.Read32();
 						uint32_t version = reader.Read32();
 						header.buildToolVersions.push_back({tool, version});
-						m_logger->LogDebug("Build Tool: %s: %s", BuildToolToString(tool).c_str(), BuildToolVersionToString(version).c_str());
+						m_logger->LogDebugF("Build Tool: {}: {}", BuildToolToString(tool), BuildToolVersionToString(version));
 				}
 				break;
 			}
@@ -879,7 +879,7 @@ void MachoView::RebaseThreadStarts(BinaryReader& virtualReader, vector<uint32_t>
 		if (threadStart == 0xffffffff)
 			break;
 
-		m_logger->LogDebug("Rebasing thread chain start: 0x%x", threadStart);
+		m_logger->LogDebugF("Rebasing thread chain start: {:#x}", threadStart);
 		try
 		{
 			uint64_t curAddr = imageBase + threadStart;
@@ -931,7 +931,7 @@ void MachoView::RebaseThreadStarts(BinaryReader& virtualReader, vector<uint32_t>
 		}
 		catch (ReadException&)
 		{
-			m_logger->LogError("Failed rebasing thread start at: 0x%x", threadStart);
+			m_logger->LogErrorF("Failed rebasing thread start at: {:#x}", threadStart);
 		}
 	}
 
@@ -1545,7 +1545,7 @@ bool MachoView::Init()
 
 	std::chrono::steady_clock::time_point endTime = std::chrono::steady_clock::now();
 	double t = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count() / 1000.0;
-	m_logger->LogInfo("Mach-O parsing took %.3f seconds\n", t);
+	m_logger->LogInfoF("Mach-O parsing took {:.3f} seconds", t);
 	return true;
 }
 
@@ -1980,8 +1980,7 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 					typeLib = typeLibs[0];
 					AddTypeLibrary(typeLib);
 
-					m_logger->LogDebug("mach-o: adding type library for '%s': %s (%s)",
-						libName.c_str(), typeLib->GetName().c_str(), typeLib->GetGuid().c_str());
+					m_logger->LogDebugF("mach-o: adding type library for {:?}: {} ({})", libName, typeLib->GetName(), typeLib->GetGuid());
 				}
 			}
 			if (!typeLib)
@@ -1995,8 +1994,7 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 						typeLib = typeLibs[0];
 						AddTypeLibrary(typeLib);
 
-						m_logger->LogDebug("mach-o: adding type library for '%s': %s (%s)",
-							libName.c_str(), typeLib->GetName().c_str(), typeLib->GetGuid().c_str());
+						m_logger->LogDebugF("mach-o: adding type library for {}: {} ({})", libName, typeLib->GetName(), typeLib->GetGuid());
 					}
 				}
 			}
@@ -2159,7 +2157,7 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 		}
 
 		if (!handled)
-			m_logger->LogError("Failed to find external symbol '%s', couldn't bind symbol at 0x%llx", name.c_str(), relocation.address);
+			m_logger->LogErrorF("Failed to find external symbol {:?}, couldn't bind symbol at {:#x}", name, relocation.address);
 	}
 
 	auto relocationHandler = m_arch->GetRelocationHandler("Mach-O");
@@ -2180,11 +2178,11 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 				memcpy(sectionName, section.sectname, sizeof(section.sectname));
 				sectionName[16] = 0;
 
-				m_logger->LogDebug("Relocations for section %s", sectionName);
+				m_logger->LogDebugF("Relocations for section {:?}", sectionName);
 				auto sec = GetSectionByName(sectionName);
 				if (!sec)
 				{
-					m_logger->LogError("Can't find section for %s", sectionName);
+					m_logger->LogErrorF("Can't find section for {:?}", sectionName);
 					continue;
 				}
 				for (size_t i = 0; i < section.nreloc; i++)
@@ -2439,7 +2437,7 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 		catch (std::exception& ex)
 		{
 			m_logger->LogError("Failed to process CFStrings. Binary may be malformed");
-			m_logger->LogError("Error: %s", ex.what());
+			m_logger->LogErrorF("Error: {:?}", ex.what());
 		}
 	}
 
@@ -2451,7 +2449,7 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 		catch (std::exception& ex)
 		{
 			m_logger->LogError("Failed to process Objective-C Metadata. Binary may be malformed");
-			m_logger->LogError("Error: %s", ex.what());
+			m_logger->LogErrorF("Error: {:?}", ex.what());
 		}
 	}
 
@@ -2501,7 +2499,7 @@ Ref<Symbol> MachoView::DefineMachoSymbol(
 		symbolTypeRef = ImportTypeLibraryObject(appliedLib, n);
 		if (symbolTypeRef)
 		{
-			m_logger->LogDebug("mach-o: type Library '%s' found hit for '%s'", appliedLib->GetName().c_str(), name.c_str());
+			m_logger->LogDebugF("mach-o: type Library {:?} found hit for {:?}", appliedLib->GetName(), name);
 			RecordImportedObjectLibrary(GetDefaultPlatform(), addr, appliedLib, n);
 		}
 
@@ -2596,14 +2594,14 @@ bool MachoView::AddExportTerminalSymbol(
 {
 	if (symbolFlags & EXPORT_SYMBOL_FLAGS_REEXPORT)
 	{
-		m_logger->LogTrace("Export symbol is a re-export, not supported: %s", symbolName.c_str());
+		m_logger->LogTraceF("Export symbol is a re-export, not supported: {:?}", symbolName);
 		return false;
 	}
 
 	uint64_t symbolAddress = GetStart() + imageOffset;
 	if (symbolName.empty() || symbolAddress == 0)
 	{
-		m_logger->LogTrace("Export symbol is malformed: %s", symbolName.c_str());
+		m_logger->LogTraceF("Export symbol is malformed: {:?}", symbolName);
 		return false;
 	}
 
@@ -2635,19 +2633,19 @@ bool MachoView::AddExportTerminalSymbol(
 	{
 	case EXPORT_SYMBOL_FLAGS_KIND_REGULAR:
 	case EXPORT_SYMBOL_FLAGS_KIND_THREAD_LOCAL:
-		m_logger->LogTrace("Export symbol is a regular or thread local symbol: %d %s", sectionSymbolType(), symbolName.c_str());
+		m_logger->LogTraceF("Export symbol is a regular or thread local symbol: {} {:?}", sectionSymbolType(), symbolName);
 		DefineMachoSymbol(sectionSymbolType(), symbolName, symbolAddress, GlobalBinding, false);
 		break;
 	case EXPORT_SYMBOL_FLAGS_KIND_ABSOLUTE:
-		m_logger->LogTrace("Export symbol is an absolute symbol: %s", symbolName.c_str());
+		m_logger->LogTraceF("Export symbol is an absolute symbol: {:?}", symbolName);
 		DefineMachoSymbol(DataSymbol, symbolName, symbolAddress, GlobalBinding, false);
 		break;
 	default:
-		m_logger->LogWarn("Unhandled export symbol kind: %llx", symbolFlags & EXPORT_SYMBOL_FLAGS_KIND_MASK);
+		m_logger->LogWarnF("Unhandled export symbol kind: {:#x}", symbolFlags & EXPORT_SYMBOL_FLAGS_KIND_MASK);
 		return false;
 	}
 
-	m_logger->LogTrace("Successfully added export symbol: %s", symbolName.c_str());
+	m_logger->LogTraceF("Successfully added export symbol: {:?}", symbolName);
 
 	return true;
 }
@@ -2670,7 +2668,7 @@ void MachoView::ParseExportTrie(BinaryReader& reader, linkedit_data_command expo
 
 		while (!stack.empty())
 		{
-			m_logger->LogTrace("Export Trie: Processing node %s with cursor %llu", stack.back().text.c_str(), stack.back().cursor);
+			m_logger->LogTraceF("Export Trie: Processing node {:?} with cursor {:#x}", stack.back().text, stack.back().cursor);
 			Node node = std::move(stack.back());
 			stack.pop_back();
 
@@ -2692,7 +2690,7 @@ void MachoView::ParseExportTrie(BinaryReader& reader, linkedit_data_command expo
 			{
 				uint64_t flags = readValidULEB128(buffer, localCursor);
 				uint64_t imageOffset = readValidULEB128(buffer, localCursor);
-				m_logger->LogTrace("Export Trie: Found terminal node %s with flags %llx and image offset %llx", currentText.c_str(), flags, imageOffset);
+				m_logger->LogTraceF("Export Trie: Found terminal node {:?} with flags {:#x} and image offset {:#x}", currentText, flags, imageOffset);
 
 				AddExportTerminalSymbol(currentText, flags, imageOffset);
 			}
@@ -2790,7 +2788,7 @@ void MachoView::ParseRebaseTable(BinaryReader& reader, MachOHeader& header, uint
 			uint8_t opAndIm = table[i];
 			uint8_t opcode = opAndIm & RebaseOpcodeMask;
 			uint64_t immediate = opAndIm & RebaseImmediateMask;
-			m_logger->LogDebug("Rebase opcode 0x%llx (im: 0x%llx)", opcode, immediate);
+			m_logger->LogTraceF("Rebase opcode {:#x} (im: {:#x})", opcode, immediate);
 			i++;
 			switch (opcode)
 			{
@@ -2815,7 +2813,7 @@ void MachoView::ParseRebaseTable(BinaryReader& reader, MachOHeader& header, uint
 				count = immediate;
 				for (uint64_t j = 0; j < count; ++j)
 				{
-					m_logger->LogDebug("Rebasing address %llx", address);
+					m_logger->LogTraceF("Rebasing address {:#x}", address);
 					if (address < segmentStartAddress || address >= segmentEndAddress)
 					{
 						m_logger->LogError("Rebase address out of segment bounds");
@@ -2835,7 +2833,7 @@ void MachoView::ParseRebaseTable(BinaryReader& reader, MachOHeader& header, uint
 				count = readLEB128(table, tableSize, i);
 				for (uint64_t j = 0; j < count; ++j)
 				{
-					m_logger->LogDebug("Rebasing address %llx", address);
+					m_logger->LogTraceF("Rebasing address {:#x}", address);
 					if (address < segmentStartAddress || address >= segmentEndAddress)
 					{
 						m_logger->LogError("Rebase address out of segment bounds");
@@ -2852,7 +2850,7 @@ void MachoView::ParseRebaseTable(BinaryReader& reader, MachOHeader& header, uint
 				}
 				break;
 			case RebaseOpcodeDoRebaseAddAddressUleb:
-				m_logger->LogDebug("Rebasing address %llx", address);
+				m_logger->LogTraceF("Rebasing address {:#x}", address);
 				if (address < segmentStartAddress || address >= segmentEndAddress)
 				{
 					m_logger->LogError("Rebase address out of segment bounds");
@@ -2872,7 +2870,7 @@ void MachoView::ParseRebaseTable(BinaryReader& reader, MachOHeader& header, uint
 				skip = readLEB128(table, tableSize, i);
 				for (uint64_t j = 0; j < count; ++j)
 				{
-					m_logger->LogDebug("Rebasing address %llx", address);
+					m_logger->LogTraceF("Rebasing address {:#x}", address);
 					if (address < segmentStartAddress || address >= segmentEndAddress)
 					{
 						m_logger->LogError("Rebase address out of segment bounds");
@@ -2889,7 +2887,7 @@ void MachoView::ParseRebaseTable(BinaryReader& reader, MachOHeader& header, uint
 				}
 				break;
 			default:
-				m_logger->LogError("Unknown rebase opcode %d", opcode);
+				m_logger->LogErrorF("Unknown rebase opcode {}", opcode);
 				throw ReadException();
 				break;
 			}
@@ -3137,7 +3135,7 @@ void MachoView::ParseSymbolTable(BinaryReader& reader, MachOHeader& header, cons
 				(symbol.length() > 2 && symbol.substr(symbol.length()-2, 2) == ".o") ||
 				(symbol.length() > 4 && symbol.substr(0, 4) == "ltmp"))
 			{
-				m_logger->LogDebug("Skipping symbol: %s.", symbol.c_str());
+				m_logger->LogDebugF("Skipping symbol: {:?}", symbol);
 				continue;
 			}
 			//N_TYPE is only set when N_SECT is the integer count of the section the symbol is in
@@ -3222,7 +3220,7 @@ void MachoView::ParseSymbolTable(BinaryReader& reader, MachOHeader& header, cons
 			{
 				for (auto& j : stubSymbolIter->second)
 				{
-					// m_logger->LogError("STUB [%d] %llx - %s", i, j.first->addr + (j * j.first->reserved2), symbol.c_str());
+					// m_logger->LogErrorF("STUB [{}] {:x} - {}", i, j.first->addr + (j * j.first->reserved2), symbol);
 					BNRelocationInfo info;
 					memset(&info, 0, sizeof(info));
 					info.nativeType = -1;
@@ -3238,8 +3236,8 @@ void MachoView::ParseSymbolTable(BinaryReader& reader, MachOHeader& header, cons
 			{
 				for (auto& j : pointerSymbolIter->second)
 				{
-					// m_logger->LogError("POINTER [%d] %llx - %s", i, j.first->addr + (j.second * m_addressSize),
-					// symbol.c_str());
+					// m_logger->LogErrorF("POINTER [{}] {:x} - {}", i, j.first->addr + (j.second * m_addressSize),
+					// symbol);
 					BNRelocationInfo info;
 					memset(&info, 0, sizeof(info));
 					info.nativeType = BINARYNINJA_MANUAL_RELOCATION;
@@ -3291,7 +3289,7 @@ void MachoView::ParseChainedFixups(
 		fixupsHeader.symbols_format = parentReader.Read32();
 
 		m_logger->LogDebugF(
-			"Chained Fixups: Header @ 0x{:x} // Fixups version {}", fixupHeaderAddress, fixupsHeader.fixups_version);
+			"Chained Fixups: Header @ {:#x} // Fixups version {}", fixupHeaderAddress, fixupsHeader.fixups_version);
 
 		size_t importsAddress = fixupHeaderAddress + fixupsHeader.imports_offset;
 		size_t importTableSize = sizeof(dyld_chained_import) * fixupsHeader.imports_count;
@@ -3380,7 +3378,7 @@ void MachoView::ParseChainedFixups(
 			}
 		}
 
-		m_logger->LogDebugF("Chained Fixups: 0x{:x} import table entries", importTable.size());
+		m_logger->LogDebugF("Chained Fixups: {:#x} import table entries", importTable.size());
 
 		uint64_t fixupStartsAddress = fixupHeaderAddress + fixupsHeader.starts_offset;
 		parentReader.Seek(fixupStartsAddress);
@@ -3448,13 +3446,13 @@ void MachoView::ParseChainedFixups(
 			default:
 			{
 				m_logger->LogErrorF("Chained Fixups: Unknown or unsupported pointer format {}, "
-					"unable to process chains for segment at @ 0x{:x}", starts.pointer_format, starts.segment_offset);
+					"unable to process chains for segment at @ {:#x}", starts.pointer_format, starts.segment_offset);
 				continue;
 			}
 			}
 
 			uint16_t fmt = starts.pointer_format;
-			m_logger->LogDebugF("Chained Fixups: Segment start @ 0x{:x}, fmt {}", starts.segment_offset, fmt);
+			m_logger->LogDebugF("Chained Fixups: Segment start @ {:#x}, fmt {}", starts.segment_offset, fmt);
 
 			uint64_t pageStartsTableStartAddress = parentReader.GetOffset();
 			vector<vector<uint16_t>> pageStartOffsets {};
@@ -3544,7 +3542,7 @@ void MachoView::ParseChainedFixups(
 							break;
 						}
 
-						m_logger->LogTraceF("Chained Fixups: @ 0x{:x} ( 0x{:x} ) - {} 0x{:x}", chainEntryAddress,
+						m_logger->LogTraceF("Chained Fixups: @ {:#x} ( {:#x} ) - {} {:#x}", chainEntryAddress,
 							GetStart() + (chainEntryAddress - m_universalImageOffset),
 							bind, nextEntryStrideCount);
 
@@ -3575,13 +3573,13 @@ void MachoView::ParseChainedFixups(
 							case DYLD_CHAINED_PTR_64_KERNEL_CACHE: // no binding
 							case DYLD_CHAINED_PTR_X86_64_KERNEL_CACHE: // ''
 							default:
-								m_logger->LogWarnF("Chained Fixups: Unknown Bind Pointer Format at 0x{:x}",
+								m_logger->LogWarnF("Chained Fixups: Unknown Bind Pointer Format at {:#x}",
 									GetStart() + (chainEntryAddress - m_universalImageOffset));
 
 								chainEntryAddress += (nextEntryStrideCount * strideSize);
 								if (chainEntryAddress > pageAddress + starts.page_size)
 								{
-									m_logger->LogErrorF("Chained Fixups: Pointer at 0x{:x} left page",
+									m_logger->LogErrorF("Chained Fixups: Pointer at {:#x} left page",
 										GetStart() + ((chainEntryAddress - (nextEntryStrideCount * strideSize))) - m_universalImageOffset);
 									fixupsDone = true;
 								}
@@ -3611,8 +3609,8 @@ void MachoView::ParseChainedFixups(
 								}
 								else
 								{
-									m_logger->LogWarnF("Chained Fixups: Import Table entry 0x{:x} has no symbol; "
-										"Unable to bind item at 0x{:x}", ordinal, targetAddress);
+									m_logger->LogWarnF("Chained Fixups: Import Table entry {:#x} has no symbol; "
+										"Unable to bind item at {:#x}", ordinal, targetAddress);
 								}
 							}
 						}
@@ -3670,7 +3668,7 @@ void MachoView::ParseChainedFixups(
 						{
 							// Something is seriously wrong here. likely malformed binary, or our parsing failed elsewhere.
 							// This will log the pointer in mapped memory.
-							m_logger->LogErrorF("Chained Fixups: Pointer at 0x{:x} left page",
+							m_logger->LogErrorF("Chained Fixups: Pointer at {:#x} left page",
 								GetStart() + ((chainEntryAddress - (nextEntryStrideCount * strideSize))) - m_universalImageOffset);
 							fixupsDone = true;
 						}
@@ -3758,7 +3756,7 @@ void MachoView::ParseChainedStarts(MachOHeader& header, section_64 chainedStarts
 			break;
 		default:
 		{
-			m_logger->LogError("Chained Starts: Unknown or unsupported pointer format %d, "
+			m_logger->LogErrorF("Chained Starts: Unknown or unsupported pointer format {}, "
 				"unable to process chain starts", pointerFormat);
 			return;
 		}
@@ -3806,7 +3804,7 @@ void MachoView::ParseChainedStarts(MachOHeader& header, section_64 chainedStarts
 					bind = false;
 				}
 
-				m_logger->LogTrace("Chained Starts: @ 0x%llx ( 0x%llx ) - %d 0x%llx", chainEntryAddress,
+				m_logger->LogTraceF("Chained Starts: @ {:#x} ( {:#x} ) - {} {:#x}", chainEntryAddress,
 					GetStart() + (chainEntryAddress - m_universalImageOffset),
 					bind, nextEntryStrideCount);
 
@@ -3859,7 +3857,7 @@ void MachoView::ParseChainedStarts(MachOHeader& header, section_64 chainedStarts
 
 					reloc.address = GetStart() + (chainEntryAddress - m_universalImageOffset);
 					DefineRelocation(m_arch, reloc, entryOffset, reloc.address);
-					m_logger->LogDebug("Chained Starts: Adding relocated pointer %llx -> %llx", reloc.address, entryOffset);
+					m_logger->LogTraceF("Chained Starts: Adding relocated pointer {:#x} -> {:#x}", reloc.address, entryOffset);
 
 					if (objcProcessor)
 					{
@@ -3922,7 +3920,7 @@ Ref<BinaryView> MachoViewType::Create(BinaryView* data)
 	}
 	catch (std::exception& e)
 	{
-		m_logger->LogError("%s<BinaryViewType> failed to create view! '%s'", GetName().c_str(), e.what());
+		m_logger->LogErrorF("{}<BinaryViewType> failed to create view! {:?}", GetName(), e.what());
 		return nullptr;
 	}
 }
@@ -3936,7 +3934,7 @@ Ref<BinaryView> MachoViewType::Parse(BinaryView* data)
 	}
 	catch (std::exception& e)
 	{
-		m_logger->LogError("%s<BinaryViewType> failed to create view! '%s'", GetName().c_str(), e.what());
+		m_logger->LogErrorF("{}<BinaryViewType> failed to create view! {:?}", GetName(), e.what());
 		return nullptr;
 	}
 }
@@ -4032,7 +4030,7 @@ uint64_t MachoViewType::ParseHeaders(BinaryView* data, uint64_t imageOffset, mac
 		ident.filetype == MH_DSYM ||
 		ident.filetype == MH_FILESET))
 	{
-		m_logger->LogError("Unhandled Macho file class: 0x%x", ident.filetype);
+		m_logger->LogErrorF("Unhandled Macho file class: {:#x}", ident.filetype);
 		errorMsg = "invalid file class";
 		return 0;
 	}
@@ -4109,7 +4107,7 @@ Ref<Settings> MachoViewType::GetLoadSettingsForData(BinaryView* data)
 	Ref<BinaryView> viewRef = Parse(data);
 	if (!viewRef || !viewRef->Init())
 	{
-		m_logger->LogWarn("Failed to initialize view of type '%s'. Generating default load settings.", GetName().c_str());
+		m_logger->LogWarnF("Failed to initialize view of type '{}'. Generating default load settings.", GetName());
 		viewRef = data;
 	}
 

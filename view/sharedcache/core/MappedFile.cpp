@@ -89,7 +89,7 @@ MapStatus MappedFile::Map()
 	void* result = mmap(nullptr, len, PROT_READ | PROT_WRITE, MAP_PRIVATE, fileno(fd), 0u);
 	if (result == MAP_FAILED)
 	{
-		BinaryNinja::LogError("mmap failed: %s", strerror(errno));  // Use errno to log the reason
+		BinaryNinja::LogErrorF("mmap failed: {}", strerror(errno));  // Use errno to log the reason
 		return MapStatus::Error;
 	}
 	_mmap = static_cast<uint8_t*>(result);

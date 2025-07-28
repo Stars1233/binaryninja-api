@@ -16,7 +16,7 @@ SharedCacheViewType::SharedCacheViewType() : BinaryViewType(VIEW_NAME, VIEW_NAME
 void SharedCacheViewType::Register()
 {
 	auto fdLimit = AdjustFileDescriptorLimit();
-	LogDebug("Shared Cache processing initialized with a max file descriptor limit of %lld", fdLimit);
+	LogDebugF("Shared Cache processing initialized with a max file descriptor limit of {}", fdLimit);
 
 	// Adjust the global accessor cache to the fdlimit.
 	FileAccessorCache::Global().SetCacheSize(fdLimit);
@@ -37,7 +37,7 @@ Ref<Settings> SharedCacheViewType::GetLoadSettingsForData(BinaryView* data)
 	Ref<BinaryView> viewRef = Parse(data);
 	if (!viewRef || !viewRef->Init())
 	{
-		LogWarn("Failed to initialize view of type '%s'. Generating default load settings.", GetName().c_str());
+		LogWarnF("Failed to initialize view of type '{}'. Generating default load settings.", GetName().c_str());
 		viewRef = data;
 	}
 
@@ -190,7 +190,7 @@ bool SharedCacheView::Init()
 	}
 	else
 	{
-		m_logger->LogError("Unknown magic: %s", magic);
+		m_logger->LogErrorF("Unknown magic: {:?}", magic);
 		return false;
 	}
 
@@ -224,10 +224,10 @@ bool SharedCacheView::Init()
 	case DSCPlatformWatchOS:
 	case DSCPlatformWatchOSSimulator:
 	case DSCPlatformBridgeOS:
-		m_logger->LogError("Unsupported platform: %d", platform);
+		m_logger->LogErrorF("Unsupported platform: {}", platform);
 		return false;
 	default:
-		m_logger->LogWarn("Unknown platform: %d", platform);
+		m_logger->LogWarnF("Unknown platform: {}", platform);
 		return false;
 	}
 
@@ -353,7 +353,7 @@ bool SharedCacheView::Init()
 
 	if (!err.empty() || !headerType.type)
 	{
-		m_logger->LogError("Failed to parse header type: %s", err.c_str());
+		m_logger->LogErrorF("Failed to parse header type: {}", err);
 		return false;
 	}
 
@@ -783,7 +783,7 @@ bool SharedCacheView::Init()
 	GetParentView()->Read(&primaryBase, basePointer, 8);
 	if (primaryBase == 0)
 	{
-		m_logger->LogError("Failed to read primary base at 0x%llx", basePointer);
+		m_logger->LogErrorF("Failed to read primary base at {:#x}", basePointer);
 		return false;
 	}
 
@@ -855,7 +855,7 @@ bool SharedCacheView::InitController()
 		auto totalEntries = sharedCacheBuilder.GetCache().GetEntries().size();
 		auto endTime = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<double> elapsed = endTime - startTime;
-		m_logger->LogInfo("Processing %zu entries took %.3f seconds", totalEntries, elapsed.count());
+		m_logger->LogInfoF("Processing {} entries took {:.3f} seconds", totalEntries, elapsed.count());
 
 		// If we can't store all of our files for this cache in the accessor cache we might run into issues, warn the user.
 		if (totalEntries > FileAccessorCache::Global().GetCacheSize())
@@ -900,7 +900,7 @@ bool SharedCacheView::InitController()
 			sharedCache.ProcessEntrySlideInfo(entry);
 		auto endTime = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<double> elapsed = endTime - startTime;
-		m_logger->LogInfo("Processing slide info took %.3f seconds", elapsed.count());
+		m_logger->LogInfoF("Processing slide info took {:.3f} seconds", elapsed.count());
 	}
 
 	{
@@ -913,7 +913,7 @@ bool SharedCacheView::InitController()
 		auto endTime = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<double> elapsed = endTime - startTime;
 		const auto& images = sharedCache.GetImages();
-		m_logger->LogInfo("Processing %zu images took %.3f seconds", images.size(), elapsed.count());
+		m_logger->LogInfoF("Processing {} images took {:.3f} seconds", images.size(), elapsed.count());
 		// Warn if we found no images, and provide the likely explanation
 		if (images.empty())
 			m_logger->LogWarn("Failed to process any images, likely missing cache files.");
@@ -926,7 +926,7 @@ bool SharedCacheView::InitController()
 			sharedCache.ProcessEntryRegions(entry);
 		auto endTime = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<double> elapsed = endTime - startTime;
-		m_logger->LogInfo("Processing %zu regions took %.3f seconds", sharedCache.GetRegions().size(), elapsed.count());
+		m_logger->LogInfoF("Processing {} regions took {:.3f} seconds", sharedCache.GetRegions().size(), elapsed.count());
 	}
 
 	// TODO: Here we should have all the regions and what not for the virtual memory populated, I think it might be a good idea
@@ -944,7 +944,7 @@ bool SharedCacheView::InitController()
 			sharedCache.ProcessSymbols();
 			auto endTime = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<double> elapsed = endTime - startTime;
-			logger->LogInfo("Processing %zu symbols took %.3f seconds (separate thread)", sharedCache.GetSymbols().size(), elapsed.count());
+			logger->LogInfoF("Processing {} symbols took {:.3f} seconds (separate thread)", sharedCache.GetSymbols().size(), elapsed.count());
 		});
 	}
 
@@ -953,7 +953,7 @@ bool SharedCacheView::InitController()
 	std::string autoLoadPattern = ".*libsystem_c.dylib";
 	if (settings && settings->Contains("loader.dsc.autoLoadPattern"))
 		autoLoadPattern = settings->Get<std::string>("loader.dsc.autoLoadPattern", this);
-	m_logger->LogDebug("Loading images using pattern: %s", autoLoadPattern.c_str());
+	m_logger->LogDebugF("Loading images using pattern: {:?}", autoLoadPattern);
 
 	{
 		// TODO: Refusing to add undo action "Added section libsystem_c.dylib::__macho_header", there is literally
@@ -970,7 +970,7 @@ bool SharedCacheView::InitController()
 					++loadedImages;
 		auto endTime = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<double> elapsed = endTime - startTime;
-		m_logger->LogInfo("Automatically loading %zu images took %.3f seconds", loadedImages, elapsed.count());
+		m_logger->LogInfoF("Automatically loading {} images took {:.3f} seconds", loadedImages, elapsed.count());
 	}
 
 	return true;

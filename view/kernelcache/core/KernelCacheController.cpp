@@ -33,11 +33,11 @@ void DeleteController(const FileMetadata& file)
 		// Someone is still holding the controller, lets warn about this.
 		// 2 is expected here because we have one held in `controllers` and one held by `controller`.
 		if (controller->m_refs > 2)
-			LogWarn("Deleting KernelCacheController for view %llx, but there are still %d references", id,
+			LogWarnF("Deleting KernelCacheController for view {:#x}, but there are still {} references", id,
 				controller->m_refs.load());
 
 		controllers.erase(it);
-		LogDebug("Deleted KernelCacheController for view %s", file.GetFilename().c_str());
+		LogDebugF("Deleted KernelCacheController for view {:?}", file.GetFilename());
 	}
 }
 

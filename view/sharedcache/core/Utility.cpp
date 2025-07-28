@@ -126,7 +126,7 @@ void ApplySymbol(Ref<BinaryView> view, Ref<TypeLibrary> typeLib, Ref<Symbol> sym
 			}
 			else
 			{
-				LogWarn("Failed to find id type for %llx, objective-c processor not ran?", func->GetStart());
+				LogWarnF("Failed to find id type for {:#x}, objective-c processor not ran?", func->GetStart());
 			}
 		}
 	}

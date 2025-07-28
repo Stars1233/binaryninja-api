@@ -377,6 +377,6 @@ void SharedCacheMachOProcessor::ApplyHeaderDataVariables(SharedCacheMachOHeader&
 	}
 	catch (ReadException&)
 	{
-		m_logger->LogError("Error when applying Mach-O header types at %llx", header.textBase);
+		m_logger->LogErrorF("Error when applying Mach-O header types at {:#x}", header.textBase);
 	}
 }

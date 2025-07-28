@@ -167,7 +167,7 @@ std::vector<SlideMappingInfo> SlideInfoProcessor::ReadEntryInfo(const MappedFile
 		auto slideInfoVersion = accessor.ReadUInt32(slideInfoAddress);
 		if (slideInfoVersion != 2 && slideInfoVersion != 3)
 		{
-			m_logger->LogError("Unsupported slide info version %d", slideInfoVersion);
+			m_logger->LogErrorF("Unsupported slide info version {}", slideInfoVersion);
 			return {};
 		}
 
@@ -216,15 +216,15 @@ std::vector<SlideMappingInfo> SlideInfoProcessor::ReadEntryInfo(const MappedFile
 		}
 		else
 		{
-			m_logger->LogError("Unknown slide info version: %d", map.slideInfoVersion);
+			m_logger->LogErrorF("Unknown slide info version: {}", map.slideInfoVersion);
 			continue;
 		}
 
 		mappings.emplace_back(map);
-		m_logger->LogDebug("File: %s", entry.GetFilePath().c_str());
-		m_logger->LogDebug("Slide Info Address: 0x%llx", map.address);
-		m_logger->LogDebug("Mapping Address: 0x%llx", map.mappingInfo.address);
-		m_logger->LogDebug("Slide Info Version: %d", map.slideInfoVersion);
+		m_logger->LogDebugF("File: {:?}", entry.GetFilePath().c_str());
+		m_logger->LogDebugF("Slide Info Address: {:#x}", map.address);
+		m_logger->LogDebugF("Mapping Address: {:#x}", map.mappingInfo.address);
+		m_logger->LogDebugF("Slide Info Version: {}", map.slideInfoVersion);
 	}
 
 	return mappings;
@@ -255,7 +255,7 @@ void SlideInfoProcessor::ApplyMappings(MappedFileAccessor& accessor, const std::
 			break;
 		default:
 			m_logger->LogError(
-				"Cannot apply slide info version: %d @ %llx", mapping.slideInfoVersion, mapping.mappingInfo.address);
+				"Cannot apply slide info version: {} @ {:#x}", mapping.slideInfoVersion, mapping.mappingInfo.address);
 			break;
 		}
 	}
@@ -273,7 +273,7 @@ std::vector<SlideMappingInfo> SlideInfoProcessor::ProcessEntry(MappedFileAccesso
 	{
 		// Just log an error, we technically can continue as if the slide info is not applied for a given entry it does
 		// not necessarily mean we cannot do analysis on others.
-		m_logger->LogError("Error processing slide info for entry `%s`: %s", entry.GetFileName().c_str(), e.what());
+		m_logger->LogErrorF("Error processing slide info for entry {:?}: {}", entry.GetFileName().c_str(), e.what());
 		return {};
 	}
 }

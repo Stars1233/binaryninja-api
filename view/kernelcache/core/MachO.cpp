@@ -76,7 +76,7 @@ std::optional<KernelCacheMachOHeader> KernelCacheMachOHeader::ParseHeaderForAddr
 	{
 		for (size_t i = 0; i < header.ident.ncmds; i++)
 		{
-			// BNLogInfo("of 0x%llx", reader.GetOffset());
+			// BNLogInfoF("of {:#x}", reader.GetOffset());
 			load_command load;
 			segment_command_64 segment64;
 			section_64 sect = {};
@@ -367,7 +367,7 @@ std::optional<KernelCacheMachOHeader> KernelCacheMachOHeader::ParseHeaderForAddr
 							(void)reader.Read(&thread.stateppc64.r1, sizeof(thread.stateppc64) - (3 * 8));
 							break;
 						default:
-							m_logger->LogError("Unknown archid: %x", m_archId);
+							m_logger->LogErrorF("Unknown archid: {:#x}", m_archId);
 					}
 
 				}*/
@@ -390,16 +390,16 @@ std::optional<KernelCacheMachOHeader> KernelCacheMachOHeader::ParseHeaderForAddr
 				header.buildVersion.minos = reader.Read32();
 				header.buildVersion.sdk = reader.Read32();
 				header.buildVersion.ntools = reader.Read32();
-				// m_logger->LogDebug("Platform: %s", BuildPlatformToString(header.buildVersion.platform).c_str());
-				// m_logger->LogDebug("MinOS: %s", BuildToolVersionToString(header.buildVersion.minos).c_str());
-				// m_logger->LogDebug("SDK: %s", BuildToolVersionToString(header.buildVersion.sdk).c_str());
+				// m_logger->LogDebugF("Platform: {}", BuildPlatformToString(header.buildVersion.platform));
+				// m_logger->LogDebugF("MinOS: {}", BuildToolVersionToString(header.buildVersion.minos));
+				// m_logger->LogDebugF("SDK: {}", BuildToolVersionToString(header.buildVersion.sdk));
 				for (uint32_t j = 0; (i < header.buildVersion.ntools) && (j < 10); j++)
 				{
 					uint32_t tool = reader.Read32();
 					uint32_t version = reader.Read32();
 					header.buildToolVersions.push_back({tool, version});
-					// m_logger->LogDebug("Build Tool: %s: %s", BuildToolToString(tool).c_str(),
-					// BuildToolVersionToString(version).c_str());
+					// m_logger->LogDebugF("Build Tool: {}: {}", BuildToolToString(tool),
+					// BuildToolVersionToString(version));
 				}
 				break;
 			}
@@ -506,7 +506,7 @@ std::vector<CacheSymbol> KernelCacheMachOHeader::ReadSymbolTable(Ref<BinaryView>
 			if (!symbolType.has_value())
 			{
 				// TODO: Where logger?
-				LogError("Symbol %s at address %llx has unknown symbol type", symbolName.c_str(), symbolAddress);
+				LogErrorF("Symbol {:?} at address {:#x} has unknown symbol type", symbolName, symbolAddress);
 				continue;
 			}
 
@@ -526,7 +526,7 @@ std::vector<CacheSymbol> KernelCacheMachOHeader::ReadSymbolTable(Ref<BinaryView>
 				if (!flags.has_value())
 				{
 					// TODO: where logger?
-					LogError("Symbol %s at address %llx is not in any section", symbolName.c_str(), symbolAddress);
+					LogErrorF("Symbol {} at address {:#x} is not in any section", symbolName, symbolAddress);
 					continue;
 				}
 
@@ -549,7 +549,7 @@ std::vector<CacheSymbol> KernelCacheMachOHeader::ReadSymbolTable(Ref<BinaryView>
 		return symbolList;
 	}
 	catch (ReadException& ex) {
-		LogError("Failed to read symbol table: %s", ex.what());
+		LogErrorF("Failed to read symbol table: {}", ex.what());
 		return {};
 	}
 
@@ -600,7 +600,7 @@ bool KernelCacheMachOHeader::AddExportTerminalSymbol(
 		symbols.emplace_back(DataSymbol, symbolAddress, symbolName);
 		break;
 	default:
-		LogWarn("Unhandled export symbol kind: %llx", symbolFlags & EXPORT_SYMBOL_FLAGS_KIND_MASK);
+		LogWarnF("Unhandled export symbol kind: {:#x}", symbolFlags & EXPORT_SYMBOL_FLAGS_KIND_MASK);
 		return false;
 	}
 

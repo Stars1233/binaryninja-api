@@ -444,7 +444,7 @@ void SharedCache::ProcessEntrySlideInfo(const CacheEntry& entry) const
 			}
 		}
 
-		LogWarn("Failed to register revive callback for slide mapping %llx in entry '%s'", mapping.address, entry.GetFileName().c_str());
+		LogWarnF("Failed to register revive callback for slide mapping {:#x} in entry {:?}", mapping.address, entry.GetFileName().c_str());
 	}
 }
 

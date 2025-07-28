@@ -35,7 +35,7 @@ void DeleteController(const FileMetadata& file)
 		// Someone is still holding the controller, lets warn about this.
 		// 2 is expected here because we have one held in `controllers` and one held by `controller`.
 		if (controller->m_refs > 2)
-			LogWarn("Deleting SharedCacheController for view %llx, but there are still %d references", id,
+			LogWarnF("Deleting SharedCacheController for view {:#x}, but there are still {} references", id,
 				controller->m_refs.load());
 
 		// Go through the file accessor cache and remove the entries we reference.
@@ -47,7 +47,7 @@ void DeleteController(const FileMetadata& file)
 		}
 
 		controllers.erase(it);
-		LogDebug("Deleted SharedCacheController for view %s", file.GetFilename().c_str());
+		LogDebugF("Deleted SharedCacheController for view {:?}", file.GetFilename().c_str());
 	}
 }
 
@@ -135,7 +135,7 @@ bool SharedCacheController::ApplyRegion(BinaryView& view, const CacheRegion& reg
 	// Skip filtered regions, this defaults to just LINKEDIT regions.
 	if (std::regex_match(region.name, m_regionFilter))
 	{
-		m_logger->LogDebug("Skipping filtered region at %llx", region.start);
+		m_logger->LogDebugF("Skipping filtered region at {:#x}", region.start);
 		return false;
 	}
 
@@ -148,7 +148,7 @@ bool SharedCacheController::ApplyRegion(BinaryView& view, const CacheRegion& reg
 	catch (std::exception& e)
 	{
 		// This happens if we have not mapped in all the relevant entries.
-		m_logger->LogError("Failed to read region: %s", e.what());
+		m_logger->LogErrorF("Failed to read region: {}", e.what());
 		return false;
 	}
 
@@ -239,7 +239,7 @@ bool SharedCacheController::ApplyImage(BinaryView& view, const CacheImage& image
 		{
 			// Let the user know there was an error in processing the objc stuff but let the image load
 			// regardless, as its non-critical.
-			m_logger->LogError("Failed to process ObjC information: %s", e.what());
+			m_logger->LogErrorF("Failed to process ObjC information: {}", e.what());
 		}
 	}
 

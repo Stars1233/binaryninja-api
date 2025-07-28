@@ -489,9 +489,9 @@ std::vector<CacheSymbol> SharedCacheMachOHeader::ReadSymbolTable(VirtualMemory& 
 		if (nlist.n_strx >= stringInfo.entries)
 		{
 			// TODO: where logger?
-			LogError(
-				"Symbol entry at index %llu has a string offset of %u which is outside the strings buffer of size %llu "
-			    "for symbol table %x",
+			LogErrorF(
+				"Symbol entry at index {} has a string offset of {:#x} which is outside the strings buffer of size {:#x} "
+				"for symbol table {:#x}",
 				entryIndex, nlist.n_strx, stringInfo.address, stringInfo.entries);
 			continue;
 		}
@@ -511,7 +511,7 @@ std::vector<CacheSymbol> SharedCacheMachOHeader::ReadSymbolTable(VirtualMemory& 
 		if (!symbolType.has_value())
 		{
 			// TODO: Where logger?
-			LogError("Symbol %s at address %llx has unknown symbol type", symbolName.c_str(), symbolAddress);
+			LogErrorF("Symbol {:?} at address {:#x} has unknown symbol type", symbolName.c_str(), symbolAddress);
 			continue;
 		}
 
@@ -531,7 +531,7 @@ std::vector<CacheSymbol> SharedCacheMachOHeader::ReadSymbolTable(VirtualMemory& 
 			if (!flags.has_value())
 			{
 				// TODO: where logger?
-				LogError("Symbol %s at address %llx is not in any section", symbolName.c_str(), symbolAddress);
+				LogErrorF("Symbol {:?} at address {:#x} is not in any section", symbolName.c_str(), symbolAddress);
 				continue;
 			}
 
@@ -599,7 +599,7 @@ bool SharedCacheMachOHeader::AddExportTerminalSymbol(
 		symbols.emplace_back(DataSymbol, symbolAddress, symbolName);
 		break;
 	default:
-		LogWarn("Unhandled export symbol kind: %llx", symbolFlags & EXPORT_SYMBOL_FLAGS_KIND_MASK);
+		LogWarnF("Unhandled export symbol kind: {:#x}", symbolFlags & EXPORT_SYMBOL_FLAGS_KIND_MASK);
 		return false;
 	}
 

@@ -11,7 +11,7 @@ void VirtualMemory::MapRegion(WeakFileAccessor fileAccessor, AddressRange mapped
 		if (existingRange.Overlaps(mappedRange))
 		{
 			// Handle overlapping regions, e.g., throw an exception or skip the mapping
-			BinaryNinja::LogError("Overlapping memory region %llx", existingRange.start);
+			BinaryNinja::LogErrorF("Overlapping memory region {:#x}", existingRange.start);
 		}
 	}
 

@@ -131,7 +131,7 @@ void KernelCache::ProcessRelocations(Ref<BinaryView> view, linkedit_data_command
 			fixupsHeader.imports_format = parentReader.Read32();
 			fixupsHeader.symbols_format = parentReader.Read32();
 
-			LogDebugF("Chained Fixups: Header @ 0x{:x}// Fixups version 0x{:x}", fixupHeaderAddress, fixupsHeader.fixups_version);
+			LogDebugF("Chained Fixups: Header @ {:#x} // Fixups version {:#x}", fixupHeaderAddress, fixupsHeader.fixups_version);
 
 			if (fixupsHeader.fixups_version > 0)
 			{

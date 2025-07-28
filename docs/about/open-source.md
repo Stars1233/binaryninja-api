@@ -42,6 +42,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [dtl] ([dtl license] - BSD)
     - [JSON for Modern C++] ([JSON for Modern C++ license] - MIT)
     - [zstd] ([zstd license] - BSD)
+    - [openssl] ([openssl license] - Apache 2.0)
 
 * Other
     - [yasm] ([yasm license] - 2-clause BSD) used for assembling x86 and x64
@@ -184,3 +185,5 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [idb import license]: https://github.com/Vector35/binaryninja-api/blob/dev/LICENSE.txt
 [SCC]: https://github.com/Vector35/scc/
 [scc license]: https://github.com/Vector35/scc/blob/master/LICENSE.txt
+[openssl]: https://github.com/openssl/openssl
+[openssl license]: https://github.com/openssl/openssl/blob/master/LICENSE.txt

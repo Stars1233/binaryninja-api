@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 
 project(sharedcache-python-api)
 
-file(GLOB PYTHON_SOURCES ${PROJECT_SOURCE_DIR}/*.py)
+file(GLOB PYTHON_SOURCES CONFIGURE_DEPENDS ${PROJECT_SOURCE_DIR}/*.py)
 list(REMOVE_ITEM PYTHON_SOURCES ${PROJECT_SOURCE_DIR}/_sharedcachecore.py)
 list(REMOVE_ITEM PYTHON_SOURCES ${PROJECT_SOURCE_DIR}/enums.py)
 

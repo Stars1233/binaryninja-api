@@ -20,7 +20,7 @@ if(NOT BN_INTERNAL_BUILD)
 	add_subdirectory(${PROJECT_SOURCE_DIR}/../.. ${PROJECT_BINARY_DIR}/api)
 endif()
 
-file(GLOB SOURCES *.cpp *.h
+file(GLOB SOURCES CONFIGURE_DEPENDS *.cpp *.h
 	${PROJECT_SOURCE_DIR}/xed/src/common/*.c
 	${PROJECT_SOURCE_DIR}/xed/src/dec/*.c
 	${PROJECT_BINARY_DIR}/obj/*.c)

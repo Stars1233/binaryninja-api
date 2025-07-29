@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 
 project(stack_render_layer)
 
-file(GLOB SOURCES
+file(GLOB SOURCES CONFIGURE_DEPENDS
         *.cpp
         *.c
         *.h)

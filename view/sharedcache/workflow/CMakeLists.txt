@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.13 FATAL_ERROR)
 
 project(sharedcacheworkflow)
-file(GLOB SOURCES *.cpp *.h)
+file(GLOB SOURCES CONFIGURE_DEPENDS *.cpp *.h)
 add_library(sharedcacheworkflow OBJECT ${SOURCES})
 
 set(COMPILE_DEFS "")

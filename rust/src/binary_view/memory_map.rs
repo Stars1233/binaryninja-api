@@ -114,6 +114,28 @@ impl MemoryMap {
         }
     }
 
+    /// Adds an unbacked memory region with a given length and fill byte.
+    pub fn add_unbacked_memory_region(
+        &mut self,
+        name: &str,
+        start: u64,
+        length: u64,
+        segment_flags: Option<SegmentFlags>,
+        fill: Option<u8>,
+    ) -> bool {
+        let name_raw = name.to_cstr();
+        unsafe {
+            BNAddUnbackedMemoryRegion(
+                self.view.handle,
+                name_raw.as_ptr(),
+                start,
+                length,
+                segment_flags.unwrap_or_default().into_raw(),
+                fill.unwrap_or_default(),
+            )
+        }
+    }
+
     pub fn remove_memory_region(&mut self, name: &str) -> bool {
         let name_raw = name.to_cstr();
         unsafe { BNRemoveMemoryRegion(self.view.handle, name_raw.as_ptr()) }

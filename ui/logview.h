@@ -49,6 +49,7 @@ struct BINARYNINJAUIAPI LogListItem
 	size_t sessionId;
 	BNLogLevel level;
 	QString text;
+	QString stackTrace;
 	LogTokenList tokens;
 	bool selected;
 	QString logger;
@@ -122,6 +123,7 @@ class BINARYNINJAUIAPI LogListModel : public QAbstractItemModel, BinaryNinja::Lo
 		static constexpr int Session = Qt::UserRole + 5;
 		static constexpr int FormattedMessage = Qt::UserRole + 6;
 		static constexpr int Tokens = Qt::UserRole + 7;
+		static constexpr int StackTrace = Qt::UserRole + 8;
 
 		LogListModel(QWidget* parent);
 		~LogListModel();

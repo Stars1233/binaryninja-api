@@ -567,6 +567,7 @@ protected:
 	void itemDoubleClicked(const QModelIndex& index);
 	virtual void contextMenuEvent(QContextMenuEvent* event) override;
 	virtual bool event(QEvent* event) override;
+	virtual void focusInEvent(QFocusEvent* event) override;
 };
 
 class BINARYNINJAUIAPI TypeBrowserOptionsIconWidget : public QWidget

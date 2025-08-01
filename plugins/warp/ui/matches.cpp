@@ -81,7 +81,7 @@ WarpCurrentFunctionWidget::WarpCurrentFunctionWidget(FunctionRef current)
             });
 
 
-    connect(m_tableWidget->GetTableView(), &QTableView::doubleClicked, this, [=](const QModelIndex &index) {
+    connect(m_tableWidget->GetTableView(), &QTableView::doubleClicked, this, [=, this](const QModelIndex &index) {
         if (m_current == nullptr)
             return;
         // Get the selected row for the given index.

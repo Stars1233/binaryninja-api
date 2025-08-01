@@ -26,7 +26,7 @@ file(
 add_library(efi_resolver SHARED ${SOURCE_FILES})
 target_link_libraries(efi_resolver binaryninjaapi)
 target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
-target_compile_features(efi_resolver PRIVATE cxx_std_17 c_std_99)
+target_compile_features(efi_resolver PRIVATE cxx_std_20 c_std_99)
 
 # Library targets linking against the Binary Ninja API need to be compiled with
 # position-independent code on Linux.

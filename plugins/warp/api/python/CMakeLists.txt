@@ -14,7 +14,7 @@ target_link_libraries(warp_generator binaryninjaapi)
 target_include_directories(warp_generator PUBLIC {PROJECT_SOURCE_DIR}/../../api)
 
 set_target_properties(warp_generator PROPERTIES
-        CXX_STANDARD 17
+        CXX_STANDARD 20
         CXX_STANDARD_REQUIRED ON
         BUILD_WITH_INSTALL_RPATH OFF
         RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})

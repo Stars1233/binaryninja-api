@@ -27,7 +27,7 @@ set(PLUGIN_SOURCE
 
 add_library(workflow_objc SHARED ${PLUGIN_SOURCE})
 target_link_libraries(workflow_objc binaryninjaapi)
-target_compile_features(workflow_objc PRIVATE cxx_std_17 c_std_99)
+target_compile_features(workflow_objc PRIVATE cxx_std_20 c_std_99)
 
 # Library targets linking against the Binary Ninja API need to be compiled with
 # position-independent code on Linux.

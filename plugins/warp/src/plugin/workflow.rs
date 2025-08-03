@@ -293,9 +293,6 @@ pub fn insert_workflow() {
     module_meta_workflow
         .register_activity(&matcher_activity)
         .unwrap();
-    module_meta_workflow.insert(
-        "core.module.finishUpdate",
-        [MATCHER_ACTIVITY_NAME],
-    );
+    module_meta_workflow.insert("core.module.finishUpdate", [MATCHER_ACTIVITY_NAME]);
     module_meta_workflow.register().unwrap();
 }

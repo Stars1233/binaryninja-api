@@ -163,7 +163,15 @@ pub trait LogListener: 'static + Sync {
     fn level(&self) -> Level;
     fn close(&self) {}
 
-    fn log_with_stack_trace(&self, session: usize, level: Level, _stack_trace: &str, msg: &str, logger_name: &str, tid: usize) {
+    fn log_with_stack_trace(
+        &self,
+        session: usize,
+        level: Level,
+        _stack_trace: &str,
+        msg: &str,
+        logger_name: &str,
+        tid: usize,
+    ) {
         self.log(session, level, msg, logger_name, tid);
     }
 }
@@ -247,7 +255,14 @@ extern "C" fn cb_log_with_stack_trace<L>(
         let stack_trace_str = raw_to_string(stack_trace).unwrap();
         let msg_str = raw_to_string(msg).unwrap();
         let logger_name_str = raw_to_string(logger_name).unwrap();
-        listener.log_with_stack_trace(session, level, &stack_trace_str, &msg_str, &logger_name_str, tid);
+        listener.log_with_stack_trace(
+            session,
+            level,
+            &stack_trace_str,
+            &msg_str,
+            &logger_name_str,
+            tid,
+        );
     })
 }
 

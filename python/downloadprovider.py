@@ -29,7 +29,7 @@ from urllib.parse import urlencode
 import binaryninja
 import binaryninja._binaryninjacore as core
 from . import settings
-from .log import log_error_for_exception
+from .log import log_error_for_exception, log_error
 
 
 def to_bytes(field):

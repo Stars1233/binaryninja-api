@@ -3196,6 +3196,7 @@ class InstructionTextToken:
 		CommentToken               Comments
 		TypeNameToken              **Not emitted by architectures**
 		AddressSeparatorToken      **Not emitted by architectures**
+		NewLineToken               New lines
 		========================== ============================================
 
 	"""

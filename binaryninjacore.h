@@ -416,7 +416,8 @@ extern "C"
 		StackVariableToken = 71,
 		AddressSeparatorToken = 72,
 		CollapsedInformationToken = 73,
-		CollapseStateIndicatorToken = 74
+		CollapseStateIndicatorToken = 74,
+		NewLineToken = 75
 	} BNInstructionTextTokenType;
 
 	typedef enum BNInstructionTextTokenContext
@@ -7607,8 +7608,10 @@ extern "C"
 
 	// LLVM Services APIs
 	BINARYNINJACOREAPI void BNLlvmServicesInit(void);
+
 	BINARYNINJACOREAPI int BNLlvmServicesAssemble(const char* src, int dialect, const char* triplet, int codeModel,
 	    int relocMode, char** outBytes, int* outBytesLen, char** err, int* errLen);
+
 	BINARYNINJACOREAPI void BNLlvmServicesAssembleFree(char* outBytes, char* err);
 	BINARYNINJACOREAPI int BNLlvmServicesDisasmInstruction(const char *triplet, uint8_t *src, int srcLen,
 		uint64_t addr, char *result, size_t resultMaxSize);

@@ -545,6 +545,10 @@ pub enum InstructionTextTokenKind {
         // TODO: Explain what this is
         hash: Option<u64>,
     },
+    NewLine {
+        // Offset into instruction that this new line is associated with
+        value: u64,
+    },
 }
 
 impl InstructionTextTokenKind {
@@ -721,6 +725,7 @@ impl InstructionTextTokenKind {
                     },
                 }
             }
+            BNInstructionTextTokenType::NewLineToken => Self::NewLine { value: value.value },
         }
     }
 
@@ -756,6 +761,7 @@ impl InstructionTextTokenKind {
             InstructionTextTokenKind::ExternalSymbol { value, .. } => Some(*value),
             InstructionTextTokenKind::StackVariable { variable_id, .. } => Some(*variable_id),
             InstructionTextTokenKind::CollapseStateIndicator { hash, .. } => *hash,
+            InstructionTextTokenKind::NewLine { value, .. } => Some(*value),
             _ => None,
         }
     }
@@ -925,6 +931,7 @@ impl From<InstructionTextTokenKind> for BNInstructionTextTokenType {
             InstructionTextTokenKind::CollapseStateIndicator { .. } => {
                 BNInstructionTextTokenType::CollapseStateIndicatorToken
             }
+            InstructionTextTokenKind::NewLine { .. } => BNInstructionTextTokenType::NewLineToken,
         }
     }
 }

@@ -11,7 +11,7 @@ use binaryninja::background_task::BackgroundTask;
 use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::command::Command;
 use binaryninja::settings::{QueryOptions, Settings};
-use binaryninja::workflow::{Activity, AnalysisContext, Workflow};
+use binaryninja::workflow::{activity, Activity, AnalysisContext, Workflow, WorkflowBuilder};
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::time::Instant;
@@ -19,39 +19,7 @@ use warp::r#type::class::function::{Location, RegisterLocation, StackLocation};
 use warp::signature::function::{Function, FunctionGUID};
 use warp::target::Target;
 
-const APPLY_ACTIVITY_CONFIG: &str = r#"{
-    "name": "analysis.warp.apply",
-    "title" : "WARP Apply Matched",
-    "description": "This analysis step applies WARP info to matched functions...",
-    "eligibility": {
-        "auto": {},
-        "runOnce": false
-    }
-}"#;
-
-const MATCHER_ACTIVITY_CONFIG: &str = r#"{
-    "name": "analysis.warp.matcher",
-    "title" : "WARP Matcher",
-    "description": "This analysis step attempts to find matching WARP functions after the initial analysis is complete...",
-    "eligibility": {
-        "auto": {},
-        "runOnce": true
-    },
-    "dependencies": {
-        "downstream": ["core.module.update"]
-    }
-}"#;
-
 pub const GUID_ACTIVITY_NAME: &str = "analysis.warp.guid";
-const GUID_ACTIVITY_CONFIG: &str = r#"{
-    "name": "analysis.warp.guid",
-    "title" : "WARP GUID Generator",
-    "description": "This analysis step generates the GUID for all analyzed functions...",
-    "eligibility": {
-        "auto": {},
-        "runOnce": false
-    }
-}"#;
 
 pub struct RunMatcher;
 
@@ -257,28 +225,47 @@ pub fn insert_workflow() -> Result<(), ()> {
         }
     };
 
-    let guid_activity = Activity::new_with_action(GUID_ACTIVITY_CONFIG, guid_activity);
-    let apply_activity = Activity::new_with_action(APPLY_ACTIVITY_CONFIG, apply_activity);
+    let guid_config = activity::Config::action(
+        GUID_ACTIVITY_NAME,
+        "WARP GUID Generator",
+        "This analysis step generates the GUID for all analyzed functions...",
+    )
+    .eligibility(activity::Eligibility::auto().run_once(false));
+    let guid_activity = Activity::new_with_action(&guid_config, guid_activity);
 
-    let add_function_activities = |workflow: Option<Ref<Workflow>>| -> Result<(), ()> {
+    let apply_config = activity::Config::action(
+        "analysis.warp.apply",
+        "WARP Apply Matched",
+        "This analysis step applies WARP info to matched functions...",
+    )
+    .eligibility(activity::Eligibility::auto().run_once(false));
+    let apply_activity = Activity::new_with_action(&apply_config, apply_activity);
+
+    let add_function_activities = |workflow: Option<WorkflowBuilder>| -> Result<(), ()> {
         let Some(workflow) = workflow else {
             return Ok(());
         };
 
         workflow
-            .clone_to(&workflow.name())
             .activity_after(&guid_activity, "core.function.runFunctionRecognizers")?
             .activity_after(&apply_activity, "core.function.generateMediumLevelIL")?
             .register()?;
         Ok(())
     };
 
-    add_function_activities(Workflow::get("core.function.metaAnalysis"))?;
+    add_function_activities(Workflow::cloned("core.function.metaAnalysis"))?;
     // TODO: Remove this once the objectivec workflow is registered on the meta workflow.
-    add_function_activities(Workflow::get("core.function.objectiveC"))?;
+    add_function_activities(Workflow::cloned("core.function.objectiveC"))?;
 
+    let matcher_config = activity::Config::action(
+        "analysis.warp.matcher",
+        "WARP Matcher",
+        "This analysis step attempts to find matching WARP functions after the initial analysis is complete...",
+    )
+    .eligibility(activity::Eligibility::auto().run_once(true))
     // Matcher activity must have core.module.update as subactivity otherwise analysis will sometimes never retrigger.
-    let matcher_activity = Activity::new_with_action(MATCHER_ACTIVITY_CONFIG, matcher_activity);
+    .downstream_dependencies(["core.module.update"]);
+    let matcher_activity = Activity::new_with_action(&matcher_config, matcher_activity);
     Workflow::cloned("core.module.metaAnalysis")
         .ok_or(())?
         .activity_before(&matcher_activity, "core.module.finishUpdate")?

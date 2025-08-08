@@ -19,7 +19,6 @@ use warp::r#type::class::function::{Location, RegisterLocation, StackLocation};
 use warp::signature::function::{Function, FunctionGUID};
 use warp::target::Target;
 
-pub const APPLY_ACTIVITY_NAME: &str = "analysis.warp.apply";
 const APPLY_ACTIVITY_CONFIG: &str = r#"{
     "name": "analysis.warp.apply",
     "title" : "WARP Apply Matched",
@@ -30,7 +29,6 @@ const APPLY_ACTIVITY_CONFIG: &str = r#"{
     }
 }"#;
 
-pub const MATCHER_ACTIVITY_NAME: &str = "analysis.warp.matcher";
 const MATCHER_ACTIVITY_CONFIG: &str = r#"{
     "name": "analysis.warp.matcher",
     "title" : "WARP Matcher",
@@ -189,7 +187,7 @@ pub fn run_matcher(view: &BinaryView) {
     view.update_analysis();
 }
 
-pub fn insert_workflow() {
+pub fn insert_workflow() -> Result<(), ()> {
     // TODO: Note: because of symbol persistence function symbol is applied in `insert_cached_function_match`.
     // TODO: Comments are also applied there, they are "user" like, persisted and make undo actions.
     // "Hey look, it's a plier" ~ Josh 2025
@@ -262,26 +260,29 @@ pub fn insert_workflow() {
     let guid_activity = Activity::new_with_action(GUID_ACTIVITY_CONFIG, guid_activity);
     let apply_activity = Activity::new_with_action(APPLY_ACTIVITY_CONFIG, apply_activity);
 
-    let add_function_activities = |workflow: &Workflow| {
-        let new_workflow = workflow.clone_to(&workflow.name());
-        new_workflow.register_activity(&guid_activity).unwrap();
-        new_workflow.register_activity(&apply_activity).unwrap();
-        new_workflow.insert_after("core.function.runFunctionRecognizers", [GUID_ACTIVITY_NAME]);
-        new_workflow.insert_after("core.function.generateMediumLevelIL", [APPLY_ACTIVITY_NAME]);
-        new_workflow.register().unwrap();
+    let add_function_activities = |workflow: Option<Ref<Workflow>>| -> Result<(), ()> {
+        let Some(workflow) = workflow else {
+            return Ok(());
+        };
+
+        workflow
+            .clone_to(&workflow.name())
+            .activity_after(&guid_activity, "core.function.runFunctionRecognizers")?
+            .activity_after(&apply_activity, "core.function.generateMediumLevelIL")?
+            .register()?;
+        Ok(())
     };
 
-    add_function_activities(&Workflow::instance("core.function.metaAnalysis"));
+    add_function_activities(Workflow::get("core.function.metaAnalysis"))?;
     // TODO: Remove this once the objectivec workflow is registered on the meta workflow.
-    add_function_activities(&Workflow::instance("core.function.objectiveC"));
+    add_function_activities(Workflow::get("core.function.objectiveC"))?;
 
-    let old_module_meta_workflow = Workflow::instance("core.module.metaAnalysis");
-    let module_meta_workflow = old_module_meta_workflow.clone_to("core.module.metaAnalysis");
-    let matcher_activity = Activity::new_with_action(MATCHER_ACTIVITY_CONFIG, matcher_activity);
     // Matcher activity must have core.module.update as subactivity otherwise analysis will sometimes never retrigger.
-    module_meta_workflow
-        .register_activity(&matcher_activity)
-        .unwrap();
-    module_meta_workflow.insert("core.module.finishUpdate", [MATCHER_ACTIVITY_NAME]);
-    module_meta_workflow.register().unwrap();
+    let matcher_activity = Activity::new_with_action(MATCHER_ACTIVITY_CONFIG, matcher_activity);
+    Workflow::cloned("core.module.metaAnalysis")
+        .ok_or(())?
+        .activity_before(&matcher_activity, "core.module.finishUpdate")?
+        .register()?;
+
+    Ok(())
 }

@@ -102,7 +102,10 @@ pub extern "C" fn CorePluginInit() -> bool {
     // Register our highlight render layer.
     HighlightRenderLayer::register();
 
-    workflow::insert_workflow();
+    if workflow::insert_workflow().is_err() {
+        log::error!("Failed to register WARP workflow");
+        return false;
+    }
 
     // TODO: Make the retrieval of containers wait on this to be done.
     // TODO: We could also have a mechanism for lazily loading the files using the chunk header target.

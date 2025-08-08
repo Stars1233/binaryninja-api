@@ -8,8 +8,11 @@ use binaryninja::workflow::Workflow;
 #[test]
 fn test_workflow_clone() {
     let _session = Session::new().expect("Failed to initialize session");
-    let original_workflow = Workflow::new("core.function.baseAnalysis");
-    let mut cloned_workflow = original_workflow.clone_to("clone_workflow");
+    let original_workflow = Workflow::get("core.function.metaAnalysis").unwrap();
+    let mut cloned_workflow = original_workflow
+        .clone_to("clone_workflow")
+        .register()
+        .unwrap();
 
     assert_eq!(cloned_workflow.name().as_str(), "clone_workflow");
     assert_eq!(
@@ -17,36 +20,30 @@ fn test_workflow_clone() {
         original_workflow.configuration()
     );
 
-    cloned_workflow = original_workflow.clone_to("");
+    // `clone_to` with an empty name should re-use the original workflow's name.
+    cloned_workflow = original_workflow.clone_to("").register().unwrap();
     assert_eq!(
         cloned_workflow.name().as_str(),
-        "core.function.baseAnalysis"
+        original_workflow.name().as_str()
     );
 }
 
 #[test]
 fn test_workflow_registration() {
     let _session = Session::new().expect("Failed to initialize session");
-    // Validate NULL workflows cannot be registered
-    let workflow = Workflow::new("null");
-    assert_eq!(workflow.name().as_str(), "null");
-    assert!(!workflow.registered());
-    workflow
-        .register()
-        .expect_err("Re-registration of null is allowed");
 
     // Validate new workflows can be registered
-    let test_workflow = Workflow::instance("core.function.baseAnalysis").clone_to("test_workflow");
+    let test_workflow = Workflow::get("core.function.baseAnalysis")
+        .unwrap()
+        .clone_to("test_workflow");
 
-    assert_eq!(test_workflow.name().as_str(), "test_workflow");
-    assert!(!test_workflow.registered());
-    test_workflow
+    let test_workflow = test_workflow
         .register()
         .expect("Failed to register workflow");
     assert!(test_workflow.registered());
     assert_eq!(
         test_workflow.size(),
-        Workflow::instance("core.function.baseAnalysis").size()
+        Workflow::get("core.function.baseAnalysis").unwrap().size()
     );
     Workflow::list()
         .iter()
@@ -57,32 +54,12 @@ fn test_workflow_registration() {
         .iter()
         .find(|&w| w == "test_workflow")
         .expect("Workflow not found in settings");
-
-    // Validate that registered workflows are immutable
-    let immutable_workflow = Workflow::instance("test_workflow");
-    assert!(!immutable_workflow.clear());
-    assert!(immutable_workflow.contains("core.function.advancedAnalysis"));
-    assert!(!immutable_workflow.remove("core.function.advancedAnalysis"));
-    assert!(!Workflow::instance("core.function.baseAnalysis").clear());
+    assert!(Workflow::get("test_workflow").is_some());
 
     // Validate re-registration of baseAnalysis is not allowed
-    let base_workflow_clone = Workflow::instance("core.function.baseAnalysis").clone_to("");
-
-    assert_eq!(
-        base_workflow_clone.name().as_str(),
-        "core.function.baseAnalysis"
-    );
-    assert!(!base_workflow_clone.registered());
+    let base_workflow_clone = Workflow::cloned("core.function.baseAnalysis").unwrap();
     base_workflow_clone
         .register()
+        .map(|_| ())
         .expect_err("Re-registration of baseAnalysis is allowed");
-    assert_eq!(
-        base_workflow_clone.size(),
-        Workflow::instance("core.function.baseAnalysis").size()
-    );
-    assert_eq!(
-        base_workflow_clone.configuration(),
-        Workflow::instance("core.function.baseAnalysis").configuration()
-    );
-    assert!(!base_workflow_clone.registered());
 }

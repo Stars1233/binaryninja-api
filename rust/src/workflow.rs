@@ -148,7 +148,6 @@ unsafe impl RefCountable for AnalysisContext {
     }
 }
 
-// TODO: We need to hide the JSON here behind a sensible/typed API.
 #[repr(transparent)]
 pub struct Workflow {
     handle: NonNull<BNWorkflow>,
@@ -164,19 +163,22 @@ impl Workflow {
     }
 
     /// Create a new unregistered [Workflow] with no activities.
+    /// Returns a [WorkflowBuilder] that can be used to configure and register the new [Workflow].
     ///
     /// To get a copy of an existing registered [Workflow] use [Workflow::clone_to].
-    pub fn new(name: &str) -> Ref<Self> {
+    pub fn build(name: &str) -> WorkflowBuilder {
         let name = name.to_cstr();
         let result = unsafe { BNCreateWorkflow(name.as_ptr()) };
-        unsafe { Workflow::ref_from_raw(NonNull::new(result).unwrap()) }
+        WorkflowBuilder {
+            handle: unsafe { Workflow::ref_from_raw(NonNull::new(result).unwrap()) },
+        }
     }
 
     /// Make a new unregistered [Workflow], copying all activities and the execution strategy.
+    /// Returns a [WorkflowBuilder] that can be used to configure and register the new [Workflow].
     ///
     /// * `name` - the name for the new [Workflow]
-    #[must_use]
-    pub fn clone_to(&self, name: &str) -> Ref<Workflow> {
+    pub fn clone_to(&self, name: &str) -> WorkflowBuilder {
         self.clone_to_with_root(name, "")
     }
 
@@ -184,11 +186,10 @@ impl Workflow {
     ///
     /// * `name` - the name for the new [Workflow]
     /// * `root_activity` - perform the clone operation with this activity as the root
-    #[must_use]
-    pub fn clone_to_with_root(&self, name: &str, root_activity: &str) -> Ref<Workflow> {
+    pub fn clone_to_with_root(&self, name: &str, root_activity: &str) -> WorkflowBuilder {
         let raw_name = name.to_cstr();
         let activity = root_activity.to_cstr();
-        unsafe {
+        let workflow = unsafe {
             Self::ref_from_raw(
                 NonNull::new(BNWorkflowClone(
                     self.handle.as_ptr(),
@@ -197,13 +198,23 @@ impl Workflow {
                 ))
                 .unwrap(),
             )
-        }
+        };
+        WorkflowBuilder { handle: workflow }
     }
 
-    pub fn instance(name: &str) -> Ref<Workflow> {
+    /// Get an existing [Workflow] by name.
+    pub fn get(name: &str) -> Option<Ref<Workflow>> {
+        // TODO: BNWorkflowInstance has get-or-create semantics. There is currently no way to just get.
         let name = name.to_cstr();
         let result = unsafe { BNWorkflowInstance(name.as_ptr()) };
-        unsafe { Workflow::ref_from_raw(NonNull::new(result).unwrap()) }
+        let handle = NonNull::new(result)?;
+        Some(unsafe { Workflow::ref_from_raw(handle) })
+    }
+
+    /// Clone the existing [Workflow] named `name`.
+    /// Returns a [WorkflowBuilder] that can be used to configure and register the new [Workflow].
+    pub fn cloned(name: &str) -> Option<WorkflowBuilder> {
+        Self::get(name).map(|workflow| workflow.clone_to(name))
     }
 
     /// List of all registered [Workflow]'s
@@ -218,58 +229,6 @@ impl Workflow {
         let result = unsafe { BNGetWorkflowName(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { BnString::into_string(result) }
-    }
-
-    /// Register this [Workflow], making it immutable and available for use.
-    pub fn register(&self) -> Result<(), ()> {
-        self.register_with_config("")
-    }
-
-    /// Register this [Workflow], making it immutable and available for use.
-    ///
-    /// * `configuration` - a JSON representation of the workflow configuration
-    pub fn register_with_config(&self, config: &str) -> Result<(), ()> {
-        let config = config.to_cstr();
-        if unsafe { BNRegisterWorkflow(self.handle.as_ptr(), config.as_ptr()) } {
-            Ok(())
-        } else {
-            Err(())
-        }
-    }
-
-    /// Register an [Activity] with this Workflow.
-    ///
-    /// * `activity` - the [Activity] to register
-    pub fn register_activity(&self, activity: &Activity) -> Result<Ref<Activity>, ()> {
-        self.register_activity_with_subactivities::<Vec<String>>(activity, vec![])
-    }
-
-    /// Register an [Activity] with this Workflow.
-    ///
-    /// * `activity` - the [Activity] to register
-    /// * `subactivities` - the list of Activities to assign
-    pub fn register_activity_with_subactivities<I>(
-        &self,
-        activity: &Activity,
-        subactivities: I,
-    ) -> Result<Ref<Activity>, ()>
-    where
-        I: IntoIterator,
-        I::Item: IntoCStr,
-    {
-        let subactivities_raw: Vec<_> = subactivities.into_iter().map(|x| x.to_cstr()).collect();
-        let mut subactivities_ptr: Vec<*const _> =
-            subactivities_raw.iter().map(|x| x.as_ptr()).collect();
-        let result = unsafe {
-            BNWorkflowRegisterActivity(
-                self.handle.as_ptr(),
-                activity.handle.as_ptr(),
-                subactivities_ptr.as_mut_ptr(),
-                subactivities_ptr.len(),
-            )
-        };
-        let activity_ptr = NonNull::new(result).ok_or(())?;
-        unsafe { Ok(Activity::ref_from_raw(activity_ptr)) }
     }
 
     /// Determine if an Activity exists in this [Workflow].
@@ -343,99 +302,6 @@ impl Workflow {
         unsafe { Array::new(result as *mut *mut c_char, count, ()) }
     }
 
-    /// Assign the list of `activities` as the new set of children for the specified `activity`.
-    ///
-    /// * `activity` - the Activity node to assign children
-    /// * `activities` - the list of Activities to assign
-    pub fn assign_subactivities<I>(&self, activity: &str, activities: I) -> bool
-    where
-        I: IntoIterator,
-        I::Item: IntoCStr,
-    {
-        let activity = activity.to_cstr();
-        let input_list: Vec<_> = activities.into_iter().map(|a| a.to_cstr()).collect();
-        let mut input_list_ptr: Vec<*const _> = input_list.iter().map(|x| x.as_ptr()).collect();
-        unsafe {
-            BNWorkflowAssignSubactivities(
-                self.handle.as_ptr(),
-                activity.as_ptr(),
-                input_list_ptr.as_mut_ptr(),
-                input_list.len(),
-            )
-        }
-    }
-
-    /// Remove all Activity nodes from this [Workflow].
-    pub fn clear(&self) -> bool {
-        unsafe { BNWorkflowClear(self.handle.as_ptr()) }
-    }
-
-    /// Insert the list of `activities` before the specified `activity` and at the same level.
-    ///
-    /// * `activity` - the Activity node for which to insert `activities` before
-    /// * `activities` - the list of Activities to insert
-    pub fn insert<I>(&self, activity: &str, activities: I) -> bool
-    where
-        I: IntoIterator,
-        I::Item: IntoCStr,
-    {
-        let activity = activity.to_cstr();
-        let input_list: Vec<_> = activities.into_iter().map(|a| a.to_cstr()).collect();
-        let mut input_list_ptr: Vec<*const _> = input_list.iter().map(|x| x.as_ptr()).collect();
-        unsafe {
-            BNWorkflowInsert(
-                self.handle.as_ptr(),
-                activity.as_ptr(),
-                input_list_ptr.as_mut_ptr(),
-                input_list.len(),
-            )
-        }
-    }
-
-    /// Insert the list of `activities` after the specified `activity` and at the same level.
-    ///
-    /// * `activity` - the Activity node for which to insert `activities` after
-    /// * `activities` - the list of Activities to insert
-    pub fn insert_after<I>(&self, activity: &str, activities: I) -> bool
-    where
-        I: IntoIterator,
-        I::Item: IntoCStr,
-    {
-        let activity = activity.to_cstr();
-        let input_list: Vec<_> = activities.into_iter().map(|a| a.to_cstr()).collect();
-        let mut input_list_ptr: Vec<*const _> = input_list.iter().map(|x| x.as_ptr()).collect();
-        unsafe {
-            BNWorkflowInsertAfter(
-                self.handle.as_ptr(),
-                activity.as_ptr(),
-                input_list_ptr.as_mut_ptr(),
-                input_list.len(),
-            )
-        }
-    }
-
-    /// Remove the specified `activity`
-    pub fn remove(&self, activity: &str) -> bool {
-        let activity = activity.to_cstr();
-        unsafe { BNWorkflowRemove(self.handle.as_ptr(), activity.as_ptr()) }
-    }
-
-    /// Replace the specified `activity`.
-    ///
-    /// * `activity` - the Activity to replace
-    /// * `new_activity` - the replacement Activity
-    pub fn replace(&self, activity: &str, new_activity: &str) -> bool {
-        let activity = activity.to_cstr();
-        let new_activity = new_activity.to_cstr();
-        unsafe {
-            BNWorkflowReplace(
-                self.handle.as_ptr(),
-                activity.as_ptr(),
-                new_activity.as_ptr(),
-            )
-        }
-    }
-
     /// Generate a FlowGraph object for the current [Workflow] and optionally show it in the UI.
     ///
     /// * `activity` - if specified, generate the Flowgraph using `activity` as the root
@@ -504,5 +370,209 @@ unsafe impl CoreArrayProviderInner for Workflow {
             Workflow::from_raw(NonNull::new(*raw).expect("valid handle")),
             context,
         )
+    }
+}
+
+#[must_use = "Workflow is not registered until `register` is called"]
+pub struct WorkflowBuilder {
+    handle: Ref<Workflow>,
+}
+
+impl WorkflowBuilder {
+    fn raw_handle(&self) -> *mut BNWorkflow {
+        self.handle.handle.as_ptr()
+    }
+
+    /// Register an [Activity] with this Workflow and insert it before the designated position.
+    ///
+    /// * `activity` - the [Activity] to register
+    /// * `sibling` - the activity to insert the new activity before
+    pub fn activity_before(self, activity: &Activity, sibling: &str) -> Result<Self, ()> {
+        self.register_activity(activity)?
+            .insert(sibling, vec![activity.name()])
+    }
+
+    /// Register an [Activity] with this Workflow and insert it in the designated position.
+    ///
+    /// * `activity` - the [Activity] to register
+    /// * `sibling` - the activity to insert the new activity after
+    pub fn activity_after(self, activity: &Activity, sibling: &str) -> Result<Self, ()> {
+        self.register_activity(activity)?
+            .insert_after(sibling, vec![activity.name()])
+    }
+
+    /// Register an [Activity] with this Workflow.
+    ///
+    /// * `activity` - the [Activity] to register
+    pub fn register_activity(self, activity: &Activity) -> Result<Self, ()> {
+        self.register_activity_with_subactivities::<Vec<String>>(activity, vec![])
+    }
+
+    /// Register an [Activity] with this Workflow.
+    ///
+    /// * `activity` - the [Activity] to register
+    /// * `subactivities` - the list of Activities to assign
+    pub fn register_activity_with_subactivities<I>(
+        self,
+        activity: &Activity,
+        subactivities: I,
+    ) -> Result<Self, ()>
+    where
+        I: IntoIterator,
+        I::Item: IntoCStr,
+    {
+        let subactivities_raw: Vec<_> = subactivities.into_iter().map(|x| x.to_cstr()).collect();
+        let mut subactivities_ptr: Vec<*const _> =
+            subactivities_raw.iter().map(|x| x.as_ptr()).collect();
+        let result = unsafe {
+            BNWorkflowRegisterActivity(
+                self.raw_handle(),
+                activity.handle.as_ptr(),
+                subactivities_ptr.as_mut_ptr(),
+                subactivities_ptr.len(),
+            )
+        };
+        let Some(activity_ptr) = NonNull::new(result) else {
+            return Err(());
+        };
+        let _ = unsafe { Activity::ref_from_raw(activity_ptr) };
+        Ok(self)
+    }
+
+    /// Register this [Workflow], making it immutable and available for use.
+    pub fn register(self) -> Result<Ref<Workflow>, ()> {
+        self.register_with_config("")
+    }
+
+    /// Register this [Workflow], making it immutable and available for use.
+    ///
+    /// * `configuration` - a JSON representation of the workflow configuration
+    pub fn register_with_config(self, config: &str) -> Result<Ref<Workflow>, ()> {
+        // TODO: We need to hide the JSON here behind a sensible/typed API.
+        let config = config.to_cstr();
+        if unsafe { BNRegisterWorkflow(self.raw_handle(), config.as_ptr()) } {
+            Ok(self.handle)
+        } else {
+            Err(())
+        }
+    }
+
+    /// Assign the list of `activities` as the new set of children for the specified `activity`.
+    ///
+    /// * `activity` - the Activity node to assign children
+    /// * `activities` - the list of Activities to assign
+    pub fn subactivities<I>(self, activity: &str, activities: I) -> Result<Self, ()>
+    where
+        I: IntoIterator,
+        I::Item: IntoCStr,
+    {
+        let activity = activity.to_cstr();
+        let input_list: Vec<_> = activities.into_iter().map(|a| a.to_cstr()).collect();
+        let mut input_list_ptr: Vec<*const _> = input_list.iter().map(|x| x.as_ptr()).collect();
+        let result = unsafe {
+            BNWorkflowAssignSubactivities(
+                self.raw_handle(),
+                activity.as_ptr(),
+                input_list_ptr.as_mut_ptr(),
+                input_list.len(),
+            )
+        };
+        if result {
+            Ok(self)
+        } else {
+            Err(())
+        }
+    }
+
+    /// Remove all Activity nodes from this [Workflow].
+    pub fn clear(self) -> Result<Self, ()> {
+        let result = unsafe { BNWorkflowClear(self.raw_handle()) };
+        if result {
+            Ok(self)
+        } else {
+            Err(())
+        }
+    }
+
+    /// Insert the list of `activities` before the specified `activity` and at the same level.
+    ///
+    /// * `activity` - the Activity node for which to insert `activities` before
+    /// * `activities` - the list of Activities to insert
+    pub fn insert<I>(self, activity: &str, activities: I) -> Result<Self, ()>
+    where
+        I: IntoIterator,
+        I::Item: IntoCStr,
+    {
+        let activity = activity.to_cstr();
+        let input_list: Vec<_> = activities.into_iter().map(|a| a.to_cstr()).collect();
+        let mut input_list_ptr: Vec<*const _> = input_list.iter().map(|x| x.as_ptr()).collect();
+        let result = unsafe {
+            BNWorkflowInsert(
+                self.raw_handle(),
+                activity.as_ptr(),
+                input_list_ptr.as_mut_ptr(),
+                input_list.len(),
+            )
+        };
+        if result {
+            Ok(self)
+        } else {
+            Err(())
+        }
+    }
+
+    /// Insert the list of `activities` after the specified `activity` and at the same level.
+    ///
+    /// * `activity` - the Activity node for which to insert `activities` after
+    /// * `activities` - the list of Activities to insert
+    pub fn insert_after<I>(self, activity: &str, activities: I) -> Result<Self, ()>
+    where
+        I: IntoIterator,
+        I::Item: IntoCStr,
+    {
+        let activity = activity.to_cstr();
+        let input_list: Vec<_> = activities.into_iter().map(|a| a.to_cstr()).collect();
+        let mut input_list_ptr: Vec<*const _> = input_list.iter().map(|x| x.as_ptr()).collect();
+        let result = unsafe {
+            BNWorkflowInsertAfter(
+                self.raw_handle(),
+                activity.as_ptr(),
+                input_list_ptr.as_mut_ptr(),
+                input_list.len(),
+            )
+        };
+        if result {
+            Ok(self)
+        } else {
+            Err(())
+        }
+    }
+
+    /// Remove the specified `activity`
+    pub fn remove(self, activity: &str) -> Result<Self, ()> {
+        let activity = activity.to_cstr();
+        let result = unsafe { BNWorkflowRemove(self.raw_handle(), activity.as_ptr()) };
+        if result {
+            Ok(self)
+        } else {
+            Err(())
+        }
+    }
+
+    /// Replace the specified `activity`.
+    ///
+    /// * `activity` - the Activity to replace
+    /// * `new_activity` - the replacement Activity
+    pub fn replace(self, activity: &str, new_activity: &str) -> Result<Self, ()> {
+        let activity = activity.to_cstr();
+        let new_activity = new_activity.to_cstr();
+        let result = unsafe {
+            BNWorkflowReplace(self.raw_handle(), activity.as_ptr(), new_activity.as_ptr())
+        };
+        if result {
+            Ok(self)
+        } else {
+            Err(())
+        }
     }
 }

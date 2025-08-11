@@ -3473,6 +3473,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "workflow_objc"
+version = "0.1.0"
+dependencies = [
+ "binaryninja",
+ "binaryninjacore-sys",
+ "dashmap",
+ "log",
+ "once_cell",
+ "thiserror 2.0.12",
+]
+
+[[package]]
 name = "writeable"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -5,15 +5,23 @@ additional support for analyzing Objective-C binaries.
 
 The primary functionality offered by this plugin is:
 
-- **Function Call Cleanup.** When using the Objective-C workflow, calls to
-  `objc_msgSend` can be replaced with direct calls to the relevant function's
-  implementation.
+1. Automatic inlining of the `objc_msgSend$foo:bar:` selector stub functions.
+2. Automatic call type adjustments for calls to `objc_msgSend` and `objc_msgSendSuper2`.
+   Call types are adjusted at each call site to set the number of arguments that are expected
+   based on the selector. Argument names are derived from the selector components, and argument
+   types are inferred in limited cases.
+3. Direct call rewriting.  Calls to `objc_msgSend` can be rewritten to be direct calls to
+   the first known method implementation for that selector. This is disabled by default
+   as it will give potentially confusing results for any selector that has more than one
+   implementation or for common selector names. That said, some users may still find it to
+   be useful. It can be enabled via the `analysis.objectiveC.resolveDynamicDispatch`
+   setting.
   
 For more details and usage instructions, see the [user guide](https://dev-docs.binary.ninja/guide/objectivec.html).
 
 ## Issues
 
-Issues for this repository have been disabled. Please file an issue for this repository at https://github.com/Vector35/binaryninja-api/issues. All previously existing issues for this repository have been transferred there as well.
+Please file issues at https://github.com/Vector35/binaryninja-api/issues.
 
 ## Building
 
@@ -21,17 +29,18 @@ This plugin can be built and installed separately from Binary Ninja via the
 following commands:
 
 ```sh
-git clone https://github.com/Vector35/workflow_objc.git && cd workflow_objc
+git clone https://github.com/Vector35/binaryninja-api.git && cd binaryninja-api
 git submodule update --init --recursive
-cmake -S . -B build -GNinja
+cmake -S plugins/workflow_objc -B build -G Ninja
 cmake --build build -t install
 ```
 
 ## Credits
 
-This plugin is a continuation of [Objective Ninja](https://github.com/jonpalmisc/ObjectiveNinja), originally made
-by [@jonpalmisc](https://twitter.com/jonpalmisc). The full terms of the
-Objective Ninja license are as follows:
+This plugin is a continuation of [Objective Ninja](https://github.com/jonpalmisc/ObjectiveNinja),
+originally made by [@jonpalmisc](https://twitter.com/jonpalmisc).
+
+The full terms of the original Objective Ninja license are as follows:
 
 ```
 Copyright (c) 2022-2023 Jon Palmisciano

@@ -1845,6 +1845,17 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 	BinaryReader virtualReader(this);
 	virtualReader.SetEndianness(m_endian);
 
+	if (m_file->IsBackedByDatabase(GetTypeName()))
+	{
+		// The `core.function.objectiveC` workflow has been removed in favor of the meta-analysis
+		// workflow. If the file is backed by a database, we need to update any references to the
+		// old workflow to refer to the meta-analysis workflow.
+		Ref<Settings> analysisSettings = Settings::Instance();
+		auto workflow = analysisSettings->Get<string>("analysis.workflows.functionWorkflow", this);
+		if (workflow == "core.function.objectiveC")
+			analysisSettings->Set("analysis.workflows.functionWorkflow", "core.function.metaAnalysis", this);
+	}
+
 	bool parseObjCStructs = true;
 	bool parseCFStrings = true;
 	if (settings && settings->Contains("loader.macho.processObjectiveC"))
@@ -1860,20 +1871,6 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 	if (parseObjCStructs || parseCFStrings)
 	{
 		objcProcessor = std::make_unique<MachoObjCProcessor>(this);
-	}
-	if (parseObjCStructs)
-	{
-		if (!settings) // Add our defaults
-		{
-			Ref<Settings> programSettings = Settings::Instance();
-			if (programSettings->Contains("corePlugins.workflows.objc"))
-			{
-				if (programSettings->Get<bool>("corePlugins.workflows.objc"))
-				{
-					programSettings->Set("analysis.workflows.functionWorkflow", "core.function.objectiveC", this);
-				}
-			}
-		}
 	}
 
 	// parse thread starts section if available
@@ -4133,14 +4130,6 @@ Ref<Settings> MachoViewType::GetLoadSettingsForData(BinaryView* data)
 			"default" : true,
 			"description" : "Processes Objective-C structures, applying method names and types from encoded metadata"
 			})");
-		Ref<Settings> programSettings = Settings::Instance();
-		if (programSettings->Contains("corePlugins.workflows.objc"))
-		{
-			if (programSettings->Get<bool>("corePlugins.workflows.objc"))
-			{
-				programSettings->Set("analysis.workflows.functionWorkflow", "core.function.objectiveC", viewRef);
-			}
-		}
 	}
 	if (viewRef->GetSectionByName("__cfstring"))
 	{

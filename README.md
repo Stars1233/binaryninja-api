@@ -124,18 +124,18 @@ This repository contains all of our Binary View Type plugins available here:
 
 ## Other Plugins
 
-* [SVD Loader](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/svd/)
+* [Objective-C](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/workflow_objc/)
 * [RTTI Analysis](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/rtti/)
-* [WARP Integration](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/warp/)
 * [Stack Render Layer](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/stack_render_layer/)
+* [SVD Loader](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/svd/)
 * [Triage View](https://github.com/Vector35/binaryninja-api/tree/dev/examples/triage/)
+* [WARP Integration](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/warp/)
 
 ## Related Repositories
 
-In addition to this main API repository being open source Vector35 also has open sourced the Debugger and the Objective-C plugins open source as well:
+In addition to this main API repository being open source Vector35 also has open sourced the Debugger plugin as well:
 
 * [Debugger](https://github.com/Vector35/debugger)
-* [workflow_objc](https://github.com/Vector35/workflow_objc)
 
 ## Licensing
 

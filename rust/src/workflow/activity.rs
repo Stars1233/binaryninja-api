@@ -287,6 +287,19 @@ pub struct Eligibility {
 }
 
 impl Eligibility {
+    /// Creates a new instance without an automatically generated boolean control setting.
+    /// The activity is eligible to run by default.
+    pub fn without_setting() -> Self {
+        Eligibility {
+            auto: None,
+            run_once: None,
+            run_once_per_session: None,
+            continuation: None,
+            predicates: vec![],
+            logical_operator: None,
+        }
+    }
+
     /// Creates a new instance with an automatically generated boolean control setting and corresponding predicate.
     /// The setting is enabled by default.
     pub fn auto() -> Self {

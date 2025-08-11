@@ -15,8 +15,6 @@
 #include "thread"
 #include <shared_mutex>
 
-#include "ObjCActivity.h"
-
 using namespace BinaryNinja;
 using namespace SharedCacheAPI;
 
@@ -373,7 +371,6 @@ void SharedCacheWorkflow::Register()
 	Ref<Workflow> workflow = Workflow::Get("core.function.metaAnalysis")->Clone("core.function.metaAnalysis");
 
 	// Register and insert activities here.
-	ObjCActivity::Register(*workflow);
 	workflow->RegisterActivity(new Activity(R"({
 	  "name": "core.analysis.sharedCache.analysis",
 	  "eligibility": {

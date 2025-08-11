@@ -1048,6 +1048,7 @@ impl LowLevelILMutableFunction {
     no_arg_lifter!(bp, LLIL_BP, VoidExpr);
 
     unsized_unary_op_lifter!(call, LLIL_CALL, VoidExpr);
+    unsized_unary_op_lifter!(tailcall, LLIL_TAILCALL, VoidExpr);
     unsized_unary_op_lifter!(ret, LLIL_RET, VoidExpr);
     unsized_unary_op_lifter!(jump, LLIL_JUMP, VoidExpr);
     // TODO: LLIL_JUMP_TO

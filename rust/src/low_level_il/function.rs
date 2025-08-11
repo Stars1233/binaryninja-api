@@ -249,7 +249,7 @@ impl Ref<LowLevelILFunction<Mutable, NonSSA>> {
     }
 }
 
-impl<M: FunctionMutability> Ref<LowLevelILFunction<M, SSA>> {
+impl<M: FunctionMutability> LowLevelILFunction<M, SSA> {
     /// Return a vector of all instructions that use the given SSA register.
     #[must_use]
     pub fn get_ssa_register_uses<R: ArchReg>(

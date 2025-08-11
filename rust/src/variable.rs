@@ -654,7 +654,9 @@ pub enum PossibleValueSet {
         value: i64,
     },
     ReturnAddressValue,
-    ImportedAddressValue,
+    ImportedAddressValue {
+        value: i64,
+    },
     SignedRangeValue {
         value: i64,
         ranges: Vec<ValueRange<i64>>,
@@ -708,7 +710,9 @@ impl PossibleValueSet {
             },
             RegisterValueType::StackFrameOffset => Self::StackFrameOffset { value: value.value },
             RegisterValueType::ReturnAddressValue => Self::ReturnAddressValue,
-            RegisterValueType::ImportedAddressValue => Self::ImportedAddressValue,
+            RegisterValueType::ImportedAddressValue => {
+                Self::ImportedAddressValue { value: value.value }
+            }
             RegisterValueType::SignedRangeValue => {
                 let raw_ranges = unsafe { std::slice::from_raw_parts(value.ranges, value.count) };
                 Self::SignedRangeValue {
@@ -791,7 +795,9 @@ impl PossibleValueSet {
                 raw.value = value;
             }
             PossibleValueSet::ReturnAddressValue => {}
-            PossibleValueSet::ImportedAddressValue => {}
+            PossibleValueSet::ImportedAddressValue { value } => {
+                raw.value = value;
+            }
             PossibleValueSet::SignedRangeValue { value, ranges } => {
                 let boxed_raw_ranges: Box<[BNValueRange]> =
                     ranges.into_iter().map(BNValueRange::from).collect();
@@ -884,7 +890,9 @@ impl PossibleValueSet {
             }
             PossibleValueSet::StackFrameOffset { .. } => RegisterValueType::StackFrameOffset,
             PossibleValueSet::ReturnAddressValue => RegisterValueType::ReturnAddressValue,
-            PossibleValueSet::ImportedAddressValue => RegisterValueType::ImportedAddressValue,
+            PossibleValueSet::ImportedAddressValue { .. } => {
+                RegisterValueType::ImportedAddressValue
+            }
             PossibleValueSet::SignedRangeValue { .. } => RegisterValueType::SignedRangeValue,
             PossibleValueSet::UnsignedRangeValue { .. } => RegisterValueType::UnsignedRangeValue,
             PossibleValueSet::LookupTableValue { .. } => RegisterValueType::LookupTableValue,

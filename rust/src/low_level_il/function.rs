@@ -18,11 +18,12 @@ use std::marker::PhantomData;
 
 use binaryninjacore_sys::*;
 
-use crate::architecture::CoreArchitecture;
+use crate::architecture::{CoreArchitecture, CoreFlag};
 use crate::basic_block::BasicBlock;
 use crate::function::Function;
 use crate::low_level_il::block::LowLevelILBlock;
 use crate::rc::*;
+use crate::variable::RegisterValue;
 
 use super::*;
 
@@ -296,6 +297,37 @@ impl<M: FunctionMutability> Ref<LowLevelILFunction<M, SSA>> {
             )
         };
         self.instruction_from_index(LowLevelInstructionIndex(instr_idx))
+    }
+
+    /// Returns the value of the given SSA register.
+    #[must_use]
+    pub fn get_ssa_register_value<R: ArchReg>(
+        &self,
+        reg: &LowLevelILSSARegisterKind<R>,
+    ) -> Option<RegisterValue> {
+        let register_id = match reg {
+            LowLevelILSSARegisterKind::Full { kind, .. } => kind.id(),
+            LowLevelILSSARegisterKind::Partial { partial_reg, .. } => partial_reg.id(),
+        };
+        let value = unsafe {
+            BNGetLowLevelILSSARegisterValue(self.handle, register_id.into(), reg.version() as usize)
+        };
+        if value.state == BNRegisterValueType::UndeterminedValue {
+            return None;
+        }
+        Some(value.into())
+    }
+
+    /// Returns the value of the given SSA flag.
+    #[must_use]
+    pub fn get_ssa_flag_value(&self, flag: &LowLevelILSSAFlag<CoreFlag>) -> Option<RegisterValue> {
+        let value = unsafe {
+            BNGetLowLevelILSSAFlagValue(self.handle, flag.flag.id().0, flag.version as usize)
+        };
+        if value.state == BNRegisterValueType::UndeterminedValue {
+            return None;
+        }
+        Some(value.into())
     }
 }
 

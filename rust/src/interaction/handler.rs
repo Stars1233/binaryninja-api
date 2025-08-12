@@ -272,11 +272,9 @@ pub struct InteractionHandlerTask {
     ctxt: *mut c_void,
     task: Option<
         unsafe extern "C" fn(
-            taskCtxt: *mut c_void,
-            progress: Option<
-                unsafe extern "C" fn(progressCtxt: *mut c_void, cur: usize, max: usize) -> bool,
-            >,
-            progressCtxt: *mut c_void,
+            *mut c_void,
+            progress: Option<unsafe extern "C" fn(*mut c_void, cur: usize, max: usize) -> bool>,
+            *mut c_void,
         ),
     >,
 }

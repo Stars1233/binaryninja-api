@@ -60,7 +60,7 @@ Based on your IL of choice, there are a bunch of places you can insert your modi
 - An **IL Expression** is a single-operation expression, which may have child expressions or be the child of another expression.
     - The `*LevelILInstruction` class represents a single **IL Expression**. The class name may be confusing since **IL Instructions** are a different concept. 
 - An **Expression Index** points to an **IL Expression** and may be used as an operand of another **IL Expression**.
-- An **IL Instruction** is an **IL Expression** that has been added as a top-level instruction to the function with a call to `*LevelILFunction::AddInstruction` (Python: `*LevelILFunction.append()`)
+- An **IL Instruction** is an **IL Expression** that has been added as a top-level instruction to the function with a call to `*LevelILFunction.append()` (C++: `*LevelILFunction::AddInstruction`)
 - An **Instruction Index** is assigned to an **IL Expression** that is added as an **IL Instruction**. Child expressions of an **IL Instruction** do not inherently have an **Instruction Index**, though the API tries to provide this for you.
 
 ## Writing The Plugin
@@ -178,12 +178,12 @@ Replacing exactly one instruction with exactly one other instruction is relative
 
 1. Create the new expression in the function, and note its **Expression Index**
 2. Find the instruction you wish to remove, and get its **Expression Index** as well
-3. Use `*LevelILFunction::ReplaceExpr` (Python: `*LevelILFunction.replace_expr`), passing the **Expression Index** of the instruction to remove and the **Expression Index** of the replacement
+3. Use `*LevelILFunction.replace_expr` (C++: `*LevelILFunction::ReplaceExpr`), passing the **Expression Index** of the instruction to remove and the **Expression Index** of the replacement
 4. Now, the backing expression for the target instruction has been replaced by your new expression. There may be dangling expressions no longer referenced by any instructions; this is fine. They will simply be skipped during later stages of lifting.
-5. Call `*LevelILFunction::Finalize` (Python: `*LevelILFunction.finalize`) to BFS traverse the function's **IL Instructions** starting with instruction 0, reconstructing the **IL Basic Blocks** of the function
-6. Call `*LevelILFunction::GenerateSSAForm` (Python: `*LevelILFunction.generate_ssa_form`) to reconstruct the SSA Form of the function, updating dataflow calculations
+5. Call `*LevelILFunction.finalize` (C++: `*LevelILFunction::Finalize`) to BFS traverse the function's **IL Instructions** starting with instruction 0, reconstructing the **IL Basic Blocks** of the function
+6. Call `*LevelILFunction.generate_ssa_form` (C++: `*LevelILFunction::GenerateSSAForm`) to reconstruct the SSA Form of the function, updating dataflow calculations
 
-If you wish to replace more than one instruction, or replace an instruction with more than one new instructions, you will need to use the more complicated method described below.
+If you wish to replace more than one instruction, or replace an instruction with more than one new instruction, you will need to use the more complicated method described below.
 
 ### Adding Instructions and Replacing Multiple Instructions
 
@@ -356,8 +356,6 @@ For each instruction, determine if you want to insert new instructions before it
             }
             //  continues ...
     ```
-
-
 
 
 And finally, regenerate dataflow:

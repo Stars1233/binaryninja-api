@@ -104,6 +104,8 @@ public:
 	void updateVisibility();
 	void refreshMetrics();
 
+	void focusChanged(SidebarWidgetAndHeader* widget);
+
 Q_SIGNALS:
 	void containerVisibilityChanged();
 };

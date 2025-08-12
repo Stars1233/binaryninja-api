@@ -20,6 +20,8 @@ struct BINARYNINJAUIAPI SidebarMetrics
 	int iconTotalWidth, iconTotalHeight;
 	int dragIconPadding;
 	int dropIconPadding;
+	int focusRectPadding;
+	int focusRectRadius;
 };
 
 /*!
@@ -139,6 +141,8 @@ public:
 	QVariant saveActiveState();
 	void restoreState(const QSettings& settings, const QString& windowStateName, bool globalStateOnly = false);
 	bool restoreActiveState(const QVariant& state);
+
+	void focusChanged(SidebarWidgetAndHeader* widget);
 
 	static void addSidebarWidgetType(SidebarWidgetType* type);
 	static void moveSidebarWidgetType(SidebarWidgetType* type, SidebarWidgetLocation newLocation, size_t newIndex);

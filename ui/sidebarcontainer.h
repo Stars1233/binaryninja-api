@@ -94,6 +94,8 @@ class BINARYNINJAUIAPI SidebarWidgetContainer : public QWidget
 
 	std::map<SidebarWidgetType*, SidebarFloatingWidgetState> m_savedFloatingWidgetState;
 
+	SidebarWidgetType* m_focusedType = nullptr;
+
 	SidebarStackedWidget& stackedWidgetForType(SidebarWidgetType* type);
 	std::vector<SidebarWidgetAndHeader*> widgetsForContext() const;
 	std::vector<SidebarContentClassifier*> contentClassifiersForContext() const;
@@ -165,6 +167,9 @@ public:
 	bool isDocked(SidebarWidgetType* type);
 	bool isFloating(SidebarWidgetType* type);
 	bool isWindowed(SidebarWidgetType* type);
+
+	void focusChanged(SidebarWidgetAndHeader* widget);
+	SidebarWidgetType* focusedType() const { return m_focusedType; }
 
 Q_SIGNALS:
 	void showContents();

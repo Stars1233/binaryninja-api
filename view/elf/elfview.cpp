@@ -583,6 +583,7 @@ bool ElfView::Init()
 	vector<Elf64SectionHeader> relocSections, relocASections;
 	Elf64SectionHeader symbolTableSection;
 
+	BeginBulkAddSegments();
 	uint64_t segmentStart = 0;
 	for (size_t i = 1; i < m_elfSections.size(); i++)
 	{
@@ -700,6 +701,8 @@ bool ElfView::Init()
 				GetParentView()->AddAutoSection(sectionNames[i], m_elfSections[i].offset, m_elfSections[i].size, DefaultSectionSemantics, type, m_elfSections[i].align, m_elfSections[i].entrySize, linkedSection, infoSection, m_elfSections[i].info);
 		}
 	}
+
+	EndBulkAddSegments();
 	// Apply architecture and platform
 	if (!m_arch)
 	{

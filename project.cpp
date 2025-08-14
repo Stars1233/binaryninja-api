@@ -285,6 +285,15 @@ std::string Project::GetPath() const
 	return result;
 }
 
+std::string Project::GetFilePathInProject(const Ref<ProjectFile>& file) const
+{
+	char* path = BNProjectGetFilePathInProject(m_object, file->m_object);
+	std::string result = path;
+	BNFreeString(path);
+	return result;
+}
+
+
 
 std::string Project::GetName() const
 {

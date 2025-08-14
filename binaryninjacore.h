@@ -4039,6 +4039,7 @@ extern "C"
 	BINARYNINJACOREAPI char* BNProjectGetId(BNProject* project);
 	BINARYNINJACOREAPI bool BNProjectIsOpen(BNProject* project);
 	BINARYNINJACOREAPI char* BNProjectGetPath(BNProject* project);
+	BINARYNINJACOREAPI char* BNProjectGetFilePathInProject(BNProject* project, BNProjectFile* file);
 	BINARYNINJACOREAPI char* BNProjectGetName(BNProject* project);
 	BINARYNINJACOREAPI void BNProjectSetName(BNProject* project, const char* name);
 	BINARYNINJACOREAPI char* BNProjectGetDescription(BNProject* project);

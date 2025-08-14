@@ -3694,6 +3694,7 @@ namespace BinaryNinja {
 		std::string GetId() const;
 		bool IsOpen() const;
 		std::string GetPath() const;
+		std::string GetFilePathInProject(const Ref<ProjectFile>& file) const;
 		std::string GetName() const;
 		void SetName(const std::string& name);
 		std::string GetDescription() const;

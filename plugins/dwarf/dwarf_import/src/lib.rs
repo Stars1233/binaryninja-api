@@ -377,39 +377,40 @@ where
 {
     let mut bases = gimli::BaseAddresses::default();
 
-    let view_start = view.start();
+    // DWARF info is stored relative to the original image base (0 for relocatable images), normalize entries to the original image base
+    let section_adjustment = view.original_image_base().wrapping_sub(view.image_base());
 
     if let Some(section) = view
         .section_by_name(".eh_frame_hdr")
         .or(view.section_by_name("__eh_frame_hdr"))
     {
-        bases = bases.set_eh_frame_hdr(section.start() - view_start);
+        bases = bases.set_eh_frame_hdr(section.start().wrapping_add(section_adjustment));
     }
 
     if let Some(section) = view
         .section_by_name(".eh_frame")
         .or(view.section_by_name("__eh_frame"))
     {
-        bases = bases.set_eh_frame(section.start() - view_start);
+        bases = bases.set_eh_frame(section.start().wrapping_add(section_adjustment));
     } else if let Some(section) = view
         .section_by_name(".debug_frame")
         .or(view.section_by_name("__debug_frame"))
     {
-        bases = bases.set_eh_frame(section.start() - view_start);
+        bases = bases.set_eh_frame(section.start().wrapping_add(section_adjustment));
     }
 
     if let Some(section) = view
         .section_by_name(".text")
         .or(view.section_by_name("__text"))
     {
-        bases = bases.set_text(section.start() - view_start);
+        bases = bases.set_text(section.start().wrapping_add(section_adjustment));
     }
 
     if let Some(section) = view
         .section_by_name(".got")
         .or(view.section_by_name("__got"))
     {
-        bases = bases.set_got(section.start() - view_start);
+        bases = bases.set_got(section.start().wrapping_add(section_adjustment));
     }
 
     let mut cies = HashMap::new();

@@ -42,7 +42,6 @@ pub(crate) type TypeUID = usize;
 /////////////////////////
 // FunctionInfoBuilder
 
-// TODO : Function local variables
 #[derive(PartialEq, Eq, Hash)]
 pub(crate) struct FunctionInfoBuilder {
     pub(crate) full_name: Option<String>,

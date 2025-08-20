@@ -1010,16 +1010,22 @@ static void LoadStoreOperandSize(LowLevelILFunction& il, bool load, bool sign_ex
 	{
 		// LLIL_TEMP registers will be reported to have size 0, so override with size
 		size_t extendSize = REGSZ_O(operand1) ? REGSZ_O(operand1) : size;
+
+		bool smallLoad = extendSize > size;
+
 		switch (operand2.operandClass)
 		{
 		case MEM_REG:
 			// operand1.reg = [operand2.reg]
 			tmp = il.Operand(1, il.Load(size, ILREG_O(operand2)));
 
-			if (sign_extend)
-				tmp = il.SignExtend(extendSize, tmp);
-			else
-				tmp = il.ZeroExtend(extendSize, tmp);
+			if (smallLoad)
+			{
+				if (sign_extend)
+					tmp = il.SignExtend(extendSize, tmp);
+				else
+					tmp = il.ZeroExtend(extendSize, tmp);
+			}
 
 			il.AddInstruction(ILSETREG_O(operand1, tmp));
 			break;
@@ -1032,10 +1038,13 @@ static void LoadStoreOperandSize(LowLevelILFunction& il, bool load, bool sign_ex
 
 			tmp = il.Operand(1, il.Load(size, tmp));
 
-			if (sign_extend)
-				tmp = il.SignExtend(extendSize, tmp);
-			else
-				tmp = il.ZeroExtend(extendSize, tmp);
+			if (smallLoad)
+			{
+				if (sign_extend)
+					tmp = il.SignExtend(extendSize, tmp);
+				else
+					tmp = il.ZeroExtend(extendSize, tmp);
+			}
 
 			il.AddInstruction(ILSETREG_O(operand1, tmp));
 			break;
@@ -1047,10 +1056,13 @@ static void LoadStoreOperandSize(LowLevelILFunction& il, bool load, bool sign_ex
 			// operand1.reg = [operand2.reg]
 			tmp = il.Operand(1, il.Load(size, ILREG_O(operand2)));
 
-			if (sign_extend)
-				tmp = il.SignExtend(extendSize, tmp);
-			else
-				tmp = il.ZeroExtend(extendSize, tmp);
+			if (smallLoad)
+			{
+				if (sign_extend)
+					tmp = il.SignExtend(extendSize, tmp);
+				else
+					tmp = il.ZeroExtend(extendSize, tmp);
+			}
 
 			il.AddInstruction(ILSETREG_O(operand1, tmp));
 			break;
@@ -1058,10 +1070,13 @@ static void LoadStoreOperandSize(LowLevelILFunction& il, bool load, bool sign_ex
 			// operand1.reg = [operand2.reg]
 			tmp = il.Operand(1, il.Load(size, ILREG_O(operand2)));
 
-			if (sign_extend)
-				tmp = il.SignExtend(extendSize, tmp);
-			else
-				tmp = il.ZeroExtend(extendSize, tmp);
+			if (smallLoad)
+			{
+				if (sign_extend)
+					tmp = il.SignExtend(extendSize, tmp);
+				else
+					tmp = il.ZeroExtend(extendSize, tmp);
+			}
 
 			il.AddInstruction(ILSETREG_O(operand1, tmp));
 			// operand2.reg += operand2.imm
@@ -1074,20 +1089,26 @@ static void LoadStoreOperandSize(LowLevelILFunction& il, bool load, bool sign_ex
 			    il.Operand(1, il.Load(size, il.Add(REGSZ_O(operand2), ILREG_O(operand2),
 			                                    GetShiftedRegister(il, operand2, 1, REGSZ_O(operand2)))));
 
-			if (sign_extend)
-				tmp = il.SignExtend(extendSize, tmp);
-			else
-				tmp = il.ZeroExtend(extendSize, tmp);
+			if (smallLoad)
+			{
+				if (sign_extend)
+					tmp = il.SignExtend(extendSize, tmp);
+				else
+					tmp = il.ZeroExtend(extendSize, tmp);
+			}
 
 			il.AddInstruction(ILSETREG_O(operand1, tmp));
 			break;
 		case LABEL:
 			tmp = il.Operand(1, il.Load(size, il.ConstPointer(8, IMM_O(operand2))));
 
-			if (sign_extend)
-				tmp = il.SignExtend(extendSize, tmp);
-			else
-				tmp = il.ZeroExtend(extendSize, tmp);
+			if (smallLoad)
+			{
+				if (sign_extend)
+					tmp = il.SignExtend(extendSize, tmp);
+				else
+					tmp = il.ZeroExtend(extendSize, tmp);
+			}
 
 			il.AddInstruction(ILSETREG_O(operand1, tmp));
 			break;
@@ -2057,8 +2078,8 @@ bool GetLowLevelILForInstruction(
 		switch (instr.encoding)
 		{
 		case ENC_FMOV_64VX_FLOAT2INT:
-			il.AddInstruction(ILSETREG_O(operand1,
-			    il.ZeroExtend(REGSZ_O(operand1), ILREG(vector_reg_minimize(instr.operands[1])))));
+			il.AddInstruction(ILSETREG_O(operand1, ILREG(vector_reg_minimize(instr.operands[1]))));
+				
 			break;
 		case ENC_FMOV_V64I_FLOAT2INT:
 		{
@@ -2071,10 +2092,19 @@ bool GetLowLevelILForInstruction(
 		case ENC_FMOV_32S_FLOAT2INT:
 		case ENC_FMOV_64H_FLOAT2INT:
 		case ENC_FMOV_64D_FLOAT2INT:
+		{
+			bool extend = REGSZ_O(operand1) > REGSZ_O(instr.operands[1]);
+			ExprId tmp;
+
 			// <Rd> <- <Vn> (copy from FP register to general register, with no conversion)
-			il.AddInstruction(
-			    ILSETREG_O(operand1, il.ZeroExtend(REGSZ_O(operand1), ILREG_O(instr.operands[1]))));
+			if (extend)
+				tmp = ILSETREG_O(operand1, il.ZeroExtend(REGSZ_O(operand1), ILREG_O(instr.operands[1])));
+			else
+				tmp = ILSETREG_O(operand1, ILREG_O(instr.operands[1]));
+
+			il.AddInstruction(tmp);
 			break;
+		}
 		case ENC_FMOV_D64_FLOAT2INT:
 		case ENC_FMOV_H32_FLOAT2INT:
 		case ENC_FMOV_H64_FLOAT2INT:
@@ -4018,11 +4048,11 @@ bool GetLowLevelILForInstruction(
 	}
 	case ARM64_UBFIZ:
 		il.AddInstruction(
-		    ILSETREG_O(operand1, il.ZeroExtend(REGSZ_O(operand1),
-		                             il.ShiftLeft(REGSZ_O(operand2),
-		                                 il.And(REGSZ_O(operand2), ILREG_O(operand2),
-		                                     il.Const(REGSZ_O(operand2), (1LL << IMM_O(operand4)) - 1)),
-		                                 il.Const(1, IMM_O(operand3))))));
+		    ILSETREG_O(operand1, il.ShiftLeft(REGSZ_O(operand2),
+                                                il.And(REGSZ_O(operand2),
+                                                    ILREG_O(operand2),
+                                                    il.Const(REGSZ_O(operand2), (1LL << IMM_O(operand4)) - 1)),
+                                                il.Const(1, IMM_O(operand3)))));
 		break;
 	case ARM64_UBFX:
 	{
@@ -4035,12 +4065,11 @@ bool GetLowLevelILForInstruction(
 		}
 		else
 		{
-			il.AddInstruction(ILSETREG_O(
-			    operand1, il.ZeroExtend(REGSZ_O(operand1),
-			                  il.And(REGSZ_O(operand2),
-			                      il.LogicalShiftRight(
-			                          REGSZ_O(operand2), ILREG_O(operand2), il.Const(1, IMM_O(operand3))),
-			                      il.Const(REGSZ_O(operand2), (1LL << IMM_O(operand4)) - 1)))));
+			il.AddInstruction(ILSETREG_O(operand1, il.And(REGSZ_O(operand2),
+                                                    il.LogicalShiftRight(REGSZ_O(operand2),
+                                                        ILREG_O(operand2),
+                                                        il.Const(1, IMM_O(operand3))),
+                                                    il.Const(REGSZ_O(operand2), (1LL << IMM_O(operand4)) - 1))));
 		}
 		break;
 	}

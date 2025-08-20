@@ -6689,7 +6689,8 @@ namespace BinaryNinja {
 
 		/*! Adds a symbol to the internal list of automatically discovered Symbol objects in a given namespace
 
-			\warning If multiple symbols for the same address are defined, only the most recent symbol will ever be used.
+			\warning If multiple symbols for the same address are defined, the most recently added symbol
+			with the highest confidence and lowest `BNSymbolType` value will be used.
 
 			\param sym Symbol to define
 		*/
@@ -6697,8 +6698,11 @@ namespace BinaryNinja {
 
 		/*! Defines an "Auto" symbol, and a Variable/Function alongside it
 
+			\warning If multiple symbols for the same address are defined, the most recently added symbol
+			with the highest confidence and lowest `BNSymbolType` value will be used.
+
 			\param platform Platform for the Type being defined
-			\param sym Symbol being definedd
+			\param sym Symbol being defined
 			\param type Type being defined
 			\return The defined symbol
 		*/
@@ -6711,6 +6715,9 @@ namespace BinaryNinja {
 		void UndefineAutoSymbol(Ref<Symbol> sym);
 
 		/*! Define a user symbol
+
+			\warning If multiple symbols for the same address are defined, the most recently added symbol
+			with the highest confidence and lowest `BNSymbolType` value will be used.
 
 			\param sym Symbol to define
 		*/

@@ -340,6 +340,14 @@ std::vector<QualifiedNameOrType> ObjCProcessor::ParseEncodedType(const std::stri
 			qualifiedName = "objc_class_t";
 			break;
 		case '?':
+			if (last == '@')
+			{
+				// A pointer to a Clang block is encoded as `@?`. For now we continue to represent this
+				// as `id` as we cannot represent block types.
+				last = c;
+				continue;
+			}
+			[[fallthrough]];
 		case 'T':
 			nameOrType.type = Type::PointerType(8, Type::VoidType());
 			break;

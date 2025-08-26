@@ -661,6 +661,48 @@ int64_t ProjectFile::GetCreationTimestamp() const
 }
 
 
+bool ProjectFile::AddDependency(Ref<ProjectFile> file)
+{
+	return BNProjectFileAddDependency(m_object, file->m_object);
+}
+
+
+bool ProjectFile::RemoveDependency(Ref<ProjectFile> file)
+{
+	return BNProjectFileRemoveDependency(m_object, file->m_object);
+}
+
+
+std::vector<Ref<ProjectFile>> ProjectFile::GetDependencies() const
+{
+	size_t count = 0;
+	BNProjectFile** deps = BNProjectFileGetDependencies(m_object, &count);
+	std::vector<Ref<ProjectFile>> out;
+	out.reserve(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		out.push_back(new ProjectFile(BNNewProjectFileReference(deps[i])));
+	}
+	BNFreeProjectFileList(deps, count);
+	return out;
+}
+
+
+std::vector<Ref<ProjectFile>> ProjectFile::GetRequiredBy() const
+{
+	size_t count = 0;
+	BNProjectFile** reqBy = BNProjectFileGetRequiredBy(m_object, &count);
+	std::vector<Ref<ProjectFile>> out;
+	out.reserve(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		out.push_back(new ProjectFile(BNNewProjectFileReference(reqBy[i])));
+	}
+	BNFreeProjectFileList(reqBy, count);
+	return out;
+}
+
+
 ProjectFolder::ProjectFolder(BNProjectFolder* folder)
 {
 	m_object = folder;

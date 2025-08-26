@@ -4215,6 +4215,10 @@ extern "C"
 	BINARYNINJACOREAPI BNProject* BNProjectFileGetProject(BNProjectFile* file);
 	BINARYNINJACOREAPI bool BNProjectFileExport(BNProjectFile* file, const char* destination);
 	BINARYNINJACOREAPI int64_t BNProjectFileGetCreationTimestamp(BNProjectFile* file);
+	BINARYNINJACOREAPI bool BNProjectFileAddDependency(BNProjectFile* file, BNProjectFile* dep);
+	BINARYNINJACOREAPI bool BNProjectFileRemoveDependency(BNProjectFile* file, BNProjectFile* dep);
+	BINARYNINJACOREAPI BNProjectFile** BNProjectFileGetDependencies(BNProjectFile* file, size_t* count);
+	BINARYNINJACOREAPI BNProjectFile** BNProjectFileGetRequiredBy(BNProjectFile* file, size_t* count);
 
 
 	// ProjectFolder object

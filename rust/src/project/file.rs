@@ -1,12 +1,8 @@
 use crate::project::{systime_from_bntime, Project, ProjectFolder};
-use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
+use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::{BnString, IntoCStr};
 use binaryninjacore_sys::{
-    BNFreeProjectFile, BNFreeProjectFileList, BNNewProjectFileReference, BNProjectFile,
-    BNProjectFileExistsOnDisk, BNProjectFileExport, BNProjectFileGetCreationTimestamp,
-    BNProjectFileGetDescription, BNProjectFileGetFolder, BNProjectFileGetId, BNProjectFileGetName,
-    BNProjectFileGetPathInProject, BNProjectFileGetPathOnDisk, BNProjectFileGetProject,
-    BNProjectFileSetDescription, BNProjectFileSetFolder, BNProjectFileSetName,
+    BNFreeProjectFile, BNFreeProjectFileList, BNNewProjectFileReference, BNProjectFile, BNProjectFileAddDependency, BNProjectFileExistsOnDisk, BNProjectFileExport, BNProjectFileGetCreationTimestamp, BNProjectFileGetDependencies, BNProjectFileGetDescription, BNProjectFileGetFolder, BNProjectFileGetId, BNProjectFileGetName, BNProjectFileGetPathInProject, BNProjectFileGetPathOnDisk, BNProjectFileGetProject, BNProjectFileGetRequiredBy, BNProjectFileRemoveDependency, BNProjectFileSetDescription, BNProjectFileSetFolder, BNProjectFileSetName
 };
 use std::fmt::Debug;
 use std::path::{Path, PathBuf};
@@ -109,6 +105,30 @@ impl ProjectFile {
     pub fn export(&self, dest: &Path) -> bool {
         let dest_raw = dest.to_cstr();
         unsafe { BNProjectFileExport(self.handle.as_ptr(), dest_raw.as_ptr()) }
+    }
+
+    /// Add a ProjectFile as a dependency of this file
+    pub fn add_dependency(&self, file: Ref<ProjectFile>) -> bool {
+        unsafe { BNProjectFileAddDependency(self.handle.as_ptr(), file.handle.as_ptr()) }
+    }
+
+    /// Remove a ProjectFile as a dependency of this file
+    pub fn remove_dependency(&self, file: Ref<ProjectFile>) -> bool {
+        unsafe { BNProjectFileRemoveDependency(self.handle.as_ptr(), file.handle.as_ptr()) }
+    }
+
+    /// Get the ProjectFiles that this file depends on
+    pub fn get_dependencies(&self) -> Array<ProjectFile> {
+        let mut count = 0;
+        let result = unsafe { BNProjectFileGetDependencies(self.handle.as_ptr(), &mut count) };
+        unsafe { Array::new(result, count, ()) }
+    }
+
+    /// Get the ProjectFiles that depend on this file
+    pub fn get_required_by(&self) -> Array<ProjectFile> {
+        let mut count = 0;
+        let result = unsafe { BNProjectFileGetRequiredBy(self.handle.as_ptr(), &mut count) };
+        unsafe { Array::new(result, count, ()) }
     }
 }
 

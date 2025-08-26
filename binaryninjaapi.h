@@ -3633,6 +3633,10 @@ namespace BinaryNinja {
 		bool SetFolder(Ref<ProjectFolder> folder);
 		bool Export(const std::string& destination) const;
 		int64_t GetCreationTimestamp() const;
+		bool AddDependency(Ref<ProjectFile> file);
+		bool RemoveDependency(Ref<ProjectFile> file);
+		std::vector<Ref<ProjectFile>> GetDependencies() const;
+		std::vector<Ref<ProjectFile>> GetRequiredBy() const;
 	};
 
 

@@ -202,9 +202,67 @@ class ProjectFile:
 		"""
 		Get this file's path in its parent project
 
-		:return: The path on disk of the file or None
+		:return: The path in the project or None
 		"""
 		return core.BNProjectFileGetPathInProject(self._handle)
+
+	def add_dependency(self, file: 'ProjectFile') -> bool:
+		"""
+		Add a ProjectFile as a dependency of this file
+
+		:return: True on success, False otherwise
+		"""
+		return core.BNProjectFileAddDependency(self._handle, file._handle)
+
+	def remove_dependency(self, file: 'ProjectFile') -> bool:
+		"""
+		Remove a ProjectFile as a dependency of this file
+
+		:return: True on success, False otherwise
+		"""
+		return core.BNProjectFileRemoveDependency(self._handle, file._handle)
+
+	def get_dependencies(self) -> List['ProjectFile']:
+		"""
+		Get the list of files that this file depends on
+
+		:return: List of ProjectFiles that this file depends on
+		"""
+		count = ctypes.c_size_t()
+		value = core.BNProjectFileGetDependencies(self._handle, count)
+		if value is None:
+			raise ProjectException("Failed to get list of project file dependencies")
+		result = []
+		try:
+			for i in range(count.value):
+				file_handle = core.BNNewProjectFileReference(value[i])
+				if file_handle is None:
+					raise ProjectException("core.BNNewProjectFileReference returned None")
+				result.append(ProjectFile(file_handle))
+			return result
+		finally:
+			core.BNFreeProjectFileList(value, count.value)
+
+	def get_required_by(self) -> List['ProjectFile']:
+		"""
+		Get the list of files that depend on this file
+
+		:return: List of ProjectFiles that depend on this file
+		"""
+		count = ctypes.c_size_t()
+		value = core.BNProjectFileGetRequiredBy(self._handle, count)
+		if value is None:
+			raise ProjectException("Failed to get list of project files that depend on file")
+		result = []
+		try:
+			for i in range(count.value):
+				file_handle = core.BNNewProjectFileReference(value[i])
+				if file_handle is None:
+					raise ProjectException("core.BNNewProjectFileReference returned None")
+				result.append(ProjectFile(file_handle))
+			return result
+		finally:
+			core.BNFreeProjectFileList(value, count.value)
 
 
 class ProjectFolder:

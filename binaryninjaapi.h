@@ -12435,12 +12435,53 @@ namespace BinaryNinja {
 		std::vector<ArchAndAddr> GetUnresolvedIndirectBranches();
 		bool HasUnresolvedIndirectBranches();
 
+		/*! \brief Apply an automatic type adjustment to the call at `addr` in `arch`.
+
+			The adjustment will take effect if the new confidence level is higher than the confidence
+			level of any existing adjustment at the given address, whether automatic or user-defined.
+
+			\param arch Architecture for the call instruction
+			\param addr Address of the call instruction
+			\param adjust Type adjustment to apply
+		*/
 		void SetAutoCallTypeAdjustment(Architecture* arch, uint64_t addr, const Confidence<Ref<Type>>& adjust);
+
+		/*! \brief Apply an automatic stack adjustment to the call at `addr` in `arch`.
+
+			The adjustment will take effect if the new confidence level is higher than the confidence
+			level of any existing adjustment at the given address, whether automatic or user-defined.
+
+			\param arch Architecture for the call instruction
+			\param addr Address of the call instruction
+			\param adjust Stack adjustment to apply
+		*/
 		void SetAutoCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<int64_t>& adjust);
+
+		/*! \brief Apply automatic register stack adjustments to the call at `addr` in `arch`.
+
+			\note This overwrites any existing register stack adjustments at the given address,
+			irrespective of their confidence level.
+
+			\param arch Architecture for the call instruction
+			\param addr Address of the call instruction
+			\param adjust Map of register stack adjustments to apply
+		*/
 		void SetAutoCallRegisterStackAdjustment(
 		    Architecture* arch, uint64_t addr, const std::map<uint32_t, Confidence<int32_t>>& adjust);
+
+		/*! \brief Apply an automatic register stack adjustment for a specific register stack to the call at `addr` in `arch`.
+
+			The adjustment will take effect if the new confidence level is higher than the confidence
+			level of any existing adjustment at the given address, whether automatic or user-defined.
+
+			\param arch Architecture for the call instruction
+			\param addr Address of the call instruction
+			\param regStack Register stack identifier
+			\param adjust Register stack adjustment to apply
+		*/
 		void SetAutoCallRegisterStackAdjustment(
 		    Architecture* arch, uint64_t addr, uint32_t regStack, const Confidence<int32_t>& adjust);
+
 		void SetUserCallTypeAdjustment(Architecture* arch, uint64_t addr, const Confidence<Ref<Type>>& adjust);
 		void SetUserCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<int64_t>& adjust);
 		void SetUserCallRegisterStackAdjustment(
@@ -12641,6 +12682,15 @@ namespace BinaryNinja {
 		bool GetInstructionContainingAddress(Architecture* arch, uint64_t addr, uint64_t* start);
 
 		Confidence<bool> IsInlinedDuringAnalysis();
+		/*! Set whether the function should be inlined during analysis.
+
+		This will take effect if the new confidence level is higher than the confidence
+		level of the existing value of `IsInlinedDuringAnalysis`, whether automatic or
+		user-defined.
+
+		\param inlined Whether the function should be inlined.
+
+		*/
 		void SetAutoInlinedDuringAnalysis(Confidence<bool> inlined);
 		void SetUserInlinedDuringAnalysis(Confidence<bool> inlined);
 

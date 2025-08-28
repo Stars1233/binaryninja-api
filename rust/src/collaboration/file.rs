@@ -394,50 +394,60 @@ impl RemoteFile {
         unsafe { BnString::into_string(result) }
     }
 
-    // TODO: AsRef<Path>
-    /// Download a file from its remote, saving all snapshots to a database in the
-    /// specified location. Returns a FileContext for opening the file later.
+    /// Download a remote file and possibly dependencies to its project
+    /// Dependency download behavior depends on the value of the collaboration.autoDownloadFileDependencies setting
     ///
-    /// * `db_path` - File path for saved database
-    /// * `progress_function` - Function to call for progress updates
-    pub fn download(&self, db_path: &Path) -> Result<Ref<FileMetadata>, ()> {
-        sync::download_file(self, db_path)
+    /// * `progress` - Function to call on progress updates
+    pub fn download(&self) -> Result<(), ()> {
+        self.download_with_progress(NoProgressCallback)
     }
 
-    // TODO: AsRef<Path>
-    /// Download a file from its remote, saving all snapshots to a database in the
-    /// specified location. Returns a FileContext for opening the file later.
+    /// Download a remote file and possibly dependencies to its project
+    /// Dependency download behavior depends on the value of the collaboration.autoDownloadFileDependencies setting
     ///
-    /// * `db_path` - File path for saved database
-    /// * `progress_function` - Function to call for progress updates
-    pub fn download_with_progress<F>(
-        &self,
-        db_path: &Path,
-        progress_function: F,
-    ) -> Result<Ref<FileMetadata>, ()>
+    /// * `progress` - Function to call on progress updates
+    pub fn download_with_progress<P>(&self, mut progress: P) -> Result<(), ()>
     where
-        F: ProgressCallback,
+        P: ProgressCallback,
     {
-        sync::download_file_with_progress(self, db_path, progress_function)
+        let success = unsafe {
+            BNRemoteFileDownload(
+                self.handle.as_ptr(),
+                Some(P::cb_progress_callback),
+                &mut progress as *mut P as *mut c_void,
+            )
+        };
+        success.then_some(()).ok_or(())
     }
 
     /// Download a remote file and save it to a BNDB at the given `path`, returning the associated [`FileMetadata`].
-    pub fn download_database(&self, path: &Path) -> Result<Ref<FileMetadata>, ()> {
-        let file = self.download(path)?;
-        let database = file.database().ok_or(())?;
-        self.sync(&database, DatabaseConflictHandlerFail, NoNameChangeset)?;
-        Ok(file)
+    /// Download a file from its remote, saving all snapshots to a database in the
+    /// specified location. Returns a FileContext for opening the file later.
+    ///
+    /// * `path` - File path for saved database
+    pub fn download_database(&self, path: impl AsRef<Path>) -> Result<Ref<FileMetadata>, ()> {
+        //TODO: deprecated, use RemoteFile.download() and ProjectFile.export()
+        self.download_database_with_progress(path, NoProgressCallback)
     }
 
-    // TODO: This might be a bad helper... maybe remove...
-    /// Download a remote file and save it to a BNDB at the given `path`.
+    /// Download a remote file and save it to a BNDB at the given `path`, returning the associated [`FileMetadata`].
+    /// Download a file from its remote, saving all snapshots to a database in the
+    /// specified location. Returns a FileContext for opening the file later.
+    ///
+    /// * `path` - File path for saved database
+    /// * `progress_function` - Function to call for progress updates
     pub fn download_database_with_progress(
         &self,
-        path: &Path,
+        path: impl AsRef<Path>,
         progress: impl ProgressCallback,
     ) -> Result<Ref<FileMetadata>, ()> {
+        //TODO: deprecated, use RemoteFile.download_with_progress() and ProjectFile.export()
         let mut progress = progress.split(&[50, 50]);
-        let file = self.download_with_progress(path, progress.next_subpart().unwrap())?;
+        let file = sync::download_file_with_progress(
+            self,
+            path.as_ref(),
+            progress.next_subpart().unwrap(),
+        )?;
         let database = file.database().ok_or(())?;
         self.sync_with_progress(
             &database,

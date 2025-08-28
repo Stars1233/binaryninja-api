@@ -22250,12 +22250,20 @@ namespace BinaryNinja::Collaboration
 		void DeleteSnapshot(const Ref<CollabSnapshot> snapshot);
 
 		/*!
+		    Download a remote file and possibly dependencies to its project
+			Dependency download behavior depends on the value of the collaboration.autoDownloadFileDependencies setting
+		    \param progress Function to call on progress updates
+		    \throws RemoteException If there is an error in any request or if the remote is not connected
+		 */
+		void Download(ProgressFunction progress = DefaultProgressFunction);
+
+		/*!
 		    Download the contents of a remote file
 		    \param progress Function to call on progress updates
 		    \return Contents of the file
 		    \throws RemoteException If there is an error in any request or if the remote is not connected
 		 */
-		std::vector<uint8_t> Download(ProgressFunction progress = {});
+		std::vector<uint8_t> DownloadContents(ProgressFunction progress = {});
 
 		/*!
 		    Get the current user positions for this file

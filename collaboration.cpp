@@ -1853,14 +1853,23 @@ void RemoteFile::DeleteSnapshot(const Ref<CollabSnapshot> snapshot)
 }
 
 
-std::vector<uint8_t> RemoteFile::Download(ProgressFunction progress)
+void RemoteFile::Download(ProgressFunction progress)
+{
+	ProgressContext pctxt;
+	pctxt.callback = progress;
+	if (!BNRemoteFileDownload(m_object, ProgressCallback, &pctxt))
+		throw RemoteException("Failed to download file");
+}
+
+
+std::vector<uint8_t> RemoteFile::DownloadContents(ProgressFunction progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
 	size_t size = 0;
 	uint8_t* data;
-	if (!BNRemoteFileDownload(m_object, ProgressCallback, &pctxt, &data, &size))
-		throw SyncException("Failed to download file");
+	if (!BNRemoteFileDownloadContents(m_object, ProgressCallback, &pctxt, &data, &size))
+		throw SyncException("Failed to download file contents");
 
 	std::vector<uint8_t> out;
 	out.insert(out.end(), &data[0], &data[size]);

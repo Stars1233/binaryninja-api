@@ -234,12 +234,18 @@ Both the graph background and individual graph nodes are actually painted as a g
 
 #### Side Bar
 
-1. `sidebarBackgroundColor`
-2. `sidebarInactiveIconColor`
-3. `sidebarActiveIconColor`
-4. `sidebarHeaderBackgroundColor`
-5. `sidebarHeaderTextColor`
-6. `sidebarWidgetBackgroundColor`
+1. `sidebarBackgroundColor` - Used to color the background of the sidebar itself
+2. `sidebarInactiveIconColor` - Used to color the icon of a sidebar that is not active
+3. `sidebarHoverIconColor` - Used to color the icon of a sidebar the mouse is currently hovering over
+4. `sidebarActiveIconColor` - Used to color the icon of a sidebar that is active
+5. `sidebarFocusedIconColor` - Used to color the icon of a sidebar that has the keyboard focus
+6. `sidebarHoverBackgroundColor` - Used to color a rounded rectangle behind the icon of a sidebar the mouse is currently hovering over
+7. `sidebarActiveBackgroundColor` - Used to color a rounded rectangle behind the icon of a sidebar that is active
+8. `sidebarFocusedBackgroundColor` - Used to color a rounded rectangle behind the icon of a sidebar that has the keyboard focus
+9. `sidebarActiveIndicatorLineColor` - Used to show a vertical line next to a sidebar that is currently active
+10. `sidebarHeaderBackgroundColor` - Used to color the background of the sidebar header
+11. `sidebarHeaderTextColor` - Used to color the text in the sidebar header
+12. `sidebarWidgetBackgroundColor` - Used to color the background of each sidebar widget
 
 #### Mini-Graph
 
@@ -264,6 +270,7 @@ The image above shows an active pane on the left and an inactive pane on the rig
 
 1. `activePaneBackgroundColor` - Used to color the background of a pane that is active
 2. `inactivePaneBackgroundColor` - Used to color the background of a pane that is inactive
+3. `focusedPaneBackgroundColor` - Used to color the background of a pane that has the keyboard focus, not shown in picture above
 
 #### Status Bar
 

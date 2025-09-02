@@ -45,6 +45,7 @@ if(BN_INTERNAL_BUILD)
     set_target_properties(kernelcacheui PROPERTIES
             LIBRARY_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR}
             RUNTIME_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR})
+    ui_plugin_rpath(kernelcacheui)
 else()
     set_target_properties(kernelcacheui PROPERTIES
             LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/plugins
@@ -93,5 +94,4 @@ target_include_directories(kernelcacheui PRIVATE ${INCLUDES})
 
 target_link_libraries(kernelcacheui kernelcacheapi kernelcache binaryninjaui Qt6::Core Qt6::Gui Qt6::Widgets)
 
-ui_plugin_rpath(kernelcacheui)
 

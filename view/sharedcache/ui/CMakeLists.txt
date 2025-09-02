@@ -45,6 +45,7 @@ if(BN_INTERNAL_BUILD)
     set_target_properties(sharedcacheui PROPERTIES
             LIBRARY_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR}
             RUNTIME_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR})
+    ui_plugin_rpath(sharedcacheui)
 else()
     set_target_properties(sharedcacheui PROPERTIES
             LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/plugins
@@ -94,5 +95,4 @@ target_include_directories(sharedcacheui PRIVATE ${INCLUDES})
 
 target_link_libraries(sharedcacheui sharedcacheapi sharedcache binaryninjaui Qt6::Core Qt6::Gui Qt6::Widgets)
 
-ui_plugin_rpath(sharedcacheui)
 

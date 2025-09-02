@@ -48,6 +48,7 @@ if(BN_INTERNAL_BUILD)
     set_target_properties(sharedcache PROPERTIES
             LIBRARY_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR}
             RUNTIME_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR})
+    plugin_rpath(sharedcache)
 else()
     set_target_properties(sharedcache PROPERTIES
             LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/plugins
@@ -67,9 +68,6 @@ set_target_properties(sharedcache PROPERTIES
 target_include_directories(sharedcache PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/core ${CMAKE_CURRENT_SOURCE_DIR}/api ${CMAKE_CURRENT_SOURCE_DIR}/workflow)
 
 target_link_libraries(sharedcache PUBLIC sharedcacheapi binaryninjaapi sharedcachecore sharedcacheworkflow)
-
-plugin_rpath(sharedcache)
-
 
 set(COMPILE_DEFS "")
 

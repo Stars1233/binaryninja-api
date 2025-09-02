@@ -423,6 +423,13 @@ class BINARYNINJAUIAPI SplitPaneWidget : public QWidget
 
 	void bindActions();
 
+	// Returns the feature map for the current view. If none exists, a new feature map
+	// will be created, registered, and returned.
+	FeatureMap* featureMapForCurrentView();
+
+	// Update the visible feature map to match the current view.
+	void updateVisibleFeatureMap();
+
   public:
 	SplitPaneWidget(Pane* initial, FileContext* fileContext);
 	Pane* currentPane() const;
@@ -435,7 +442,6 @@ class BINARYNINJAUIAPI SplitPaneWidget : public QWidget
 	void enumerateViewPanes(const std::function<void(ViewPane*)>& func);
 	Pane* paneAt(const QPoint& pos);
 
-	void createFeatureMap();
 	void recreateFeatureMaps();
 	void refreshFeatureMap();
 	void resetFeatureMap(bool sizeOnly = false);

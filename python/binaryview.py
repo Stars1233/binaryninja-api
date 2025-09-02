@@ -11307,11 +11307,16 @@ class DataVariable(CoreDataVariable):
 
 	@symbol.setter
 	def symbol(self, value: Optional[Union[str, '_types.CoreSymbol']]) -> None:  # type: ignore
+		existing_symbol = self.symbol
 		if value is None or value == "":
-			if self.symbol is not None:
-				self.view.undefine_user_symbol(self.symbol)
+			if existing_symbol is not None:
+				self.view.undefine_user_symbol(existing_symbol)
 		elif isinstance(value, (str, _types.QualifiedName)):
-			symbol = _types.Symbol(SymbolType.DataSymbol, self.address, str(value))
+			if existing_symbol is not None:
+				symbol_type = existing_symbol.type
+			else:
+				symbol_type = SymbolType.DataSymbol
+			symbol = _types.Symbol(symbol_type, self.address, str(value))
 			self.view.define_user_symbol(symbol)
 		elif isinstance(value, _types.CoreSymbol):
 			self.view.define_user_symbol(value)

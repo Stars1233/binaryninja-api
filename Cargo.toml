@@ -27,6 +27,8 @@ members = [
     "plugins/workflow_objc/demo",
     "plugins/bntl_utils",
     "plugins/bntl_utils/cli",
+    "plugins/workflow_swift",
+    "plugins/workflow_swift/demo",
 ]
 
 [workspace.dependencies]

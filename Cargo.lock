@@ -3455,6 +3455,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "workflow_swift"
+version = "0.1.0"
+dependencies = [
+ "binaryninja",
+ "binaryninjacore-sys",
+ "thiserror 2.0.18",
+ "tracing",
+]
+
+[[package]]
+name = "workflow_swift-static"
+version = "0.1.0"
+dependencies = [
+ "binaryninja",
+ "binaryninjacore-sys",
+ "thiserror 2.0.18",
+ "tracing",
+]
+
+[[package]]
 name = "writeable"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"

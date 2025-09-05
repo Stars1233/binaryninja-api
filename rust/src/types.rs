@@ -101,6 +101,27 @@ impl TypeBuilder {
         self
     }
 
+    pub fn set_child_type<'a, T: Into<Conf<&'a Type>>>(&self, ty: T) -> &Self {
+        let mut type_with_confidence = Conf::<&Type>::into_raw(ty.into());
+        unsafe { BNTypeBuilderSetChildType(self.handle, &mut type_with_confidence) };
+        self
+    }
+
+    /// This is an alias for [`Self::set_child_type`].
+    pub fn set_target<'a, T: Into<Conf<&'a Type>>>(&self, ty: T) -> &Self {
+        self.set_child_type(ty)
+    }
+
+    /// This is an alias for [`Self::set_child_type`].
+    pub fn set_element_type<'a, T: Into<Conf<&'a Type>>>(&self, ty: T) -> &Self {
+        self.set_child_type(ty)
+    }
+
+    /// This is an alias for [`Self::set_child_type`].
+    pub fn set_return_value<'a, T: Into<Conf<&'a Type>>>(&self, ty: T) -> &Self {
+        self.set_child_type(ty)
+    }
+
     // Readable properties
 
     pub fn type_class(&self) -> TypeClass {

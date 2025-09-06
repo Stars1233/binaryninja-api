@@ -124,7 +124,8 @@ bool KernelCacheController::ApplyImage(BinaryView& view, const CacheImage& image
 		loadedRegion = true;
 		for (const auto& segment : image.header->segments)
 		{
-			view.AddAutoSegment(segment.vmaddr, segment.vmsize, segment.fileoff, segment.filesize, segment.flags);
+			auto flags = SegmentFlagsFromMachOProtections(segment.initprot, segment.maxprot);
+			view.AddAutoSegment(segment.vmaddr, segment.vmsize, segment.fileoff, segment.filesize, flags);
 
 			auto relocations = m_cache.GetRelocations();
 

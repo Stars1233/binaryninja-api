@@ -211,11 +211,7 @@ Full Class List
 				modulefile.write(f"     - {summary}\n")
 
 
-		modulefile.write(f'''\n\n.. automodule:: {module.__name__}
-   :members:
-   :undoc-members:
-   :show-inheritance:
-   :noindex:\n\n''')
+		modulefile.write(f'''\n\n''')
    
 		# Generate individual class sections with proper headers
 		for (classname, classref) in classes:

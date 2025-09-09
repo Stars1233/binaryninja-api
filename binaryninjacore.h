@@ -311,6 +311,7 @@ extern "C"
 	typedef struct BNStringRef BNStringRef;
 	typedef struct BNIndirectBranchInfo BNIndirectBranchInfo;
 	typedef struct BNArchitectureAndAddress BNArchitectureAndAddress;
+	typedef struct BNConstantRenderer BNConstantRenderer;
 
 	typedef struct BNRemoteFileSearchMatch
 	{
@@ -3813,6 +3814,17 @@ extern "C"
 		char* name;
 		char* value;
 	} BNTypeAttribute;
+
+	typedef struct BNCustomConstantRenderer
+	{
+		void* context;
+		bool (*isValidForType)(void* ctxt, BNHighLevelILFunction* hlil, BNType* type);
+		bool (*renderConstant)(void* ctxt, BNHighLevelILFunction* hlil, size_t expr, BNType* type, int64_t val,
+			BNHighLevelILTokenEmitter* tokens, BNDisassemblySettings* settings, BNOperatorPrecedence precedence);
+		bool (*renderConstantPointer)(void* ctxt, BNHighLevelILFunction* hlil, size_t expr, BNType* type, int64_t val,
+			BNHighLevelILTokenEmitter* tokens, BNDisassemblySettings* settings, BNSymbolDisplayType symbolDisplay,
+			BNOperatorPrecedence precedence);
+	} BNCustomConstantRenderer;
 
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI char* BNAllocStringWithLength(const char* contents, size_t len);
@@ -8689,6 +8701,22 @@ extern "C"
 	BINARYNINJACOREAPI BNStringRef* BNDuplicateStringRef(BNStringRef* ref);
 	BINARYNINJACOREAPI const char* BNGetStringRefContents(BNStringRef* ref);
 	BINARYNINJACOREAPI size_t BNGetStringRefSize(BNStringRef* ref);
+
+	// Constant Renderers
+	BINARYNINJACOREAPI BNConstantRenderer* BNRegisterConstantRenderer(
+		const char* name, BNCustomConstantRenderer* renderer);
+	BINARYNINJACOREAPI BNConstantRenderer* BNGetConstantRendererByName(const char* name);
+	BINARYNINJACOREAPI BNConstantRenderer** BNGetConstantRendererList(size_t* count);
+	BINARYNINJACOREAPI void BNFreeConstantRendererList(BNLanguageRepresentationFunctionType** renderers);
+	BINARYNINJACOREAPI char* BNGetConstantRendererName(BNConstantRenderer* renderer);
+	BINARYNINJACOREAPI bool BNIsConstantRendererValidForType(
+		BNConstantRenderer* renderer, BNHighLevelILFunction* il, BNType* type);
+	BINARYNINJACOREAPI bool BNConstantRendererRenderConstant(BNConstantRenderer* renderer, BNHighLevelILFunction* il,
+		size_t exprIndex, BNType* type, int64_t val, BNHighLevelILTokenEmitter* tokens, BNDisassemblySettings* settings,
+		BNOperatorPrecedence precedence);
+	BINARYNINJACOREAPI bool BNConstantRendererRenderConstantPointer(BNConstantRenderer* renderer,
+		BNHighLevelILFunction* il, size_t exprIndex, BNType* type, int64_t val, BNHighLevelILTokenEmitter* tokens,
+		BNDisassemblySettings* settings, BNSymbolDisplayType symbolDisplay, BNOperatorPrecedence precedence);
 
 #ifdef __cplusplus
 }

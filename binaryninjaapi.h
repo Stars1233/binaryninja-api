@@ -4811,6 +4811,7 @@ namespace BinaryNinja {
 	public:
 		StringRef();
 		explicit StringRef(BNStringRef* ref);
+		StringRef(const std::string& str);
 		StringRef(const StringRef& other);
 		StringRef(StringRef&& other);
 		~StringRef();
@@ -21276,6 +21277,54 @@ namespace BinaryNinja {
 			Ref<LinearViewObject> next,
 			std::vector<LinearDisassemblyLine>& lines
 		) override;
+	};
+
+	class ConstantRenderer : public StaticCoreRefCountObject<BNConstantRenderer>
+	{
+		std::string m_nameForRegister;
+
+	public:
+		ConstantRenderer(const std::string& name);
+		ConstantRenderer(BNConstantRenderer* renderer);
+
+		std::string GetName() const;
+
+		virtual bool IsValidForType(HighLevelILFunction* func, Type* type);
+		virtual bool RenderConstant(const HighLevelILInstruction& instr, Type* type, int64_t val,
+			HighLevelILTokenEmitter& tokens, DisassemblySettings* settings, BNOperatorPrecedence precedence);
+		virtual bool RenderConstantPointer(const HighLevelILInstruction& instr, Type* type, int64_t val,
+			HighLevelILTokenEmitter& tokens, DisassemblySettings* settings, BNSymbolDisplayType symbolDisplay,
+			BNOperatorPrecedence precedence);
+
+		/*! Registers the constant renderer.
+
+		    \param renderer The constant renderer to register.
+		*/
+		static void Register(ConstantRenderer* renderer);
+
+		static Ref<ConstantRenderer> GetByName(const std::string& name);
+		static std::vector<Ref<ConstantRenderer>> GetRenderers();
+
+	private:
+		static bool IsValidForTypeCallback(void* ctxt, BNHighLevelILFunction* hlil, BNType* type);
+		static bool RenderConstantCallback(void* ctxt, BNHighLevelILFunction* hlil, size_t expr, BNType* type,
+			int64_t val, BNHighLevelILTokenEmitter* tokens, BNDisassemblySettings* settings,
+			BNOperatorPrecedence precedence);
+		static bool RenderConstantPointerCallback(void* ctxt, BNHighLevelILFunction* hlil, size_t expr, BNType* type,
+			int64_t val, BNHighLevelILTokenEmitter* tokens, BNDisassemblySettings* settings,
+			BNSymbolDisplayType symbolDisplay, BNOperatorPrecedence precedence);
+	};
+
+	class CoreConstantRenderer : public ConstantRenderer
+	{
+	public:
+		CoreConstantRenderer(BNConstantRenderer* renderer);
+		bool IsValidForType(HighLevelILFunction* func, Type* type) override;
+		bool RenderConstant(const HighLevelILInstruction& instr, Type* type, int64_t val,
+			HighLevelILTokenEmitter& tokens, DisassemblySettings* settings, BNOperatorPrecedence precedence) override;
+		bool RenderConstantPointer(const HighLevelILInstruction& instr, Type* type, int64_t val,
+			HighLevelILTokenEmitter& tokens, DisassemblySettings* settings, BNSymbolDisplayType symbolDisplay,
+			BNOperatorPrecedence precedence) override;
 	};
 }  // namespace BinaryNinja
 

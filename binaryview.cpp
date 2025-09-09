@@ -662,6 +662,12 @@ StringRef::StringRef(BNStringRef* ref)
 }
 
 
+StringRef::StringRef(const std::string& str)
+{
+	m_ref = BNCreateStringRefOfLength(str.c_str(), str.size());
+}
+
+
 StringRef::StringRef(const StringRef& other)
 {
 	m_ref = BNDuplicateStringRef(other.m_ref);

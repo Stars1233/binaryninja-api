@@ -323,25 +323,15 @@ void RewriteAction(Ref<AnalysisContext> context, bool doIt)
 			newMLIL = new MediumLevelILFunction(oldMLIL->GetArchitecture(), oldMLIL->GetFunction(), context->GetLowLevelILFunction());
 			newMLIL->PrepareToCopyFunction(oldMLIL);
 
-			// Keep a running list of blocks and labels so we can line up the MLIL_GOTOs
-			std::map<size_t, MediumLevelILLabel> blockLabels;
-
 			for (auto& block: oldMLIL->GetBasicBlocks())
 			{
 				newMLIL->PrepareToCopyBlock(block);
-				newMLIL->SetCurrentAddress(block->GetArchitecture(), oldMLIL->GetInstruction(block->GetStart()).address);
-
-				// Update block label list for the MLIL_GOTOs
-				if (blockLabels.find(block->GetStart()) == blockLabels.end())
-				{
-					blockLabels[block->GetStart()] = MediumLevelILLabel{};
-				}
-				MediumLevelILLabel* label = &blockLabels[block->GetStart()];
-				newMLIL->MarkLabel(*label);
 
 				for (size_t instrIndex = block->GetStart(); instrIndex < block->GetEnd(); instrIndex++)
 				{
 					auto oldInstr = oldMLIL->GetInstruction(instrIndex);
+					newMLIL->SetCurrentAddress(block->GetArchitecture(), oldInstr.address);
+
 					// If we find a MLIL_JUMP_TO with a known constant dest, then rewrite it
 					// to a MLIL_GOTO with the known dest filled in
 					if (oldInstr.operation == MLIL_JUMP_TO)
@@ -354,11 +344,7 @@ void RewriteAction(Ref<AnalysisContext> context, bool doIt)
 								return target.first == destValue;
 							}) != targets.end()) {
 								auto oldTargetIndex = targets[destValue];
-								if (blockLabels.find(oldTargetIndex) == blockLabels.end())
-								{
-									blockLabels[oldTargetIndex] = MediumLevelILLabel{};
-								}
-								MediumLevelILLabel* targetLabel = &blockLabels[oldTargetIndex];
+								BNMediumLevelILLabel* targetLabel = newMLIL->GetLabelForSourceInstruction(oldTargetIndex);
 								newMLIL->AddInstruction(newMLIL->Goto(*targetLabel, oldInstr), oldInstr);
 								continue;
 							}
@@ -366,7 +352,6 @@ void RewriteAction(Ref<AnalysisContext> context, bool doIt)
 					}
 
 					// Otherwise, copy the instruction as-is
-					newMLIL->SetCurrentAddress(block->GetArchitecture(), oldInstr.address);
 					newMLIL->AddInstruction(oldInstr.CopyTo(newMLIL), oldInstr);
 				}
 			}

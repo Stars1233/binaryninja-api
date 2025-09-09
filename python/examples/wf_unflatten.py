@@ -201,23 +201,13 @@ def rewrite_action(context: AnalysisContext, do_it: bool):
         new_mlil = MediumLevelILFunction(old_mlil.arch, low_level_il=context.llil)
         new_mlil.prepare_to_copy_function(old_mlil)
 
-        # Keep a running list of blocks and labels so we can line up the MLIL_GOTOs
-        block_labels = {}
-
         for old_block in old_mlil.basic_blocks:
             new_mlil.prepare_to_copy_block(old_block)
-            new_mlil.set_current_address(old_mlil[InstructionIndex(old_block.start)].address, old_block.arch)
-
-            # Update block label list for the MLIL_GOTOs
-            if old_block.start in block_labels:
-                label = block_labels[old_block.start]
-            else:
-                label = MediumLevelILLabel()
-                block_labels[old_block.start] = label
-            new_mlil.mark_label(label)
 
             for instr_index in range(old_block.start, old_block.end):
                 old_instr: MediumLevelILInstruction = old_mlil[InstructionIndex(instr_index)]
+                new_mlil.set_current_address(old_instr.address, old_block.arch)
+
                 # If we find a MLIL_JUMP_TO with a known constant dest, then rewrite it
                 # to a MLIL_GOTO with the known dest filled in
                 if old_instr.operation == MediumLevelILOperation.MLIL_JUMP_TO:
@@ -225,16 +215,10 @@ def rewrite_action(context: AnalysisContext, do_it: bool):
                         dest_value = old_instr.dest.value.value
                         if dest_value in old_instr.targets:
                             old_target_index = old_instr.targets[dest_value]
-                            if old_target_index in block_labels:
-                                target_label = block_labels[old_target_index]
-                            else:
-                                target_label = MediumLevelILLabel()
-                                block_labels[old_target_index] = target_label
-                            new_mlil.append(new_mlil.goto(target_label, ILSourceLocation.from_instruction(old_instr)), ILSourceLocation.from_instruction(old_instr))
+                            new_mlil.append(new_mlil.goto(new_mlil.get_label_for_source_instruction(old_target_index), ILSourceLocation.from_instruction(old_instr)), ILSourceLocation.from_instruction(old_instr))
                             continue
 
                 # Otherwise, copy the instruction as-is
-                new_mlil.set_current_address(old_instr.address, old_block.arch)
                 new_mlil.append(old_instr.copy_to(new_mlil), ILSourceLocation.from_instruction(old_instr))
 
         new_mlil.finalize()

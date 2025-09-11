@@ -38,7 +38,7 @@ Therefore, without any alternative names, `libc.so.bntl` will not be loaded by B
 
 We recommend and use the following convention:
 
-Type libraries should be named for the filename from which they were generated with the phrase ".bntl" added. When the source library contains additional minor and release number, like `libfoo.so.1.2.3` Binary Ninja would not load the resulting type library `libfoo.so.1.2.3.bntl` for an ELF requesting soname `libfoo.so.1`. Therefore the alternative names list should include the most specific version numbers, incrementally stripped down to the soname, and finally a linkname for good measure.
+Type libraries should be named for the filename from which they were generated with the phrase ".bntl" added. When the source library contains additional minor and release number, like `libfoo.so.1.2.3` Binary Ninja would not load the resulting type library `libfoo.so.1.2.3.bntl` for an ELF requesting soname `libfoo.so.1`. Therefore, the alternative names list should include the most specific version numbers, incrementally stripped down to the soname, and finally a linkname for good measure.
 
 Example:
 
@@ -285,4 +285,4 @@ When a binary is loaded and its external symbols is processed, the symbol names 
 type library test.bntl found hit for _DoSuperComputation
 ```
 
-At this moment, there is no built in functionality to apply named objects to an existing Binary Ninja database.
+At this moment, there is no built-in functionality to apply named objects to an existing Binary Ninja database.

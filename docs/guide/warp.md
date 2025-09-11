@@ -11,8 +11,8 @@ The bundled plugin is open source and is located [here](https://github.com/Vecto
 
 ## How WARP Works
 
-WARP works by making a function GUID based off the byte contents of the function. Because WARP creates this GUID based 
-off the byte contents, the functions are expected to be an exact match, aside from variant instructions. 
+WARP works by making a function GUID based off the byte contents of the function. Because WARP creates this GUID based
+off the byte contents, the functions are expected to be an exact match, aside from variant instructions.
 To use WARP, you only need to know that the function GUID's must match across binaries for the function information to be considered.
 
 To read more about how WARP works, please see the GitHub repository [here](https://github.com/vector35/warp).
@@ -45,13 +45,13 @@ Files are automatically loaded from two locations when Binary Ninja starts:
 - [User Directory] + `/signatures/`
     - Can be disabled using the setting `analysis.warp.loadUserFiles`.
 
-???+ Danger "Warning" 
+???+ Danger "Warning"
     Always place your signature libraries in your user directory. The installation path is wiped whenever Binary Ninja auto-updates. You can locate it with `Open Plugin Folder` in the command palette and navigate "up" a directory.
 
 ### Manually
 
-Aside from using the signature directory you can load any WARP file manually using the 
-command `WARP\\Load File` or via the UI sidebar, they both do the same thing. Once the file is 
+Aside from using the signature directory you can load any WARP file manually using the
+command `WARP\\Load File` or via the UI sidebar, they both do the same thing. Once the file is
 loaded, you do not need to load if for every view, it is available globally.
 
 ???+ Info "Tip"
@@ -65,23 +65,23 @@ Before you actually can create these WARP files, you must identify the binary fi
 that is done, you can determine which of the following procedures is best:
 
 === "From the current view"
-    You can create signatures for the current view by running the 
-    command `WARP\\Create\\From View` or by hitting the associated 
+    You can create signatures for the current view by running the
+    command `WARP\\Create\\From View` or by hitting the associated
     button in the WARP sidebar.
 
     ![From View](../img/warp/create_from_view.png "From View")
 
 === "From a file"
     Using the command `WARP\\Create\\From File(s)` you can create
-    a signature file for an external file. This is useful if you 
+    a signature file for an external file. This is useful if you
     are generating signatures for library files (`.a`, `.lib`, `.rlib`).
 
     ![From File](../img/warp/create_from_file.png "From File")
 
 === "From the current project"
-    When dealing with a large dataset, you will want a way to process 
-    files in parallel, using the `WARP\\Create\\From Project` command 
-    you can generate signatures for any set of files in a project, this 
+    When dealing with a large dataset, you will want a way to process
+    files in parallel, using the `WARP\\Create\\From Project` command
+    you can generate signatures for any set of files in a project, this
     includes archive formats like library files (`.a`, `.lib`, `.rlib`).
 
     ![From Project](../img/warp/create_from_project.png "From Project")
@@ -108,7 +108,7 @@ will be prompted whether you want to keep the existing data, you will want to sa
 
 ### File size
 
-Information in the WARP file will be deduplicated across all processed files automatically. 
+Information in the WARP file will be deduplicated across all processed files automatically.
 If your files are too large, try and adjust the file data to something like "Symbols" only, and if you are looking to
 make the files load quicker, turn off compression.
 
@@ -182,13 +182,13 @@ to provide an inexpensive base layer of function matching and an open source fil
 
 ### Why does the exact same function have a different function GUID?
 
-Using the render layer, you can identify differences in the two functions guid construction:
+Using the render layer, you can identify differences in the two functions GUID construction:
 
 - Highlighted red is "variant instruction"
 - Highlighted yellow is "computed variant instruction"
 - Highlighted black is "blacklisted instruction"
 
-The function guid will differ if the instruction highlights are not exactly the same across all instructions in both functions.
+The function GUID will differ if the instruction highlights are not exactly the same across all instructions in both functions.
 
 ![Render Layer](../img/warp/render_layer.png "Render Layer")
 

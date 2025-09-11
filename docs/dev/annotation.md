@@ -308,7 +308,7 @@ Here's a few useful concepts when working Binary Ninja's type system.
 
 In Binary Ninja the name of a class/struct/union or enumeration is separate from its type definition. This
 is much like how it's done in C. The mapping between a structure's definition and its name is kept in the Binary View.
-Thus if we want to associate a name with our type we need an extra step.
+Thus, if we want to associate a name with our type we need an extra step.
 
 ```python
 bv.define_user_type('Foo', Type.structure(members=[(Type.int(4), 'field_0')]))
@@ -356,7 +356,7 @@ struct Bas
 
 #### Mutable Types
 
-As `Type` objects are immutable, the Binary Ninja API provides a pure python implementation of types to provide mutability, these all inherit from `MutableType` and keep the same names as their immutable counterparts minus the `Type` part. Thus `Structure` is the mutable version of `StructureType` and `Enumeration` is the mutable version of `MutableType`. `Type` objects can be converted to `MutableType` objects using the `Type.mutable_copy` API and, `MutableType` objects can be converted to `Type` objects through the `MutableType.immutable_copy` API. Generally speaking you shouldn't need the mutable type variants for anything except creation of structures and enumerations, mutable type variants are provided for convenience and consistency. Building and defining a new structure can be done in a few ways. The first way would be the two step process of creating the structure then defining it.
+As `Type` objects are immutable, the Binary Ninja API provides a pure python implementation of types to provide mutability, these all inherit from `MutableType` and keep the same names as their immutable counterparts minus the `Type` part. Thus, `Structure` is the mutable version of `StructureType` and `Enumeration` is the mutable version of `MutableType`. `Type` objects can be converted to `MutableType` objects using the `Type.mutable_copy` API and, `MutableType` objects can be converted to `Type` objects through the `MutableType.immutable_copy` API. Generally speaking you shouldn't need the mutable type variants for anything except creation of structures and enumerations, mutable type variants are provided for convenience and consistency. Building and defining a new structure can be done in a few ways. The first way would be the two-step process of creating the structure then defining it.
 
 ```python
 s = StructureBuilder.create(members=[(IntegerType.create(4), 'field_0')])
@@ -373,7 +373,7 @@ s.append(IntegerType.create(4))
 bv.define_user_type('Foo', s)
 ```
 
-Finally you can use the built-in context manager which automatically registers the created type with the provided `BinaryView` (`bv`) and name(`Foo`). Additionally when creating TypeLibraries a `Type` can be passed instead of a `BinaryView`
+Finally, you can use the built-in context manager which automatically registers the created type with the provided `BinaryView` (`bv`) and name(`Foo`). Additionally, when creating TypeLibraries a `Type` can be passed instead of a `BinaryView`
 
 ```python
 with StructureBuilder.builder(bv, 'Foo') as s:
@@ -412,7 +412,7 @@ There are 3 categories of object which can have `Type` objects applied to them.
 * Variables (i.e. local variables)
 * DataVariables (i.e. global variables)
 
-As of the 3.0 API its much easier to apply types to Variables and DataVariables
+As of the 3.0 API it's much easier to apply types to Variables and DataVariables
 
 #### Applying a type to a `Function`
 
@@ -463,13 +463,13 @@ Importing a header goes through the same code path as parsing source directly. Y
 (<types: [...], variables: [...], functions: [...]>, [])
 ```
 
-Using these APIs will give you a Python object with all of the results, but won't actually apply them to the analysis in any way. If you want to replicate the importing behavior seen in the UI widget, there are a few additional steps you will need to take:
+Using these APIs will give you a Python object with all the results, but won't actually apply them to the analysis in any way. If you want to replicate the importing behavior seen in the UI widget, there are a few additional steps you will need to take:
 
 1. Use `BinaryView.define_user_types()` to add all the created types to the analysis
-1. Update the function and data variable types
+2. Update the function and data variable types
     1. Look up matching functions and symbols by using `BinaryView.get_symbol_by_raw_name`. Also look up potentially modified function names starting with `_` or `__`
-    1. Once you have found a function whose name matches one found in the header file, set its type using `Function.type = ftype`
-    1. Similarly for Data Variables, once one is found with a matching name, set its type using `DataVariable.type = dvtype`
+    2. Once you have found a function whose name matches one found in the header file, set its type using `Function.type = ftype`
+    3. Similarly for Data Variables, once one is found with a matching name, set its type using `DataVariable.type = dvtype`
 
 #### Exporting a Header
 

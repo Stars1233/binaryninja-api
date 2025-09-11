@@ -1,9 +1,8 @@
 # Shared Cache
 
-Shared cache support in Binary Ninja provides you with tools to selectively load specific images, search for 
-specific symbols, and follow analysis references between any images loaded from a `dyld_shared_cache` in one view.
+Shared cache support in Binary Ninja provides you with tools to selectively load specific images, search for specific symbols, and follow analysis references between any images loaded from a `dyld_shared_cache` in one view.
 
-Our support for `dyld_shared_cache` is largely open source. The supporting code can can be found in our public API repository [here](https://github.com/Vector35/binaryninja-api/tree/dev/view/sharedcache). Instructions for setting up your development environment and building plugins like this yourself can be found in our [Developer Guide](../dev/plugins.md#writing-native-plugins). Contributions are welcome!
+Our support for `dyld_shared_cache` is largely open source. The supporting code can be found in our public API repository [here](https://github.com/Vector35/binaryninja-api/tree/dev/view/sharedcache). Instructions for setting up your development environment and building plugins like this yourself can be found in our [Developer Guide](../dev/plugins.md#writing-native-plugins). Contributions are welcome!
 
 ## Support Matrix
 
@@ -80,7 +79,7 @@ opening a `dyld_shared_cache` and is how you add images to the actual binary vie
 
 === "Images"
     Shows a list of all images within the `dyld_shared_cache` and their virtual addresses.
-    
+
     - Double click on an image to load
     - Select image(s) and click button "Load Selected" to load multiple images at once
     - Select image(s) and right click if you want more options for loading images
@@ -93,7 +92,7 @@ opening a `dyld_shared_cache` and is how you add images to the actual binary vie
     - Double click on a symbol to load the associated image, or use the "Load Image" button
 
     ![Shared Cache Symbols](../img/dsc/triage-symbols.png "Shared Cache Symbols")
-    
+
 === "Mappings & Regions"
     Shows information about the entry mappings and the cache regions.
 

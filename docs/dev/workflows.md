@@ -608,7 +608,7 @@ current_function.workflow.show_topology()
 These commands build upon the static view by incorporating real-time dynamic state information. It provides additional insights such as the current eligibility of activities, override states, and other runtime data. This enhanced view offers a more detailed and interactive perspective, making it invaluable for monitoring and debugging during execution.
 
 !!! note
-	Using the dynamic view, the eligibility of activities can be toggled interactively. Currently, this behavior is tied to the double-click event on an activity node. This feature allows you to quickly cycle through different eligibility states, enabling rapid testing and validation of activity configurations.
+	Using the dynamic view, the eligibility of activities can be toggled interactively. Currently, this behavior is tied to the double click event on an activity node. This feature allows you to quickly cycle through different eligibility states, enabling rapid testing and validation of activity configurations.
 
 ## Advanced Topics (Coming Soon)
 

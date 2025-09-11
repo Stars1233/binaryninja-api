@@ -9,7 +9,7 @@
 
 We recommend the following steps to produce the best bug-reports:
 
-1. Try to reproduce your issue with both the latest stable release as well as [switching](index.md#updates) to the latest development branch.
+1. Try to reproduce your issue with both the latest stable release and [the latest development release](index.md#updates).
 2. Try temporarily [disabling plugins](#disabling-plugins)
 3. Try temporarily [disabling user settings](#disabling-user-settings)
 4. Try temporarily [resetting QSettings](#resetting-qsettings)
@@ -25,9 +25,9 @@ In addition to the above-mentioned method of disabling user-plugins, you can als
 
 ### Resetting QSettings
 
-Some UI features rely on [QSettings](https://doc.qt.io/qt-6/qsettings.html#platform-specific-notes) to save state, window location, etc. You can temporarily reset your QSettings by setting the `BN_QSETTINGS_POSTFIX` environment variable which will cause Binary Ninja to use a different qsettings for that launch.
+Some UI features rely on [QSettings](https://doc.qt.io/qt-6/qsettings.html#platform-specific-notes) to save state, window location, etc. You can temporarily reset your QSettings by setting the `BN_QSETTINGS_POSTFIX` environment variable which will cause Binary Ninja to use a different QSettings for that launch.
 
-Removing the environment variable or running without it will revert to the default qsettings locations.
+Removing the environment variable or running without it will revert to the default QSettings locations.
 
 ### Extra logging
 
@@ -64,7 +64,7 @@ Binary Ninja will refuse to run as root on Linux and macOS platforms. You can wo
 
 ## API
 
- - If the GUI launches but the license file is not valid when launched from the command-line, check that you're using the right version of Python as only 64-bit Python 2.7, or 3.x versions are supported. Additionally, the [personal][purchase] edition does not support headless operation.
+ - If the GUI launches, but the license file is not valid when launched from the command-line, check that you're using the right version of Python as only 64-bit Python 3.x versions are supported. Additionally, the [personal][purchase] edition does not support headless operation.
 
 ## Database Issues
 
@@ -72,7 +72,7 @@ Binary Ninja will refuse to run as root on Linux and macOS platforms. You can wo
 
 Binary Ninja currently uses SQLite for its analysis databases (`.bndb`), projects (`.bnpr`), and type archives (`.bnta`). This means it is only able to have a single instance of these open at any time.
 
-The message `Error while saving database snapshot: database is locked` means multiple copies are open at the same time. All instances will need to be closed and a new one opened to allow saving again (this includes syncing to an Enterprise server).
+The message `Error while saving database snapshot: database is locked` means multiple copies are open at the same time. All instances will need to be closed, and a new one opened to allow saving again (this includes syncing to an Enterprise server).
 
 ### Large File Size
 

@@ -139,7 +139,7 @@ contained in the current project. To specify that the secondary entity is in an 
     If the current binary is not part of a Binary Ninja project, the `External File` button will be disabled, providing
     only the option to define internal relationships.
 
-Click populated the cells in the `Primary` or `Secondary` columns to navigate between related items. If the related
+Click populated cells in the `Primary` or `Secondary` columns to navigate between related items. If the related
 item is in an external bndb, the external bndb will be opened in a new tab and the UI will navigate to the location of
 the item.
 

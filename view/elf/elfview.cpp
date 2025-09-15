@@ -653,6 +653,9 @@ bool ElfView::Init()
 		vector<string> readWriteDataSectionNames = {".data", ".bss"};
 		vector<string> readOnlyDataSectionNames = {".rodata", ".dynamic", ".dynsym", ".dynstr", ".ehframe",
 			".ctors", ".dtors", ".got", ".got2", ".data.rel.ro", ".gnu.hash"};
+		if (m_arch && m_arch->GetName() == "hexagon") {
+			readOnlyDataSectionNames.emplace_back(".got.plt");
+		}
 		if ((m_elfSections[i].flags & ELF_SHF_EXECINSTR) || In(sectionNames[i], readOnlyCodeSectionNames))
 			semantics = ReadOnlyCodeSectionSemantics;
 		else if (!(m_elfSections[i].flags & ELF_SHF_WRITE) || In(sectionNames[i], readOnlyDataSectionNames))
@@ -2561,7 +2564,7 @@ void ElfView::DefineElfSymbol(BNSymbolType type, const string& incomingName, uin
 			}
 		}
 
-		if (!typeRef && m_arch->GetName() == "hexagon")
+		if (!typeRef && m_arch && m_arch->GetName() == "hexagon")
 		{
 			// Apply platform types for statically linked Hexagon binaries
 			typeRef = GetDefaultPlatform()->GetFunctionByName(rawName);

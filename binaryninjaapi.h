@@ -10911,6 +10911,8 @@ namespace BinaryNinja {
 		uint64_t offset;
 		BNMemberAccess access;
 		BNMemberScope scope;
+		uint8_t bitPosition;
+		uint8_t bitWidth;
 	};
 
 	/*!
@@ -11112,6 +11114,7 @@ namespace BinaryNinja {
 		    \return Whether a StructureMember was successfully retrieved
 		*/
 		bool GetMemberByName(const std::string& name, StructureMember& result) const;
+		// TODO: GetMember at offset also needs to pass a bit position.
 		bool GetMemberAtOffset(int64_t offset, StructureMember& result) const;
 		bool GetMemberAtOffset(int64_t offset, StructureMember& result, size_t& idx) const;
 		uint64_t GetWidth() const;
@@ -11161,10 +11164,26 @@ namespace BinaryNinja {
 		    \param overwriteExisting Whether to overwrite an existing member at that offset, Optional, default true
 		    \param access One of NoAccess, PrivateAccess, ProtectedAccess, PublicAccess
 		    \param scope One of NoScope, StaticScope, VirtualScope, ThunkScope, FriendScope
+			\param bitPosition The number of bits from the start of the `offset` to place this member, used for bitfields
+			\param bitWidth The number of bits wide to make the member, this is analogous to a bitfield width in C
 		    \return Reference to the StructureBuilder
 		*/
 		StructureBuilder& AddMemberAtOffset(const Confidence<Ref<Type>>& type, const std::string& name, uint64_t offset,
-		    bool overwriteExisting = true, BNMemberAccess access = NoAccess, BNMemberScope scope = NoScope);
+		    bool overwriteExisting = true, BNMemberAccess access = NoAccess, BNMemberScope scope = NoScope, uint8_t bitPosition = 0, uint8_t bitWidth = 0);
+
+		/*! AddMemberAtBitOffset adds a member at a specific bit offset within the struct
+
+			\param type Type of the Field
+			\param name Name of the field
+			\param bitOffset Offset, in bits, to add the member within the struct
+			\param bitWidth The number of bits wide to make the member, this is analogous to a bitfield width in C
+			\param overwriteExisting Whether to overwrite an existing member at that offset, Optional, default true
+			\param access One of NoAccess, PrivateAccess, ProtectedAccess, PublicAccess
+			\param scope One of NoScope, StaticScope, VirtualScope, ThunkScope, FriendScope
+			\return Reference to the StructureBuilder
+		*/
+		StructureBuilder& AddMemberAtBitOffset(const Confidence<Ref<Type>>& type, const std::string& name, uint64_t bitOffset,
+			uint8_t bitWidth, bool overwriteExisting = true, BNMemberAccess access = NoAccess, BNMemberScope scope = NoScope);
 
 		/*! RemoveMember removes a member at a specified index
 

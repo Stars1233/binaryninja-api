@@ -88,6 +88,22 @@ where
         };
         PossibleValueSet::from_owned_core_raw(raw_pvs)
     }
+
+    /// Get the raw operand from the operand list.
+    ///
+    /// This has no type information associated with it. It's up to the caller to know what the correct type of the
+    /// underlying u64 should be.
+    ///
+    /// # Panic
+    /// `idx` must be less than 4. This is to protect against an out of bounds access.
+    ///
+    /// # Safety
+    /// Even if `idx` is valid, it may index to an unitialized or unused value. Make sure you index into an operand that
+    /// you know should be initialized properly.
+    pub unsafe fn get_operand(&self, idx: usize) -> u64 {
+        assert!(idx < 4);
+        self.op.operands[idx]
+    }
 }
 
 impl<M, O> Operation<'_, M, NonSSA, O>
@@ -214,15 +230,68 @@ where
 // LLIL_INTRINSIC, LLIL_INTRINSIC_SSA
 pub struct Intrinsic;
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum IntrinsicOutput {
+    Reg(CoreRegister),
+    Flag(CoreFlag),
+}
+
+impl From<CoreRegister> for IntrinsicOutput {
+    fn from(value: CoreRegister) -> Self {
+        Self::Reg(value)
+    }
+}
+
+impl From<CoreFlag> for IntrinsicOutput {
+    fn from(value: CoreFlag) -> Self {
+        Self::Flag(value)
+    }
+}
+
 impl<M, F> Operation<'_, M, F, Intrinsic>
 where
     M: FunctionMutability,
     F: FunctionForm,
 {
-    // TODO: Support register and expression lists
     pub fn intrinsic(&self) -> Option<CoreIntrinsic> {
         let raw_id = self.op.operands[2] as u32;
         self.function.arch().intrinsic_from_id(IntrinsicId(raw_id))
+    }
+
+    /// Get the output list.
+    pub fn outputs(&self) -> Vec<IntrinsicOutput> {
+        // Convert the operand to either a register or flag id.
+        let operand_to_output = |o: u64| {
+            if o & (1 << 32) != 0 {
+                self.function
+                    .arch()
+                    .flag_from_id(FlagId((o & 0xffffffff) as u32))
+                    .expect("Invalid core flag ID")
+                    .into()
+            } else {
+                self.function
+                    .arch()
+                    .register_from_id(RegisterId((o & 0xffffffff) as u32))
+                    .expect("Invalid register ID")
+                    .into()
+            }
+        };
+
+        self.get_operand_list(0)
+            .into_iter()
+            .map(operand_to_output)
+            .collect::<Vec<_>>()
+    }
+
+    /// Get the input list for the intrinsic.
+    ///
+    /// This will just be a CallParamSsa expression.
+    #[inline]
+    pub fn inputs(&self) -> LowLevelILExpression<'_, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelExpressionIndex(self.op.operands[3] as usize),
+        )
     }
 }
 
@@ -232,9 +301,15 @@ where
     F: FunctionForm,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        use crate::architecture::Intrinsic;
         f.debug_struct("Intrinsic")
             .field("address", &self.address())
-            .field("size", &self.intrinsic())
+            .field(
+                "intrinsic",
+                &self.intrinsic().expect("Valid intrinsic").name(),
+            )
+            .field("outputs", &self.outputs())
+            .field("inputs", &self.inputs())
             .finish()
     }
 }
@@ -1013,13 +1088,28 @@ where
 // LLIL_FLAG, LLIL_FLAG_SSA
 pub struct Flag;
 
+impl<M, F> Operation<'_, M, F, Flag>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    pub fn source_flag(&self) -> CoreFlag {
+        self.function
+            .arch()
+            .flag_from_id(FlagId(self.op.operands[0] as u32))
+            .expect("Bad flag ID")
+    }
+}
+
 impl<M, F> Debug for Operation<'_, M, F, Flag>
 where
     M: FunctionMutability,
     F: FunctionForm,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Flag").finish()
+        f.debug_struct("Flag")
+            .field("source_flag", &self.source_flag())
+            .finish()
     }
 }
 

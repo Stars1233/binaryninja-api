@@ -28,7 +28,7 @@ set_target_properties(binaryninjacore_stubs
     CXX_STANDARD_REQUIRED ON
     VISIBILITY_INLINES_HIDDEN ON
     POSITION_INDEPENDENT_CODE ON
-    ARCHIVE_OUTPUT_DIRECTORY $<1:${PROJECT_BINARY_DIR}>
+    ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
 )
 
 target_include_directories(binaryninjacore_stubs PUBLIC ${ABSOLUTE_API_PATH})

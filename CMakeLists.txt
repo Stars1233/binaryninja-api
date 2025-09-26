@@ -4,6 +4,7 @@ project(binaryninjaapi CXX C)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 option(BN_API_BUILD_EXAMPLES "Builds example plugins" OFF)
+option(BN_ALLOW_STUBS "Allow generating and linking against stubs if a Binary Ninja installation was not found" OFF)
 
 option(BN_REF_COUNT_DEBUG "Add extra debugging checks for RefCountObject leaks" OFF)
 mark_as_advanced(BN_REF_COUNT_DEBUG)
@@ -33,29 +34,29 @@ add_library(binaryninjaapi STATIC ${BN_API_SOURCES})
 target_include_directories(binaryninjaapi
     PUBLIC ${PROJECT_SOURCE_DIR})
 
+# Store path to user plugin dir
+if(WIN32)
+    set(BN_USER_PLUGINS_DIR "$ENV{APPDATA}\\Binary Ninja\\plugins")
+elseif(APPLE)
+    set(BN_USER_PLUGINS_DIR "$ENV{HOME}/Library/Application Support/Binary Ninja/plugins")
+else()
+    set(BN_USER_PLUGINS_DIR "$ENV{HOME}/.binaryninja/plugins")
+endif()
+message(STATUS "Binary Ninja User Plugins Dir: ${BN_USER_PLUGINS_DIR}")
+
 find_package(BinaryNinjaCore)
 if(BinaryNinjaCore_FOUND)
     target_link_libraries(binaryninjaapi PUBLIC ${BinaryNinjaCore_LIBRARIES})
     target_link_directories(binaryninjaapi PUBLIC ${BinaryNinjaCore_LIBRARY_DIRS})
     target_compile_definitions(binaryninjaapi PUBLIC ${BinaryNinjaCore_DEFINITIONS})
-else()
+elseif(BN_ALLOW_STUBS)
     add_subdirectory(stubs EXCLUDE_FROM_ALL)
 
     # Be sure to only link against the stubs archive file
     add_dependencies(binaryninjaapi binaryninjacore_stubs)
-
-    if(APPLE)
-        target_link_libraries(binaryninjaapi PUBLIC "$<TARGET_PROPERTY:binaryninjacore_stubs,ARCHIVE_OUTPUT_DIRECTORY>/$<TARGET_PROPERTY:binaryninjacore_stubs,OUTPUT_NAME>.dylib")
-    elseif(MSVC)
-        if(${CMAKE_GENERATOR} MATCHES "^Visual Studio")
-            # Visual Studio's generator adds the config to the file path
-            target_link_libraries(binaryninjaapi PUBLIC "$<TARGET_PROPERTY:binaryninjacore_stubs,ARCHIVE_OUTPUT_DIRECTORY>/$<CONFIG>/$<TARGET_PROPERTY:binaryninjacore_stubs,OUTPUT_NAME>.lib")
-        else()
-            target_link_libraries(binaryninjaapi PUBLIC "$<TARGET_PROPERTY:binaryninjacore_stubs,ARCHIVE_OUTPUT_DIRECTORY>/$<TARGET_PROPERTY:binaryninjacore_stubs,OUTPUT_NAME>.lib")
-        endif()
-    else()
-        target_link_libraries(binaryninjaapi PUBLIC "$<TARGET_PROPERTY:binaryninjacore_stubs,ARCHIVE_OUTPUT_DIRECTORY>/$<TARGET_PROPERTY:binaryninjacore_stubs,OUTPUT_NAME>.so.1")
-    endif()
+    target_link_libraries(binaryninjaapi PUBLIC binaryninjacore_stubs)
+else()
+    message(FATAL_ERROR "No Binary Ninja installation was found and stub generation is disabled")
 endif()
 
 if(BN_REF_COUNT_DEBUG)
@@ -111,25 +112,24 @@ if(NOT HEADLESS)
 endif()
 
 function(bn_install_plugin target)
+    if(WIN32)
+        set(BN_USER_PLUGINS_DIR "$ENV{APPDATA}\\Binary Ninja\\plugins")
+    elseif(APPLE)
+        set(BN_USER_PLUGINS_DIR "$ENV{HOME}/Library/Application Support/Binary Ninja/plugins")
+    else()
+        set(BN_USER_PLUGINS_DIR "$ENV{HOME}/.binaryninja/plugins")
+    endif()
+
     if(NOT BN_INTERNAL_BUILD)
-        # Get API source directory so we can find BinaryNinjaCore
-        get_target_property(BN_API_SOURCE_DIR binaryninjaapi SOURCE_DIR)
-        message(STATUS "${BN_API_SOURCE_DIR}")
-        list(APPEND CMAKE_MODULE_PATH "${BN_API_SOURCE_DIR}/cmake")
+        if(WIN32)
+            install(TARGETS ${target} RUNTIME
+                DESTINATION ${BN_USER_PLUGINS_DIR})
 
-        # BinaryNinjaCore has the user plugins dir define that we want
-        find_package(BinaryNinjaCore)
-        if(BinaryNinjaCore_FOUND)
-            if(WIN32)
-                install(TARGETS ${target} RUNTIME
-                    DESTINATION ${BinaryNinjaCore_USER_PLUGINS_DIR})
-
-                install(FILES $<TARGET_PDB_FILE:${target}>
-                    DESTINATION ${BinaryNinjaCore_USER_PLUGINS_DIR} OPTIONAL)
-            else()
-                install(TARGETS ${target} LIBRARY
-                    DESTINATION ${BinaryNinjaCore_USER_PLUGINS_DIR})
-            endif()
+            install(FILES $<TARGET_PDB_FILE:${target}>
+                DESTINATION ${BN_USER_PLUGINS_DIR} OPTIONAL)
+        else()
+            install(TARGETS ${target} LIBRARY
+                DESTINATION ${BN_USER_PLUGINS_DIR})
         endif()
     endif()
 endfunction()

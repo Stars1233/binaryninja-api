@@ -51,6 +51,8 @@ fn generate_stubs() -> PathBuf {
         .unwrap();
 
     let stubs_path = api_base_path.join("stubs");
+
+    // TODO: does visual studio add the config name as a subdirectory?
     cmake::Config::new(stubs_path)
         .generator("Ninja")
         .build()

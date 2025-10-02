@@ -21,17 +21,17 @@ public:
 
     virtual bool Decode(const DataBuffer& input, DataBuffer& output, const std::map<std::string, DataBuffer>& params) override
     {
-        DERItem* item = new DERItem;
-        item->data = (DERByte *)input.GetData();
-        item->length = input.GetLength();
+        DERItem item = {};
+        item.data = (DERByte *)input.GetData();
+        item.length = input.GetLength();
 
-        Img4Payload *payload = new Img4Payload;
-        DERImg4DecodePayload(item, payload);
-
-        if (!payload->payload.data || !payload->payload.length)
+        Img4Payload payload = {};
+        if (auto result = DERImg4DecodePayload(&item, &payload); (result != DR_Success) && (result != DR_DecodeError))
+            return false;
+        if (!payload.payload.data || !payload.payload.length)
             return false;
 
-        output = DataBuffer(payload->payload.data, payload->payload.length);
+        output = DataBuffer(payload.payload.data, payload.payload.length);
 
         return true;
     }
@@ -45,7 +45,7 @@ public:
     }
 
     static void der_put_ia5(std::vector<uint8_t>& v, const void* s, size_t len) {
-        v.push_back(0x16);                 // IA5String
+        v.push_back(0x16); // IA5String
         der_put_len(v, len);
         const uint8_t* p = static_cast<const uint8_t*>(s);
         v.insert(v.end(), p, p + len);
@@ -153,15 +153,24 @@ public:
         // parse up to the first 5 elements to find the magic "IM4P"
         for (int i = 0; i < 5 && offset < seqEnd; ++i)
         {
+            if (offset >= headerLength)
+                return false;
+
             if (seqEnd - offset < 2)
                 return false;
             uint8_t tag = data[offset++];
-            auto [elementLen, elementLenHdr] = parseDerLen(data + offset, seqEnd - offset);
+            if (offset >= headerLength)
+                return false;
+
+            auto [elementLen, elementLenHdr] = parseDerLen(data + offset, std::min(seqEnd - offset, headerLength - offset));
             if (!elementLen || !elementLenHdr || (elementLen > (seqEnd - offset - elementLenHdr)))
                 return false;
             offset += elementLenHdr;
+            if (offset + elementLen > headerLength)
+                return false;
             if ((tag == 0x16) && (elementLen == 4) && memcmp(data + offset, "IM4P", 4) == 0)
                 return true;
+            offset += elementLen;
         }
 
         return false;

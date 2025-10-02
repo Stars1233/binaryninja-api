@@ -27,7 +27,11 @@ pub struct DiskContainer {
 
 impl DiskContainer {
     pub fn new(name: String, sources: HashMap<SourceId, DiskContainerSource>) -> Self {
-        Self { name, sources, writable: true }
+        Self {
+            name,
+            sources,
+            writable: true,
+        }
     }
 
     pub fn new_from_dir(dir_path: PathBuf) -> Self {

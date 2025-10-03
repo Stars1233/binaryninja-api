@@ -1747,6 +1747,18 @@ DataBuffer BinaryView::ReadBuffer(uint64_t offset, size_t len)
 }
 
 
+const uint8_t* BinaryView::GetDataPointer() const
+{
+	return BNGetViewDataPointer(m_object);
+}
+
+
+size_t BinaryView::GetDataLength() const
+{
+	return BNGetViewDataLength(m_object);
+}
+
+
 size_t BinaryView::WriteBuffer(uint64_t offset, const DataBuffer& data)
 {
 	return BNWriteViewBuffer(m_object, offset, data.GetBufferObject());

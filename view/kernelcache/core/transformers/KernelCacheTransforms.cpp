@@ -41,11 +41,14 @@ public:
         if (!context || !context->GetInput())
             return false;
 
-        // TODO: DataBuffers are not zero-copy, so this is inefficient. Investigate a better way.
-        auto input = context->GetInput()->ReadBuffer(0, context->GetInput()->GetLength());
+        const uint8_t* dataPtr = context->GetInput()->GetDataPointer();
+        size_t dataLength = context->GetInput()->GetDataLength();
+        if (!dataPtr || !dataLength)
+            return false;
+
         DERItem item = {};
-        item.data = (DERByte *)input.GetData();
-        item.length = static_cast<DERSize>(std::min(input.GetLength(), (size_t)std::numeric_limits<DERSize>::max()));
+        item.data = (DERByte *)dataPtr;
+        item.length = static_cast<DERSize>(std::min(dataLength, (size_t)std::numeric_limits<DERSize>::max()));
         Img4Payload payload = {};
         if (auto result = DERImg4DecodePayload(&item, &payload); (result != DR_Success) && (result != DR_DecodeError))
             return false;

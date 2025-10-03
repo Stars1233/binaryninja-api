@@ -37,7 +37,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 134
+#define BN_CURRENT_CORE_ABI_VERSION 135
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -4328,6 +4328,8 @@ extern "C"
 
 	BINARYNINJACOREAPI size_t BNReadViewData(BNBinaryView* view, void* dest, uint64_t offset, size_t len);
 	BINARYNINJACOREAPI BNDataBuffer* BNReadViewBuffer(BNBinaryView* view, uint64_t offset, size_t len);
+	BINARYNINJACOREAPI const uint8_t* BNGetViewDataPointer(BNBinaryView* view);
+	BINARYNINJACOREAPI size_t BNGetViewDataLength(BNBinaryView* view);
 
 	BINARYNINJACOREAPI size_t BNWriteViewData(BNBinaryView* view, uint64_t offset, const void* data, size_t len);
 	BINARYNINJACOREAPI size_t BNWriteViewBuffer(BNBinaryView* view, uint64_t offset, BNDataBuffer* data);

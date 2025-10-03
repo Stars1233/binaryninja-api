@@ -5829,6 +5829,18 @@ namespace BinaryNinja {
 		*/
 		DataBuffer ReadBuffer(uint64_t offset, size_t len);
 
+		/*! GetDataPointer returns a pointer to the underlying data for zero-copy access
+
+		    \return pointer to data if available for zero-copy access, nullptr otherwise
+		*/
+		const uint8_t* GetDataPointer() const;
+
+		/*! GetDataLength returns the length of the underlying data
+
+		    \return length of data if available for zero-copy access, 0 otherwise
+		*/
+		size_t GetDataLength() const;
+
 		/*! Write writes `len` bytes data at address `dest` to virtual address `offset`
 
 			\param offset virtual address to write to

@@ -10,12 +10,13 @@ using namespace BinaryNinja;
 #include "libDER/libDER.h"
 #include "libimg4/img4.h"
 #include "liblzfse/lzfse.h"
+#include <algorithm>
 
 class IMG4PayloadTransform : public Transform
 {
 
 public:
-    IMG4PayloadTransform(): Transform(DecodeTransform, TransformSupportsDetection, "IMG4", "IMG4", "Container")
+    IMG4PayloadTransform(): Transform(DecodeTransform, TransformCapabilities(TransformSupportsDetection | TransformSupportsContext), "IMG4", "IMG4", "Container")
     {
     }
 
@@ -23,8 +24,7 @@ public:
     {
         DERItem item = {};
         item.data = (DERByte *)input.GetData();
-        item.length = input.GetLength();
-
+        item.length = static_cast<DERSize>(std::min(input.GetLength(), (size_t)std::numeric_limits<DERSize>::max()));
         Img4Payload payload = {};
         if (auto result = DERImg4DecodePayload(&item, &payload); (result != DR_Success) && (result != DR_DecodeError))
             return false;
@@ -32,6 +32,38 @@ public:
             return false;
 
         output = DataBuffer(payload.payload.data, payload.payload.length);
+
+        return true;
+    }
+
+    virtual bool DecodeWithContext(Ref<TransformContext> context, const std::map<std::string, DataBuffer>& params) override
+    {
+        if (!context || !context->GetInput())
+            return false;
+
+        // TODO: DataBuffers are not zero-copy, so this is inefficient. Investigate a better way.
+        auto input = context->GetInput()->ReadBuffer(0, context->GetInput()->GetLength());
+        DERItem item = {};
+        item.data = (DERByte *)input.GetData();
+        item.length = static_cast<DERSize>(std::min(input.GetLength(), (size_t)std::numeric_limits<DERSize>::max()));
+        Img4Payload payload = {};
+        if (auto result = DERImg4DecodePayload(&item, &payload); (result != DR_Success) && (result != DR_DecodeError))
+            return false;
+        if (!payload.payload.data || !payload.payload.length)
+            return false;
+
+        // Synthesize name: <type>[.<version>]
+        std::string filename = "";
+        if (payload.type.data && payload.type.length)
+            filename = std::string((const char*)payload.type.data, payload.type.length);
+        if (payload.version.data && payload.version.length)
+        {
+            if (!filename.empty())
+                filename += ".";
+            filename += std::string((const char*)payload.version.data, payload.version.length);
+        }
+
+        context->CreateChild(DataBuffer(payload.payload.data, payload.payload.length), filename);
 
         return true;
     }

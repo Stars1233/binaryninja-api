@@ -8929,6 +8929,7 @@ namespace BinaryNinja {
 	};
 
 	class TransformContext;
+	typedef BNTransformCapabilities TransformCapabilities;
 
 	/*! Allows users to implement custom transformations.
 

@@ -50,7 +50,7 @@ Ref<TransformContext> TransformContext::GetParent() const
 	BNTransformContext* parent = BNTransformContextGetParent(m_object);
 	if (!parent)
 		return nullptr;
-	return new TransformContext(BNNewTransformContextReference(parent));
+	return new TransformContext(parent);
 }
 
 
@@ -81,7 +81,7 @@ Ref<TransformContext> TransformContext::GetChild(const string& filename) const
 	BNTransformContext* child = BNTransformContextGetChild(m_object, filename.c_str());
 	if (!child)
 		return nullptr;
-	return new TransformContext(BNNewTransformContextReference(child));
+	return new TransformContext(child);
 }
 
 
@@ -90,7 +90,7 @@ Ref<TransformContext> TransformContext::CreateChild(const DataBuffer& data, cons
 	BNTransformContext* child = BNTransformContextCreateChild(m_object, data.GetBufferObject(), filename.c_str());
 	if (!child)
 		return nullptr;
-	return new TransformContext(BNNewTransformContextReference(child));
+	return new TransformContext(child);
 }
 
 

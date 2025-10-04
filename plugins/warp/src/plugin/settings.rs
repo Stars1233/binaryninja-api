@@ -161,8 +161,9 @@ impl PluginSettings {
         }
         if bn_settings.contains(Self::SERVER_API_KEY_SETTING) {
             let server_api_key_str = bn_settings.get_string(Self::SERVER_API_KEY_SETTING);
-            if !server_api_key_str.is_empty() {
-                settings.server_api_key = Some(server_api_key_str);
+            let trimmed_server_api_key_str = server_api_key_str.trim();
+            if !trimmed_server_api_key_str.is_empty() {
+                settings.server_api_key = Some(trimmed_server_api_key_str.to_string());
             }
         }
         if bn_settings.contains(Self::SECONDARY_SERVER_URL_SETTING) {
@@ -173,8 +174,9 @@ impl PluginSettings {
         }
         if bn_settings.contains(Self::SECONDARY_SERVER_API_KEY_SETTING) {
             let server_api_key_str = bn_settings.get_string(Self::SECONDARY_SERVER_API_KEY_SETTING);
-            if !server_api_key_str.is_empty() {
-                settings.second_server_api_key = Some(server_api_key_str);
+            let trimmed_server_api_key_str = server_api_key_str.trim();
+            if !trimmed_server_api_key_str.is_empty() {
+                settings.second_server_api_key = Some(trimmed_server_api_key_str.to_string());
             }
         }
         if bn_settings.contains(Self::ENABLE_SERVER_SETTING) {

@@ -14,6 +14,7 @@ use warp::signature::chunk::SignatureChunk;
 use warp::signature::function::{Function, FunctionGUID};
 use warp::target::Target;
 use warp::{WarpFile, WarpFileHeader};
+use warp::r#type::chunk::TypeChunk;
 
 pub mod client;
 

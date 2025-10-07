@@ -251,6 +251,8 @@ impl Container for NetworkContainer {
             .map_err(|_| CannotCreateSource(path))?;
         // Must probe the source before attempting to access it, as it does not exist locally.
         self.probe_source(source);
+        // Adding a source inherently makes it writable, so we add it to the set of writable sources.
+        self.writable_sources.insert(source);
         Ok(source)
     }
 

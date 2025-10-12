@@ -3,7 +3,12 @@ fn main() {
         .expect("DEP_BINARYNINJACORE_PATH not specified");
 
     println!("cargo::rustc-link-lib=dylib=binaryninjacore");
-    println!("cargo::rustc-link-search={}", link_path.to_str().unwrap());
+    println!(
+        "cargo::rustc-link-search={}",
+        link_path
+            .to_str()
+            .expect("Failed to convert link path to string")
+    );
 
     #[cfg(target_os = "linux")]
     {

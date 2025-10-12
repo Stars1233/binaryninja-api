@@ -121,8 +121,20 @@ fn recover_names_internal<R: ReaderType>(
     let mut iter = dwarf.units();
     let mut current_byte_offset: usize = 0;
     while let Ok(Some(header)) = iter.next() {
-        let unit_offset = header.offset().as_debug_info_offset().unwrap().0;
-        let unit = dwarf.unit(header).unwrap();
+        let unit_offset = header.offset().as_debug_info_offset().map_or_else(
+            || {
+                log::warn!("Failed to get debug info offset for {:?}", header.offset());
+                0
+            },
+            |x| x.0,
+        );
+        let unit = match dwarf.unit(header) {
+            Ok(x) => x,
+            Err(e) => {
+                log::error!("Failed to get unit at {:#x}: {}", unit_offset, e);
+                continue;
+            }
+        };
         let mut namespace_qualifiers: Vec<(isize, String)> = vec![];
         let mut entries = unit.entries();
         let mut depth = 0;
@@ -178,10 +190,17 @@ fn recover_names_internal<R: ReaderType>(
                         ) {
                             match die_reference {
                                 DieReference::UnitAndOffset((dwarf, entry_unit, entry_offset)) => {
+                                    let resolved_entry = match entry_unit.entry(entry_offset) {
+                                        Ok(x) => x,
+                                        Err(e) => {
+                                            log::error!("Failed to resolve entry in unit {:?} at offset {:#x} (resolve_namespace_name): {}", entry_unit, entry_offset.0, e);
+                                            return;
+                                        }
+                                    };
                                     resolve_namespace_name(
                                         dwarf,
                                         entry_unit,
-                                        &entry_unit.entry(entry_offset).unwrap(),
+                                        &resolved_entry,
                                         debug_info_builder_context,
                                         namespace_qualifiers,
                                         depth,
@@ -525,7 +544,13 @@ fn parse_range_data_offsets(
         let eh_frame_section_reader = |section_id: SectionId| -> _ {
             create_section_reader(section_id, bv, eh_frame_endian, dwo_file)
         };
-        let mut eh_frame = gimli::EhFrame::load(eh_frame_section_reader).unwrap();
+        let mut eh_frame = match gimli::EhFrame::load(eh_frame_section_reader) {
+            Ok(x) => x,
+            Err(e) => {
+                log::error!("Failed to load EH frame: {}", e);
+                return None;
+            }
+        };
         if let Some(view_arch) = bv.default_arch() {
             if view_arch.name().as_str() == "aarch64" {
                 eh_frame.set_vendor(gimli::Vendor::AArch64);
@@ -543,7 +568,13 @@ fn parse_range_data_offsets(
         let debug_frame_section_reader = |section_id: SectionId| -> _ {
             create_section_reader(section_id, bv, debug_frame_endian, dwo_file)
         };
-        let mut debug_frame = gimli::DebugFrame::load(debug_frame_section_reader).unwrap();
+        let mut debug_frame = match gimli::DebugFrame::load(debug_frame_section_reader) {
+            Ok(x) => x,
+            Err(e) => {
+                log::error!("Failed to load debug frame: {}", e);
+                return None;
+            }
+        };
         if let Some(view_arch) = bv.default_arch() {
             if view_arch.name().as_str() == "aarch64" {
                 debug_frame.set_vendor(gimli::Vendor::AArch64);
@@ -649,8 +680,17 @@ fn parse_dwarf(
         let mut current_die_number = 0;
 
         for unit in debug_info_builder_context.sup_units() {
+            let sup = match dwarf.sup() {
+                Some(x) => x,
+                None => {
+                    log::error!(
+                        "Supplemental units found but no supplementary DWARF info available"
+                    );
+                    break;
+                }
+            };
             parse_unit(
-                dwarf.sup().unwrap(),
+                sup,
                 unit,
                 &debug_info_builder_context,
                 &mut debug_info_builder,
@@ -717,7 +757,7 @@ impl CustomDebugInfoParser for DWARFParser {
             .and_then(|build_id| {
                 load_debug_info_for_build_id(&build_id, bv)
                     .0
-                    .map(|x| x.raw_view().unwrap())
+                    .map(|x| x.raw_view().expect("Failed to get raw view"))
             });
 
         let result = match parse_dwarf(

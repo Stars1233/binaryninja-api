@@ -175,8 +175,21 @@ fn do_structure_parse<R: ReaderType>(
 
     // Get all the children and base classes to populate
     let mut base_structures = Vec::new();
-    let mut tree = unit.entries_tree(Some(entry.offset())).unwrap();
-    let mut children = tree.root().unwrap().children();
+    let mut tree = match unit.entries_tree(Some(entry.offset())) {
+        Ok(x) => x,
+        Err(e) => {
+            log::error!("Failed to get structure entry tree: {}", e);
+            return None;
+        }
+    };
+    let tree_root = match tree.root() {
+        Ok(x) => x,
+        Err(e) => {
+            log::error!("Failed to get structure entry tree root: {}", e);
+            return None;
+        }
+    };
+    let mut children = tree_root.children();
     while let Ok(Some(child)) = children.next() {
         match child.entry().tag() {
             constants::DW_TAG_member => {
@@ -315,13 +328,27 @@ pub(crate) fn get_type<R: ReaderType>(
     ) {
         // This needs to recurse first (before the early return below) to ensure all sub-types have been parsed
         match die_reference {
-            DieReference::UnitAndOffset((dwarf, entry_unit, entry_offset)) => get_type(
-                dwarf,
-                entry_unit,
-                &entry_unit.entry(entry_offset).unwrap(),
-                debug_info_builder_context,
-                debug_info_builder,
-            ),
+            DieReference::UnitAndOffset((dwarf, entry_unit, entry_offset)) => {
+                let resolved_entry = match entry_unit.entry(entry_offset) {
+                    Ok(x) => x,
+                    Err(e) => {
+                        log::error!(
+                            "Failed to resolve entry in unit {:?} at offset {:#x}: {}",
+                            entry_unit,
+                            entry_offset.0,
+                            e
+                        );
+                        return None;
+                    }
+                };
+                get_type(
+                    dwarf,
+                    entry_unit,
+                    &resolved_entry,
+                    debug_info_builder_context,
+                    debug_info_builder,
+                )
+            }
             DieReference::Err => {
                 warn!("Failed to fetch DIE when getting type through DW_AT_type. Debug information may be incomplete.");
                 None
@@ -336,13 +363,27 @@ pub(crate) fn get_type<R: ReaderType>(
     ) {
         // This needs to recurse first (before the early return below) to ensure all sub-types have been parsed
         match die_reference {
-            DieReference::UnitAndOffset((dwarf, entry_unit, entry_offset)) => get_type(
-                dwarf,
-                entry_unit,
-                &entry_unit.entry(entry_offset).unwrap(),
-                debug_info_builder_context,
-                debug_info_builder,
-            ),
+            DieReference::UnitAndOffset((dwarf, entry_unit, entry_offset)) => {
+                let resolved_entry = match entry_unit.entry(entry_offset) {
+                    Ok(x) => x,
+                    Err(e) => {
+                        log::error!(
+                            "Failed to resolve entry in unit {:?} at offset {:#x}: {}",
+                            entry_unit,
+                            entry_offset.0,
+                            e
+                        );
+                        return None;
+                    }
+                };
+                get_type(
+                    dwarf,
+                    entry_unit,
+                    &resolved_entry,
+                    debug_info_builder_context,
+                    debug_info_builder,
+                )
+            }
             DieReference::Err => {
                 warn!("Failed to fetch DIE when getting type through DW_AT_abstract_origin. Debug information may be incomplete.");
                 None
@@ -355,10 +396,22 @@ pub(crate) fn get_type<R: ReaderType>(
                 if entry_unit.header.offset() != unit.header.offset()
                     && entry_offset != entry.offset() =>
             {
+                let resolved_entry = match entry_unit.entry(entry_offset) {
+                    Ok(x) => x,
+                    Err(e) => {
+                        log::error!(
+                            "Failed to resolve entry in unit {:?} at offset {:#x}: {}",
+                            entry_unit,
+                            entry_offset.0,
+                            e
+                        );
+                        return None;
+                    }
+                };
                 get_type(
                     dwarf,
                     entry_unit,
-                    &entry_unit.entry(entry_offset).unwrap(),
+                    &resolved_entry,
                     debug_info_builder_context,
                     debug_info_builder,
                 )

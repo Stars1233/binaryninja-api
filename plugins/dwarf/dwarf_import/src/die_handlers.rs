@@ -106,8 +106,23 @@ pub(crate) fn handle_enum<R: ReaderType>(
 
     let mut enumeration_builder = EnumerationBuilder::new();
 
-    let mut tree = unit.entries_tree(Some(entry.offset())).unwrap();
-    let mut children = tree.root().unwrap().children();
+    let mut tree = match unit.entries_tree(Some(entry.offset())) {
+        Ok(x) => x,
+        Err(e) => {
+            log::error!("Failed to get enum entry tree: {}", e);
+            return None;
+        }
+    };
+
+    let tree_root = match tree.root() {
+        Ok(x) => x,
+        Err(e) => {
+            log::error!("Failed to get enum entry tree root: {}", e);
+            return None;
+        }
+    };
+
+    let mut children = tree_root.children();
     while let Ok(Some(child)) = children.next() {
         if child.entry().tag() == constants::DW_TAG_enumerator {
             let name = debug_info_builder_context.get_name(dwarf, unit, child.entry())?;
@@ -183,49 +198,32 @@ pub(crate) fn handle_pointer<R: ReaderType>(
     //   ?DW_AT_data_location
     //   * = Optional
 
-    if let Some(pointer_size) = get_size_as_usize(entry) {
-        if let Some(entry_type_offset) = entry_type {
-            let parent_type = debug_info_builder
-                .get_type(entry_type_offset)
-                .unwrap()
-                .get_type();
-            Some(Type::pointer_of_width(
-                parent_type.as_ref(),
-                pointer_size,
-                false,
-                false,
-                Some(reference_type),
-            ))
-        } else {
-            Some(Type::pointer_of_width(
-                Type::void().as_ref(),
-                pointer_size,
-                false,
-                false,
-                Some(reference_type),
-            ))
-        }
-    } else if let Some(entry_type_offset) = entry_type {
-        let parent_type = debug_info_builder
+    let pointer_size = match get_size_as_usize(entry) {
+        Some(x) => x,
+        None => debug_info_builder_context.default_address_size(),
+    };
+
+    let target_type = match entry_type {
+        Some(entry_type_offset) => debug_info_builder
             .get_type(entry_type_offset)
-            .unwrap()
-            .get_type();
-        Some(Type::pointer_of_width(
-            parent_type.as_ref(),
-            debug_info_builder_context.default_address_size(),
-            false,
-            false,
-            Some(reference_type),
-        ))
-    } else {
-        Some(Type::pointer_of_width(
-            Type::void().as_ref(),
-            debug_info_builder_context.default_address_size(),
-            false,
-            false,
-            Some(reference_type),
-        ))
-    }
+            .or_else(|| {
+                log::error!(
+                    "Failed to get pointer target type at entry offset {}",
+                    entry_type_offset
+                );
+                None
+            })?
+            .get_type(),
+        None => Type::void(),
+    };
+
+    Some(Type::pointer_of_width(
+        target_type.as_ref(),
+        pointer_size,
+        false,
+        false,
+        Some(reference_type),
+    ))
 }
 
 pub(crate) fn handle_array<R: ReaderType>(
@@ -246,35 +244,51 @@ pub(crate) fn handle_array<R: ReaderType>(
     //   * = Optional
     //   For multidimensional arrays, DW_TAG_subrange_type or DW_TAG_enumeration_type
 
-    if let Some(entry_type_offset) = entry_type {
-        let parent_type = debug_info_builder
-            .get_type(entry_type_offset)
-            .unwrap()
-            .get_type();
+    let entry_type_offset = entry_type?;
+    let parent_type = debug_info_builder
+        .get_type(entry_type_offset)
+        .or_else(|| {
+            log::error!(
+                "Failed to get array member type at entry offset {}",
+                entry_type_offset
+            );
+            None
+        })?
+        .get_type();
 
-        let mut tree = unit.entries_tree(Some(entry.offset())).unwrap();
-        let mut children = tree.root().unwrap().children();
-
-        // TODO : This is currently applying the size in reverse order
-        let mut result_type: Option<Ref<Type>> = None;
-        while let Ok(Some(child)) = children.next() {
-            if let Some(inner_type) = result_type {
-                result_type = Some(Type::array(
-                    inner_type.as_ref(),
-                    get_subrange_size(child.entry()),
-                ));
-            } else {
-                result_type = Some(Type::array(
-                    parent_type.as_ref(),
-                    get_subrange_size(child.entry()),
-                ));
-            }
+    let mut tree = match unit.entries_tree(Some(entry.offset())) {
+        Ok(x) => x,
+        Err(e) => {
+            log::error!("Failed to get array entry tree: {}", e);
+            return None;
         }
+    };
+    let tree_root = match tree.root() {
+        Ok(x) => x,
+        Err(e) => {
+            log::error!("Failed to get array entry tree root: {}", e);
+            return None;
+        }
+    };
+    let mut children = tree_root.children();
 
-        result_type.map_or(Some(Type::array(parent_type.as_ref(), 0)), Some)
-    } else {
-        None
+    // TODO : This is currently applying the size in reverse order
+    let mut result_type: Option<Ref<Type>> = None;
+    while let Ok(Some(child)) = children.next() {
+        if let Some(inner_type) = result_type {
+            result_type = Some(Type::array(
+                inner_type.as_ref(),
+                get_subrange_size(child.entry()),
+            ));
+        } else {
+            result_type = Some(Type::array(
+                parent_type.as_ref(),
+                get_subrange_size(child.entry()),
+            ));
+        }
     }
+
+    result_type.map_or(Some(Type::array(parent_type.as_ref(), 0)), Some)
 }
 
 pub(crate) fn handle_function<R: ReaderType>(
@@ -327,8 +341,23 @@ pub(crate) fn handle_function<R: ReaderType>(
     let mut variable_arguments = false;
 
     // Get all the children and populate
-    let mut tree = unit.entries_tree(Some(entry.offset())).unwrap();
-    let mut children = tree.root().unwrap().children();
+    let mut tree = match unit.entries_tree(Some(entry.offset())) {
+        Ok(x) => x,
+        Err(e) => {
+            log::error!("Failed to get function entry tree: {}", e);
+            return None;
+        }
+    };
+
+    let tree_root = match tree.root() {
+        Ok(x) => x,
+        Err(e) => {
+            log::error!("Failed to get function entry tree root: {}", e);
+            return None;
+        }
+    };
+
+    let mut children = tree_root.children();
     while let Ok(Some(child)) = children.next() {
         if child.entry().tag() == constants::DW_TAG_formal_parameter {
             if let (Some(child_uid), Some(name)) = {
@@ -343,7 +372,16 @@ pub(crate) fn handle_function<R: ReaderType>(
                     debug_info_builder_context.get_name(dwarf, unit, child.entry()),
                 )
             } {
-                let child_type = debug_info_builder.get_type(child_uid).unwrap().get_type();
+                let child_type = debug_info_builder
+                    .get_type(child_uid)
+                    .or_else(|| {
+                        log::error!(
+                            "Failed to get function parameter type with uid {}",
+                            child_uid
+                        );
+                        None
+                    })?
+                    .get_type();
                 parameters.push(FunctionParameter::new(child_type, name, None));
             }
         } else if child.entry().tag() == constants::DW_TAG_unspecified_parameters {
@@ -373,15 +411,22 @@ pub(crate) fn handle_const(
     //   ?DW_AT_sibling
     //   ?DW_AT_type
 
-    if let Some(entry_type_offset) = entry_type {
-        let parent_type = debug_info_builder
+    let target_type_builder = match entry_type {
+        Some(entry_type_offset) => debug_info_builder
             .get_type(entry_type_offset)
-            .unwrap()
-            .get_type();
-        Some((*parent_type).to_builder().set_const(true).finalize())
-    } else {
-        Some(TypeBuilder::void().set_const(true).finalize())
-    }
+            .or_else(|| {
+                log::error!(
+                    "Failed to get const type with entry offset {}",
+                    entry_type_offset
+                );
+                None
+            })?
+            .get_type()
+            .to_builder(),
+        None => TypeBuilder::void(),
+    };
+
+    Some(target_type_builder.set_const(true).finalize())
 }
 
 pub(crate) fn handle_volatile(
@@ -396,13 +441,20 @@ pub(crate) fn handle_volatile(
     //   ?DW_AT_sibling
     //   ?DW_AT_type
 
-    if let Some(entry_type_offset) = entry_type {
-        let parent_type = debug_info_builder
+    let target_type_builder = match entry_type {
+        Some(entry_type_offset) => debug_info_builder
             .get_type(entry_type_offset)
-            .unwrap()
-            .get_type();
-        Some((*parent_type).to_builder().set_volatile(true).finalize())
-    } else {
-        Some(TypeBuilder::void().set_volatile(true).finalize())
-    }
+            .or_else(|| {
+                log::error!(
+                    "Failed to get volatile type with entry offset {}",
+                    entry_type_offset
+                );
+                None
+            })?
+            .get_type()
+            .to_builder(),
+        None => TypeBuilder::void(),
+    };
+
+    Some(target_type_builder.set_volatile(true).finalize())
 }

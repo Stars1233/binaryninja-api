@@ -4090,13 +4090,13 @@ extern "C"
 	BINARYNINJACOREAPI char* BNProjectGetPath(BNProject* project);
 	BINARYNINJACOREAPI char* BNProjectGetFilePathInProject(BNProject* project, BNProjectFile* file);
 	BINARYNINJACOREAPI char* BNProjectGetName(BNProject* project);
-	BINARYNINJACOREAPI void BNProjectSetName(BNProject* project, const char* name);
+	BINARYNINJACOREAPI bool BNProjectSetName(BNProject* project, const char* name);
 	BINARYNINJACOREAPI char* BNProjectGetDescription(BNProject* project);
-	BINARYNINJACOREAPI void BNProjectSetDescription(BNProject* project, const char* description);
+	BINARYNINJACOREAPI bool BNProjectSetDescription(BNProject* project, const char* description);
 
 	BINARYNINJACOREAPI BNMetadata* BNProjectQueryMetadata(BNProject* project, const char* key);
 	BINARYNINJACOREAPI bool BNProjectStoreMetadata(BNProject* project, const char* key, BNMetadata* value);
-	BINARYNINJACOREAPI void BNProjectRemoveMetadata(BNProject* project, const char* key);
+	BINARYNINJACOREAPI bool BNProjectRemoveMetadata(BNProject* project, const char* key);
 
 	BINARYNINJACOREAPI BNProjectFile* BNProjectCreateFileFromPath(BNProject* project, const char* path, BNProjectFolder* folder, const char* name, const char* description, void* ctxt,
 		BNProgressFunction progress);
@@ -4111,7 +4111,7 @@ extern "C"
 	BINARYNINJACOREAPI BNProjectFile* BNProjectGetFileByPathOnDisk(BNProject* project, const char* path);
 	BINARYNINJACOREAPI BNProjectFile** BNProjectGetFilesByPathInProject(BNProject* project, const char* path, size_t* count);
 
-	BINARYNINJACOREAPI void BNProjectPushFile(BNProject* project, BNProjectFile* file);
+	BINARYNINJACOREAPI bool BNProjectPushFile(BNProject* project, BNProjectFile* file);
 	BINARYNINJACOREAPI bool BNProjectDeleteFile(BNProject* project, BNProjectFile* file);
 
 	BINARYNINJACOREAPI BNProjectFolder* BNProjectCreateFolderFromPath(BNProject* project, const char* path, BNProjectFolder* parent, const char* description, void* ctxt,
@@ -4120,12 +4120,12 @@ extern "C"
 	BINARYNINJACOREAPI BNProjectFolder* BNProjectCreateFolderUnsafe(BNProject* project, BNProjectFolder* parent, const char* name, const char* description, const char* id);
 	BINARYNINJACOREAPI BNProjectFolder** BNProjectGetFolders(BNProject* project, size_t* count);
 	BINARYNINJACOREAPI BNProjectFolder* BNProjectGetFolderById(BNProject* project, const char* id);
-	BINARYNINJACOREAPI void BNProjectPushFolder(BNProject* project, BNProjectFolder* folder);
+	BINARYNINJACOREAPI bool BNProjectPushFolder(BNProject* project, BNProjectFolder* folder);
 	BINARYNINJACOREAPI bool BNProjectDeleteFolder(BNProject* project, BNProjectFolder* folder, void* ctxt,
 		BNProgressFunction progress);
 
-	BINARYNINJACOREAPI void BNProjectBeginBulkOperation(BNProject* project);
-	BINARYNINJACOREAPI void BNProjectEndBulkOperation(BNProject* project);
+	BINARYNINJACOREAPI bool BNProjectBeginBulkOperation(BNProject* project);
+	BINARYNINJACOREAPI bool BNProjectEndBulkOperation(BNProject* project);
 
 	BINARYNINJACOREAPI BNRemoteProject* BNProjectGetRemoteProject(BNProject* project);
 

@@ -3640,10 +3640,10 @@ namespace BinaryNinja {
 		std::string GetId() const;
 		std::string GetName() const;
 		std::string GetDescription() const;
-		void SetName(const std::string& name);
-		void SetDescription(const std::string& description);
+		bool SetName(const std::string& name);
+		bool SetDescription(const std::string& description);
 		Ref<ProjectFolder> GetParent() const;
-		void SetParent(Ref<ProjectFolder> parent);
+		bool SetParent(Ref<ProjectFolder> parent);
 		bool Export(const std::string& destination, const ProgressFunction& progressCallback = {}) const;
 	};
 
@@ -3662,11 +3662,11 @@ namespace BinaryNinja {
 		bool ExistsOnDisk() const;
 		std::string GetName() const;
 		std::string GetDescription() const;
-		void SetName(const std::string& name);
-		void SetDescription(const std::string& description);
+		bool SetName(const std::string& name);
+		bool SetDescription(const std::string& description);
 		std::string GetId() const;
 		Ref<ProjectFolder> GetFolder() const;
-		void SetFolder(Ref<ProjectFolder> folder);
+		bool SetFolder(Ref<ProjectFolder> folder);
 		bool Export(const std::string& destination) const;
 		int64_t GetCreationTimestamp() const;
 	};
@@ -3696,13 +3696,13 @@ namespace BinaryNinja {
 		std::string GetPath() const;
 		std::string GetFilePathInProject(const Ref<ProjectFile>& file) const;
 		std::string GetName() const;
-		void SetName(const std::string& name);
+		bool SetName(const std::string& name);
 		std::string GetDescription() const;
-		void SetDescription(const std::string& description);
+		bool SetDescription(const std::string& description);
 
 		Ref<Metadata> QueryMetadata(const std::string& key);
 		bool StoreMetadata(const std::string& key, Ref<Metadata> value);
-		void RemoveMetadata(const std::string& key);
+		bool RemoveMetadata(const std::string& key);
 
 		Ref<ProjectFolder> CreateFolderFromPath(const std::string& path, Ref<ProjectFolder> parent, const std::string& description,
 			const ProgressFunction& progressCallback = {});
@@ -3710,7 +3710,7 @@ namespace BinaryNinja {
 		Ref<ProjectFolder> CreateFolderUnsafe(Ref<ProjectFolder> parent, const std::string& name, const std::string& description, const std::string& id);
 		std::vector<Ref<ProjectFolder>> GetFolders() const;
 		Ref<ProjectFolder> GetFolderById(const std::string& id) const;
-		void PushFolder(Ref<ProjectFolder> folder);
+		bool PushFolder(Ref<ProjectFolder> folder);
 		bool DeleteFolder(Ref<ProjectFolder> folder, const ProgressFunction& progressCallback = {});
 
 		Ref<ProjectFile> CreateFileFromPath(const std::string& path, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const ProgressFunction& progressCallback = {});
@@ -3721,14 +3721,14 @@ namespace BinaryNinja {
 		Ref<ProjectFile> GetFileById(const std::string& id) const;
 		Ref<ProjectFile> GetFileByPathOnDisk(const std::string& path) const;
 		std::vector<Ref<ProjectFile>> GetFilesByPathInProject(const std::string& path) const;
-		void PushFile(Ref<ProjectFile> file);
+		bool PushFile(Ref<ProjectFile> file);
 		bool DeleteFile_(Ref<ProjectFile> file);
 
 		void RegisterNotification(ProjectNotification* notify);
 		void UnregisterNotification(ProjectNotification* notify);
 
-		void BeginBulkOperation();
-		void EndBulkOperation();
+		bool BeginBulkOperation();
+		bool EndBulkOperation();
 
 		Ref<Collaboration::RemoteProject> GetRemoteProject();
 	};

@@ -975,6 +975,8 @@ pub enum InstructionTextTokenContext {
     Expanded,
     /// Use only with [`InstructionTextTokenKind::CollapseStateIndicator`]
     CollapsiblePadding,
+    /// Use only with [`InstructionTextTokenKind::String`]
+    DerivedStringReference,
 }
 
 impl From<BNInstructionTextTokenContext> for InstructionTextTokenContext {
@@ -1002,6 +1004,9 @@ impl From<BNInstructionTextTokenContext> for InstructionTextTokenContext {
             BNInstructionTextTokenContext::ContentCollapsedContext => Self::Collapsed,
             BNInstructionTextTokenContext::ContentExpandedContext => Self::Expanded,
             BNInstructionTextTokenContext::ContentCollapsiblePadding => Self::CollapsiblePadding,
+            BNInstructionTextTokenContext::DerivedStringReferenceTokenContext => {
+                Self::DerivedStringReference
+            }
         }
     }
 }
@@ -1023,6 +1028,7 @@ impl From<InstructionTextTokenContext> for BNInstructionTextTokenContext {
             InstructionTextTokenContext::Collapsed => Self::ContentCollapsedContext,
             InstructionTextTokenContext::Expanded => Self::ContentExpandedContext,
             InstructionTextTokenContext::CollapsiblePadding => Self::ContentCollapsiblePadding,
+            InstructionTextTokenContext::DerivedStringReference => Self::DerivedStringReferenceTokenContext,
         }
     }
 }

@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 137
+#define BN_CURRENT_CORE_ABI_VERSION 138
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 136
+#define BN_MINIMUM_CORE_ABI_VERSION 138
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -312,6 +312,8 @@ extern "C"
 	typedef struct BNIndirectBranchInfo BNIndirectBranchInfo;
 	typedef struct BNArchitectureAndAddress BNArchitectureAndAddress;
 	typedef struct BNConstantRenderer BNConstantRenderer;
+	typedef struct BNStringRecognizer BNStringRecognizer;
+	typedef struct BNCustomStringType BNCustomStringType;
 
 	typedef struct BNRemoteFileSearchMatch
 	{
@@ -468,7 +470,8 @@ extern "C"
 		StringDisplayTokenContext = 10, // For displaying strings which aren't associated with an address
 		ContentCollapsedContext = 11,
 		ContentExpandedContext = 12,
-		ContentCollapsiblePadding = 13
+		ContentCollapsiblePadding = 13,
+		DerivedStringReferenceTokenContext = 14
 	} BNInstructionTextTokenContext;
 
 	typedef enum BNLinearDisassemblyLineType
@@ -1639,6 +1642,27 @@ extern "C"
 		size_t nameCount;
 	} BNQualifiedName;
 
+	typedef enum BNDerivedStringLocationType
+	{
+		DataBackedStringLocation,
+		CodeStringLocation
+	} BNDerivedStringLocationType;
+
+	typedef struct BNDerivedStringLocation
+	{
+		BNDerivedStringLocationType locationType;
+		uint64_t addr;
+		uint64_t len;
+	} BNDerivedStringLocation;
+
+	typedef struct BNDerivedString
+	{
+		BNStringRef* value;
+		bool locationValid;
+		BNDerivedStringLocation location;
+		BNCustomStringType* customType;
+	} BNDerivedString;
+
 	typedef struct BNBinaryDataNotification
 	{
 		void* context;
@@ -1664,6 +1688,8 @@ extern "C"
 		void (*symbolUpdated)(void* ctxt, BNBinaryView* view, BNSymbol* sym);
 		void (*stringFound)(void* ctxt, BNBinaryView* view, BNStringType type, uint64_t offset, size_t len);
 		void (*stringRemoved)(void* ctxt, BNBinaryView* view, BNStringType type, uint64_t offset, size_t len);
+		void (*derivedStringFound)(void* ctxt, BNBinaryView* view, BNDerivedString* str);
+		void (*derivedStringRemoved)(void* ctxt, BNBinaryView* view, BNDerivedString* str);
 		void (*typeDefined)(void* ctxt, BNBinaryView* view, BNQualifiedName* name, BNType* type);
 		void (*typeUndefined)(void* ctxt, BNBinaryView* view, BNQualifiedName* name, BNType* type);
 		void (*typeReferenceChanged)(void* ctxt, BNBinaryView* view, BNQualifiedName* name, BNType* type);
@@ -3826,6 +3852,27 @@ extern "C"
 			BNOperatorPrecedence precedence);
 	} BNCustomConstantRenderer;
 
+	typedef struct BNCustomStringRecognizer
+	{
+		void* context;
+		bool (*isValidForType)(void* ctxt, BNHighLevelILFunction* hlil, BNType* type);
+		bool (*recognizeConstant)(
+			void* ctxt, BNHighLevelILFunction* hlil, size_t expr, BNType* type, int64_t val, BNDerivedString* result);
+		bool (*recognizeConstantPointer)(
+			void* ctxt, BNHighLevelILFunction* hlil, size_t expr, BNType* type, int64_t val, BNDerivedString* result);
+		bool (*recognizeExternPointer)(void* ctxt, BNHighLevelILFunction* hlil, size_t expr, BNType* type, int64_t val,
+			uint64_t offset, BNDerivedString* result);
+		bool (*recognizeImport)(
+			void* ctxt, BNHighLevelILFunction* hlil, size_t expr, BNType* type, int64_t val, BNDerivedString* result);
+	} BNCustomStringRecognizer;
+
+	typedef struct BNCustomStringTypeInfo
+	{
+		char* name;
+		char* stringPrefix;
+		char* stringPostfix;
+	} BNCustomStringTypeInfo;
+
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI char* BNAllocStringWithLength(const char* contents, size_t len);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
@@ -5273,6 +5320,11 @@ extern "C"
 	    BNBinaryView* view, uint64_t start, uint64_t len, size_t* count);
 	BINARYNINJACOREAPI void BNFreeStringReferenceList(BNStringReference* strings);
 
+	BINARYNINJACOREAPI BNDerivedString* BNGetDerivedStrings(BNBinaryView* view, size_t* count);
+	BINARYNINJACOREAPI BNReferenceSource* BNGetDerivedStringCodeReferences(
+		BNBinaryView* view, BNDerivedString* str, size_t* count, bool limit, size_t maxItems);
+	BINARYNINJACOREAPI void BNFreeDerivedStringList(BNDerivedString* strings, size_t count);
+
 	BINARYNINJACOREAPI BNVariableNameAndType* BNGetStackLayout(BNFunction* func, size_t* count);
 	BINARYNINJACOREAPI void BNFreeVariableNameAndTypeList(BNVariableNameAndType* vars, size_t count);
 	BINARYNINJACOREAPI void BNCreateAutoStackVariable(
@@ -6576,6 +6628,12 @@ extern "C"
 	    BNHighLevelILFunction* leftFunc, size_t leftExpr, BNHighLevelILFunction* rightFunc, size_t rightExpr);
 	BINARYNINJACOREAPI bool BNHighLevelILExprEqual(
 	    BNHighLevelILFunction* leftFunc, size_t leftExpr, BNHighLevelILFunction* rightFunc, size_t rightExpr);
+
+	BINARYNINJACOREAPI void BNSetHighLevelILDerivedStringReferenceForExpr(
+		BNHighLevelILFunction* func, size_t expr, BNDerivedString* str);
+	BINARYNINJACOREAPI void BNRemoveHighLevelILDerivedStringReferenceForExpr(BNHighLevelILFunction* func, size_t expr);
+	BINARYNINJACOREAPI bool BNGetHighLevelILDerivedStringReferenceForExpr(
+		BNHighLevelILFunction* func, size_t expr, BNDerivedString* out);
 
 	// Type Libraries
 	BINARYNINJACOREAPI BNTypeLibrary* BNNewTypeLibrary(BNArchitecture* arch, const char* name);
@@ -8701,13 +8759,15 @@ extern "C"
 	BINARYNINJACOREAPI BNStringRef* BNDuplicateStringRef(BNStringRef* ref);
 	BINARYNINJACOREAPI const char* BNGetStringRefContents(BNStringRef* ref);
 	BINARYNINJACOREAPI size_t BNGetStringRefSize(BNStringRef* ref);
+	BINARYNINJACOREAPI BNStringRef* BNCreateStringRef(const char* str);
+	BINARYNINJACOREAPI BNStringRef* BNCreateStringRefOfLength(const char* str, size_t len);
 
 	// Constant Renderers
 	BINARYNINJACOREAPI BNConstantRenderer* BNRegisterConstantRenderer(
 		const char* name, BNCustomConstantRenderer* renderer);
 	BINARYNINJACOREAPI BNConstantRenderer* BNGetConstantRendererByName(const char* name);
 	BINARYNINJACOREAPI BNConstantRenderer** BNGetConstantRendererList(size_t* count);
-	BINARYNINJACOREAPI void BNFreeConstantRendererList(BNLanguageRepresentationFunctionType** renderers);
+	BINARYNINJACOREAPI void BNFreeConstantRendererList(BNConstantRenderer** renderers);
 	BINARYNINJACOREAPI char* BNGetConstantRendererName(BNConstantRenderer* renderer);
 	BINARYNINJACOREAPI bool BNIsConstantRendererValidForType(
 		BNConstantRenderer* renderer, BNHighLevelILFunction* il, BNType* type);
@@ -8717,6 +8777,32 @@ extern "C"
 	BINARYNINJACOREAPI bool BNConstantRendererRenderConstantPointer(BNConstantRenderer* renderer,
 		BNHighLevelILFunction* il, size_t exprIndex, BNType* type, int64_t val, BNHighLevelILTokenEmitter* tokens,
 		BNDisassemblySettings* settings, BNSymbolDisplayType symbolDisplay, BNOperatorPrecedence precedence);
+
+	// String recognizers
+	BINARYNINJACOREAPI BNCustomStringType* BNRegisterCustomStringType(BNCustomStringTypeInfo* info);
+	BINARYNINJACOREAPI BNCustomStringType* BNGetCustomStringTypeByName(const char* name);
+	BINARYNINJACOREAPI BNCustomStringType* BNGetCustomStringTypeByID(uint32_t id);
+	BINARYNINJACOREAPI BNCustomStringType** BNGetCustomStringTypeList(size_t* count);
+	BINARYNINJACOREAPI void BNFreeCustomStringTypeList(BNCustomStringType** types);
+	BINARYNINJACOREAPI char* BNGetCustomStringTypeName(BNCustomStringType* type);
+	BINARYNINJACOREAPI char* BNGetCustomStringTypePrefix(BNCustomStringType* type);
+	BINARYNINJACOREAPI char* BNGetCustomStringTypePostfix(BNCustomStringType* type);
+	BINARYNINJACOREAPI BNStringRecognizer* BNRegisterStringRecognizer(
+		const char* name, BNCustomStringRecognizer* recognizer);
+	BINARYNINJACOREAPI BNStringRecognizer* BNGetStringRecognizerByName(const char* name);
+	BINARYNINJACOREAPI BNStringRecognizer** BNGetStringRecognizerList(size_t* count);
+	BINARYNINJACOREAPI void BNFreeStringRecognizerList(BNStringRecognizer** recognizers);
+	BINARYNINJACOREAPI char* BNGetStringRecognizerName(BNStringRecognizer* recognizer);
+	BINARYNINJACOREAPI bool BNIsStringRecognizerValidForType(
+		BNStringRecognizer* recognizer, BNHighLevelILFunction* il, BNType* type);
+	BINARYNINJACOREAPI bool BNStringRecognizerRecognizeConstant(BNStringRecognizer* recognizer,
+		BNHighLevelILFunction* il, size_t exprIndex, BNType* type, int64_t val, BNDerivedString* out);
+	BINARYNINJACOREAPI bool BNStringRecognizerRecognizeConstantPointer(BNStringRecognizer* recognizer,
+		BNHighLevelILFunction* il, size_t exprIndex, BNType* type, int64_t val, BNDerivedString* out);
+	BINARYNINJACOREAPI bool BNStringRecognizerRecognizeExternPointer(BNStringRecognizer* recognizer,
+		BNHighLevelILFunction* il, size_t exprIndex, BNType* type, int64_t val, uint64_t offset, BNDerivedString* out);
+	BINARYNINJACOREAPI bool BNStringRecognizerRecognizeImport(BNStringRecognizer* recognizer, BNHighLevelILFunction* il,
+		size_t exprIndex, BNType* type, int64_t val, BNDerivedString* out);
 
 #ifdef __cplusplus
 }

@@ -79,6 +79,8 @@ class BINARYNINJAUIAPI StringsListModel : public QAbstractItemModel, public Bina
 
 	virtual void OnStringFound(BinaryNinja::BinaryView* data, BNStringType type, uint64_t offset, size_t len) override;
 	virtual void OnStringRemoved(BinaryNinja::BinaryView* data, BNStringType type, uint64_t offset, size_t len) override;
+	virtual void OnDerivedStringFound(BinaryNinja::BinaryView* data, const BinaryNinja::DerivedString& str) override;
+	virtual void OnDerivedStringRemoved(BinaryNinja::BinaryView* data, const BinaryNinja::DerivedString& str) override;
 	void updateStrings();
 
 	virtual void sort(int col, Qt::SortOrder order) override;

@@ -1,4 +1,6 @@
 #pragma once
+#include <QCheckBox>
+#include <QDialog>
 #include <qmetatype.h>
 #include <QSortFilterProxyModel>
 #include <qstandarditemmodel.h>
@@ -101,6 +103,20 @@ struct ParsedQuery
 			return std::nullopt;
 		return it.value();
 	}
+};
+
+// TODO: Consolidate with `WARP\\Remove Matched Function` plugin command?
+class WarpRemoveMatchDialog : public QDialog
+{
+	Q_OBJECT
+public:
+	explicit WarpRemoveMatchDialog(QWidget* parent, FunctionRef func);
+
+	bool execute();
+
+private:
+	FunctionRef m_func;
+	QCheckBox* m_ignoreCheck{nullptr};
 };
 
 constexpr const char* ALLOWED_TAGS_SETTING = "warp.fetcher.allowedSourceTags";

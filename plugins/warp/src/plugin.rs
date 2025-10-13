@@ -216,6 +216,18 @@ pub extern "C" fn CorePluginInit() -> bool {
     );
 
     register_command_for_function(
+        "WARP\\Ignore Function",
+        "Add current function to the list of functions to ignore when matching",
+        function::IgnoreFunction {},
+    );
+
+    register_command_for_function(
+        "WARP\\Remove Matched Function",
+        "Remove the current match from the selected function, to prevent matches in future use 'Ignore Function'",
+        function::RemoveFunction {},
+    );
+
+    register_command_for_function(
         "WARP\\Copy GUID",
         "Copy the computed GUID for the function",
         function::CopyFunctionGUID {},

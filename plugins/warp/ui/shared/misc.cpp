@@ -1,5 +1,6 @@
 #include "misc.h"
 
+#include <QDialogButtonBox>
 #include <QGridLayout>
 #include <QHeaderView>
 
@@ -139,4 +140,45 @@ ParsedQuery::ParsedQuery(const QString& rawQuery)
 
 	// Normalize whitespace
 	query = query.simplified();
+}
+
+WarpRemoveMatchDialog::WarpRemoveMatchDialog(QWidget *parent, FunctionRef func) : QDialog(parent), m_func(func)
+{
+	setWindowTitle("Remove Matching Function");
+	setModal(true);
+
+	auto* vbox = new QVBoxLayout(this);
+	auto* text = new QLabel("Remove the match for this function? You can also mark it as ignored to prevent future automatic matches.");
+	text->setWordWrap(true);
+	vbox->addWidget(text);
+
+	m_ignoreCheck = new QCheckBox("Tag function as ignored");
+	m_ignoreCheck->setChecked(true);
+	vbox->addWidget(m_ignoreCheck);
+
+	auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
+	connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
+	connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
+	vbox->addWidget(buttons);
+}
+
+bool WarpRemoveMatchDialog::execute()
+{
+	if (!m_func)
+		return false;
+	if (exec() != QDialog::Accepted)
+		return false;
+	Warp::Function::RemoveMatch(*m_func);
+	if (m_ignoreCheck->isChecked())
+	{
+		// TODO: For now we just assume the tag type to exist (the matcher activity will create it)
+		const TagTypeRef tagType = m_func->GetView()->GetTagTypeByName("WARP: Ignored Function");
+		if (!tagType)
+			return false;
+		const TagRef tag = new BinaryNinja::Tag(tagType, "");
+		if (tagType)
+			m_func->AddUserFunctionTag(tag);
+	}
+	m_func->Reanalyze();
+	return true;
 }

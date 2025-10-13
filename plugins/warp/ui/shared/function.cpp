@@ -70,6 +70,15 @@ void WarpFunctionItemModel::InsertFunction(uint64_t address, WarpFunctionItem* i
 	m_insertableFunctionRows[address] = rowCount() - 1;
 }
 
+void WarpFunctionItemModel::RemoveFunction(uint64_t address)
+{
+	const auto iter = m_insertableFunctionRows.find(address);
+	if (iter == m_insertableFunctionRows.end())
+		return;
+	removeRow(iter->second);
+	m_insertableFunctionRows.erase(iter);
+}
+
 WarpFunctionItem* WarpFunctionItemModel::GetItem(const QModelIndex& index) const
 {
 	if (!index.isValid())
@@ -173,7 +182,7 @@ WarpFunctionTableWidget::WarpFunctionTableWidget(QWidget* parent) : QWidget(pare
 	m_table->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_table->setSelectionMode(QAbstractItemView::SingleSelection);
 	m_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
-	m_table->setFocusPolicy(Qt::NoFocus);
+	m_table->setFocusPolicy(Qt::FocusPolicy::StrongFocus);
 	m_table->setShowGrid(false);
 	m_table->setAlternatingRowColors(false);
 	m_table->setSortingEnabled(true);
@@ -219,6 +228,15 @@ WarpFunctionTableWidget::WarpFunctionTableWidget(QWidget* parent) : QWidget(pare
 		if (!item || !item->GetFunction())
 			return;
 
+		for (QAction* action : m_contextMenu->actions())
+		{
+			bool enabled = true;
+			auto iter = m_contextMenuIsValid.find(action->text());
+			if (iter != m_contextMenuIsValid.end())
+				enabled = iter->second(item, m_model->GetAddress(sourceIndex));
+			action->setEnabled(enabled);
+		}
+
 		// Execute the menu and get the selected action
 		const QAction* selectedAction = m_contextMenu->exec(m_table->viewport()->mapToGlobal(pos));
 		if (!selectedAction)
@@ -236,6 +254,16 @@ void WarpFunctionTableWidget::RegisterContextMenuAction(
 {
 	m_contextMenu->addAction(name);
 	m_contextMenuActions[name] = callback;
+}
+
+void WarpFunctionTableWidget::RegisterContextMenuAction(
+	const QString& name,
+	const std::function<void(WarpFunctionItem*, std::optional<uint64_t>)>& callback,
+	const std::function<bool(WarpFunctionItem*, std::optional<uint64_t>)>& isValid)
+{
+	// Reuse existing registration then add optional validator
+	RegisterContextMenuAction(name, callback);
+	m_contextMenuIsValid[name] = isValid;
 }
 
 void WarpFunctionTableWidget::SetFunctions(QVector<WarpFunctionItem*> functions)
@@ -264,6 +292,11 @@ void WarpFunctionTableWidget::SetFunctions(QVector<WarpFunctionItem*> functions)
 void WarpFunctionTableWidget::InsertFunction(uint64_t address, WarpFunctionItem* function)
 {
 	m_model->InsertFunction(address, function);
+}
+
+void WarpFunctionTableWidget::RemoveFunction(uint64_t address)
+{
+	m_model->RemoveFunction(address);
 }
 
 void WarpFunctionTableWidget::setFilter(const std::string& filter)

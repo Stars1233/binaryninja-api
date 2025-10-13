@@ -27,17 +27,18 @@ WarpMatchedWidget::WarpMatchedWidget(BinaryViewRef current)
 	m_tableWidget->setContentsMargins(0, 0, 0, 0);
 	m_splitter->addWidget(m_tableWidget);
 
-	// Toggle the applying workflow, this workflow sets all the data for the function based on the matched function
-	// data.
+	// Removes the match for the function, this is irreversible currently, and the user must run the matcher again.
+	// TODO: We previously were trying to instead toggle the application of the match, but because the symbols are applied
+	// TODO: when applying the match metadata we would persist that regardless.
 	m_tableWidget->RegisterContextMenuAction(
-		"Toggle Application", [this](WarpFunctionItem*, std::optional<uint64_t> address) {
+		"Remove Match", [this](WarpFunctionItem*, std::optional<uint64_t> address) {
 			if (!address.has_value())
 				return;
 			for (const auto& func : m_current->GetAnalysisFunctionsForAddress(*address))
 			{
-				const bool previous = BinaryNinja::Settings::Instance()->Get<bool>(WARP_APPLY_ACTIVITY, func);
-				BinaryNinja::Settings::Instance()->Set(WARP_APPLY_ACTIVITY, !previous, func);
-				func->Reanalyze();
+				WarpRemoveMatchDialog dlg(this, func);
+				if (dlg.execute())
+					Update();
 			}
 		});
 
@@ -74,10 +75,9 @@ void WarpMatchedWidget::Update()
 	for (const auto& analysisFunction : m_current->GetAnalysisFunctionList())
 	{
 		if (const auto& matchedFunction = Warp::Function::GetMatched(*analysisFunction))
-		{
-			uint64_t startAddress = analysisFunction->GetStart();
-			m_tableWidget->InsertFunction(startAddress, new WarpFunctionItem(matchedFunction, analysisFunction));
-		}
+			m_tableWidget->InsertFunction(analysisFunction->GetStart(), new WarpFunctionItem(matchedFunction, analysisFunction));
+		else
+			m_tableWidget->RemoveFunction(analysisFunction->GetStart());
 	}
 	m_tableWidget->GetTableView()->setModel(m_tableWidget->GetProxyModel());
 	m_tableWidget->GetProxyModel()->setSourceModel(m_tableWidget->GetModel());

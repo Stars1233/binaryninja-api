@@ -49,6 +49,8 @@ public:
 
 	void InsertFunction(uint64_t address, WarpFunctionItem* item);
 
+	void RemoveFunction(uint64_t address);
+
 	WarpFunctionItem* GetItem(const QModelIndex& index) const;
 
 	std::optional<uint64_t> GetAddress(const QModelIndex& index) const;
@@ -68,6 +70,8 @@ public:
 			emit dataChanged(topLeft, bottomRight);
 		}
 	}
+
+	Warp::Ref<Warp::Function> GetMatchedFunction() const { return m_matchedFunction; }
 };
 
 class WarpFunctionFilterModel : public QSortFilterProxyModel
@@ -95,6 +99,7 @@ class WarpFunctionTableWidget : public QWidget, public FilterTarget
 	FilteredView* m_filterView;
 	QMenu* m_contextMenu;
 	std::map<QString, std::function<void(WarpFunctionItem*, std::optional<uint64_t>)>> m_contextMenuActions;
+	std::map<QString, std::function<bool(WarpFunctionItem*, std::optional<uint64_t>)>> m_contextMenuIsValid;
 
 public:
 	explicit WarpFunctionTableWidget(QWidget* parent = nullptr);
@@ -107,9 +112,16 @@ public:
 	void RegisterContextMenuAction(
 		const QString& name, const std::function<void(WarpFunctionItem*, std::optional<uint64_t>)>& callback);
 
+	void RegisterContextMenuAction(
+		const QString &name,
+		const std::function<void(WarpFunctionItem *, std::optional<uint64_t>)> &callback,
+		const std::function<bool(WarpFunctionItem *, std::optional<uint64_t>)> &isValid);
+
 	void SetFunctions(QVector<WarpFunctionItem*> functions);
 
 	void InsertFunction(uint64_t address, WarpFunctionItem* function);
+
+	void RemoveFunction(uint64_t address);
 
 	void setFilter(const std::string&) override;
 

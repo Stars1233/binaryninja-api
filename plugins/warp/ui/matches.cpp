@@ -56,6 +56,24 @@ WarpCurrentFunctionWidget::WarpCurrentFunctionWidget()
 		// So it shows visually as selected.
 		m_tableWidget->GetModel()->SetMatchedFunction(selectedFunction);
 	});
+	// If the selected function is the current match, let the user remove the match.
+	m_tableWidget->RegisterContextMenuAction("Remove Match",
+		[this](WarpFunctionItem*, std::optional<uint64_t>) {
+			WarpRemoveMatchDialog dlg(this, m_current);
+			if (dlg.execute())
+				m_tableWidget->GetModel()->SetMatchedFunction(nullptr);
+		},
+		[this](WarpFunctionItem* item, std::optional<uint64_t>) {
+		if (item == nullptr)
+			return false;
+		Warp::Ref<Warp::Function> selectedFunction = item->GetFunction();
+		if (!selectedFunction)
+			return false;
+		Warp::Ref<Warp::Function> matchedFunction = m_tableWidget->GetModel()->GetMatchedFunction();
+		if (!matchedFunction)
+			return false;
+		return BNWARPFunctionsEqual(selectedFunction->m_object, matchedFunction->m_object);
+	});
 	m_tableWidget->RegisterContextMenuAction(
 		"Search for Source", [this](WarpFunctionItem* item, std::optional<uint64_t>) {
 			// Apply the source as the filter.
@@ -78,7 +96,6 @@ WarpCurrentFunctionWidget::WarpCurrentFunctionWidget()
 		m_infoWidget->SetFunction(selectedItem->GetFunction());
 		m_infoWidget->UpdateInfo();
 	});
-
 
 	connect(m_tableWidget->GetTableView(), &QTableView::doubleClicked, this, [=, this](const QModelIndex& index) {
 		if (m_current == nullptr)

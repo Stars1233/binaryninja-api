@@ -6,7 +6,7 @@ use crate::cache::{
 use crate::convert::{platform_to_target, to_bn_type};
 use crate::matcher::{Matcher, MatcherSettings};
 use crate::plugin::settings::PluginSettings;
-use crate::{get_warp_tag_type, relocatable_regions};
+use crate::{get_warp_ignore_tag_type, get_warp_tag_type, relocatable_regions, IGNORE_TAG_NAME};
 use binaryninja::architecture::RegisterId;
 use binaryninja::background_task::BackgroundTask;
 use binaryninja::binary_view::{BinaryView, BinaryViewExt};
@@ -62,11 +62,15 @@ struct FunctionSet {
 impl FunctionSet {
     fn from_view(view: &BinaryView) -> Option<Self> {
         let mut set = FunctionSet::default();
+        let is_ignored_func =
+            |f: &BNFunction| !f.function_tags(None, Some(IGNORE_TAG_NAME)).is_empty();
 
         // TODO: Par iter this? Using dashmap
         set.functions_by_target_and_guid = view
             .functions()
             .iter()
+            // Skip functions that have the ignored tag! Otherwise, we will match on them.
+            .filter(|f| !is_ignored_func(f))
             .filter_map(|f| {
                 let guid = try_cached_function_guid(&f)?;
                 let target = platform_to_target(&f.platform());
@@ -110,6 +114,7 @@ pub fn run_matcher(view: &BinaryView) {
     // TODO: Create the tag type so we dont have UB in the apply function workflow.
     let undo_id = view.file().begin_undo_actions(false);
     let _ = get_warp_tag_type(view);
+    let _ = get_warp_ignore_tag_type(view);
     view.file().forget_undo_actions(&undo_id);
 
     // Then we want to actually find matching functions.

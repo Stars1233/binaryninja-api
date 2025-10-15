@@ -193,7 +193,7 @@ fn recover_names_internal<R: ReaderType>(
                                     let resolved_entry = match entry_unit.entry(entry_offset) {
                                         Ok(x) => x,
                                         Err(e) => {
-                                            log::error!("Failed to resolve entry in unit {:?} at offset {:#x} (resolve_namespace_name): {}", entry_unit, entry_offset.0, e);
+                                            log::error!("Failed to resolve entry in unit {:?} at offset {:#x} (resolve_namespace_name): {}", entry_unit.header.offset(), entry_offset.0, e);
                                             return;
                                         }
                                     };

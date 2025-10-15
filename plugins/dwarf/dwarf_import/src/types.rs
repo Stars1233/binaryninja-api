@@ -334,7 +334,7 @@ pub(crate) fn get_type<R: ReaderType>(
                     Err(e) => {
                         log::error!(
                             "Failed to resolve entry in unit {:?} at offset {:#x}: {}",
-                            entry_unit,
+                            entry_unit.header.offset(),
                             entry_offset.0,
                             e
                         );
@@ -369,7 +369,7 @@ pub(crate) fn get_type<R: ReaderType>(
                     Err(e) => {
                         log::error!(
                             "Failed to resolve entry in unit {:?} at offset {:#x}: {}",
-                            entry_unit,
+                            entry_unit.header.offset(),
                             entry_offset.0,
                             e
                         );
@@ -401,7 +401,7 @@ pub(crate) fn get_type<R: ReaderType>(
                     Err(e) => {
                         log::error!(
                             "Failed to resolve entry in unit {:?} at offset {:#x}: {}",
-                            entry_unit,
+                            entry_unit.header.offset(),
                             entry_offset.0,
                             e
                         );

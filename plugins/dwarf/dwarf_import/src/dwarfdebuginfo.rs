@@ -125,7 +125,7 @@ pub(crate) struct DebugInfoBuilderContext<R: ReaderType> {
 }
 
 impl<R: ReaderType> DebugInfoBuilderContext<R> {
-    pub(crate) fn new(view: &BinaryView, dwarf: &Dwarf<R>) -> Option<Self> {
+    pub(crate) fn new(default_address_size: usize, dwarf: &Dwarf<R>) -> Option<Self> {
         let mut units = vec![];
         let mut iter = dwarf.units();
         while let Ok(Some(header)) = iter.next() {
@@ -154,7 +154,7 @@ impl<R: ReaderType> DebugInfoBuilderContext<R> {
             units,
             sup_units,
             names: HashMap::new(),
-            default_address_size: view.address_size(),
+            default_address_size,
             total_die_count: 0,
             total_unit_size_bytes: 0,
         })

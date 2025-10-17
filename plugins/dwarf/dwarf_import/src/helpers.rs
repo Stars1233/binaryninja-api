@@ -657,6 +657,6 @@ pub(crate) fn load_sibling_debug_file(view: &BinaryView) -> (Option<Ref<BinaryVi
 
     (
         binaryninja::load_with_options(debug_file, false, Some(load_settings)),
-        false,
+        true,
     )
 }

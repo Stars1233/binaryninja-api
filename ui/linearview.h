@@ -117,6 +117,10 @@ public:
 
 class LinearView;
 
+class QHBoxLayout;
+class QVBoxLayout;
+class QResizeEvent;
+
 class StickyHeader: public QWidget
 {
 	RenderContext m_render;
@@ -128,6 +132,11 @@ class StickyHeader: public QWidget
 	LinearViewLine m_line;
 	BinaryNinja::FunctionViewType m_viewType;
 	QProgressIndicator* m_updateIndicator;
+	QHBoxLayout* m_mainLayout = nullptr;
+	QVBoxLayout* m_indicatorLayout = nullptr;
+
+	void updateIndicatorIcon();
+	void updateIndicatorPosition();
 
 public:
 	StickyHeader(BinaryViewRef data, LinearView* parent);
@@ -138,6 +147,7 @@ public:
 	void updateTheme();
 
 	virtual void paintEvent(QPaintEvent* event) override;
+	virtual void resizeEvent(QResizeEvent* event) override;
 };
 
 

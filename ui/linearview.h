@@ -223,6 +223,10 @@ class BINARYNINJAUIAPI LinearView : public QAbstractScrollArea, public View, pub
 	std::set<size_t> m_relatedIndexHighlights;
 	std::set<uint64_t> m_relatedInstructionHighlights;
 
+	void updateStickyHeaderLine();
+	void updateStickyHeaderVisibility();
+	bool shouldShowStickyHeader() const;
+
 	SettingsRef m_settings;
 	DisassemblySettingsRef m_options;
 	BinaryNinja::FunctionViewType m_ilViewType, m_prevILViewType = InvalidILViewType;

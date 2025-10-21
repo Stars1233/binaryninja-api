@@ -10048,17 +10048,38 @@ namespace BinaryNinja {
 	*/
 	struct Variable : public BNVariable
 	{
-		Variable();
-		Variable(BNVariableSourceType type, uint32_t index, uint64_t storage);
-		Variable(BNVariableSourceType type, uint64_t storage);
-		Variable(const BNVariable& var);
-		Variable(const Variable& var);
+		Variable() : BNVariable{RegisterVariableSourceType, 0, 0} {}
+		Variable(BNVariableSourceType type, uint64_t storage) : Variable(type, 0, storage) {}
+		Variable(BNVariableSourceType type, uint32_t index, uint64_t storage)
+			: BNVariable{type, index, static_cast<int64_t>(storage)}
+		{
+		}
+		Variable(const BNVariable& var) : BNVariable(var) {}
 
-		Variable& operator=(const Variable& var);
+		Variable(const Variable&) = default;
+		Variable& operator=(const Variable&) = default;
 
-		bool operator==(const Variable& var) const;
-		bool operator!=(const Variable& var) const;
-		bool operator<(const Variable& var) const;
+		Variable(Variable&&) = default;
+		Variable& operator=(Variable&&) = default;
+
+		bool operator==(const Variable& var) const
+		{
+			return type == var.type && index == var.index && storage == var.storage;
+		}
+
+		bool operator!=(const Variable& var) const
+		{
+			return !(*this == var);
+		}
+		
+		bool operator<(const Variable& var) const
+		{
+			if (type != var.type)
+				return type < var.type;
+			if (storage != var.storage)
+				return storage < var.storage;
+			return index < var.index;
+		}
 
 		uint64_t ToIdentifier() const;
 		static Variable FromIdentifier(uint64_t id);

@@ -3928,11 +3928,11 @@ class BinaryView:
 		Performs "finalization" on segments added after initial Finalization (performed after an Init() has completed).
 
 		Finalizing a segment involves optimizing the relocation info stored in that segment, so if a segment is added
-			and relocations are defined for that segment by some automated process, this function should be called afterwards.
+		and relocations are defined for that segment by some automated process, this function should be called afterwards.
 
 		An example of this can be seen in the KernelCache plugin, in `KernelCache::LoadImageWithInstallName`.
-			After we load an image, map new segments, and define relocations for all of them, we call this function
-			to let core know it is now safe to finalize the new segments
+		After we load an image, map new segments, and define relocations for all of them, we call this function
+		to let core know it is now safe to finalize the new segments
 
 		:return: Whether finalization was successful
 		"""
@@ -7485,8 +7485,8 @@ class BinaryView:
 		"""
 		Create a new component with an optional name and parent.
 
-		The `parent` argument can be either a Component or the Guid of a component that the created component will be
-			added as a child of
+		The `parent` argument can be either a Component or the Guid of a component to which the created component
+		will be added as a child
 
 		:param name: Optional name to create the component with
 		:param parent: Optional parent to which the component will be added

@@ -790,8 +790,6 @@ class TypeBuilder:
 	def finalized(self):
 		type_handle = core.BNFinalizeTypeBuilder(self._handle)
 		assert type_handle is not None, "core.BNFinalizeTypeBuilder returned None"
-		type_handle = core.BNNewTypeReference(type_handle)
-		assert type_handle is not None, "core.BNNewTypeReference returned None"
 		return type_handle
 
 	@property
@@ -2586,6 +2584,7 @@ class StructureType(Type):
 	def __del__(self):
 		if core is not None:
 			core.BNFreeStructure(self.struct_handle)
+		super(StructureType, self).__del__()
 
 	def __hash__(self):
 		return hash(ctypes.addressof(self.struct_handle.contents))
@@ -2833,6 +2832,7 @@ class EnumerationType(IntegerType):
 	def __del__(self):
 		if core is not None:
 			core.BNFreeEnumeration(self.enum_handle)
+		super(EnumerationType, self).__del__()
 
 	def __hash__(self):
 		return hash(ctypes.addressof(self.enum_handle.contents))
@@ -3293,6 +3293,7 @@ class NamedTypeReferenceType(Type):
 	def __del__(self):
 		if core is not None:
 			core.BNFreeNamedTypeReference(self.ntr_handle)
+		super(NamedTypeReferenceType, self).__del__()
 
 	def __repr__(self):
 		if self.named_type_class == NamedTypeReferenceClass.TypedefNamedTypeClass:

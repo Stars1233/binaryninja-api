@@ -2135,7 +2135,7 @@ class Type:
 		return result
 
 	def get_lines(
-		self, bv: Union['binaryview.BinaryView', 'typecontainer.TypeContainer'], name: str, padding_cols: int = 64, collapsed: bool = False,
+		self, bv: Union['binaryview.BinaryView', 'typecontainer.TypeContainer'], name: Union[str, 'QualifiedName'], padding_cols: int = 64, collapsed: bool = False,
 		escaping: TokenEscapingType = TokenEscapingType.NoTokenEscapingType
 	) -> List['TypeDefinitionLine']:
 		"""
@@ -2158,6 +2158,8 @@ class Type:
 			container = bv
 		else:
 			assert False, "Unexpected type container type"
+		if isinstance(name, QualifiedName):
+		    name = str(name)
 		core_lines = core.BNGetTypeLines(self._handle, container.handle, name, padding_cols, collapsed, escaping, count)
 		assert core_lines is not None, "core.BNGetTypeLines returned None"
 		lines = []

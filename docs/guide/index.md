@@ -1058,6 +1058,9 @@ When you launch Binary Ninja from the command-line, you can control whether a ne
     3. Open those files in a new instance of Binary Ninja.
 * Passing the `-n` or `--new-instance` command line argument will cause a new Binary Ninja application to be launched and any files or URLs on the command line will be opened in the new instance.
 
+???+ Danger "Warning"
+    Due to [bug](https://github.com/Vector35/binaryninja-api/issues/7523) on macOS, the above behavior is only correct for Windows and Linux. On macOS, the default behavior is to always launch a new window.
+
 ## Debugger
 
 Binary Ninja now comes with a debugger plugin that can debug executables on Windows, Linux, and macOS.
@@ -1074,7 +1077,6 @@ Updates are silently downloaded in the background and when complete an option to
 
 On Windows, this is achieved through a separate launcher that loads first and replaces the installation before launching the new version which you'll notice as a separate window. On macOS and Linux, the original installation is overwritten after the update occurs as these operating systems allow files to be replaced while running. The update on restart is thus immediate.
 
-Note
 ???+ Tip "Tip"
     If you have any trouble with the self-updater, you can always [request](https://binary.ninja/recover/) a fresh set of download links as long as you are under active support.
 

@@ -625,7 +625,7 @@ class TypeBuilder:
 		    TypeClass.EnumerationTypeClass: EnumerationType,
 		    TypeClass.NamedTypeReferenceClass: NamedTypeReferenceType,
 		}
-		return Types[self.type_class](self.finalized, self.platform, self.confidence)
+		return Types[self.type_class](self._finalized, self.platform, self.confidence)
 
 	def mutable_copy(self) -> 'TypeBuilder':
 		return self
@@ -787,7 +787,7 @@ class TypeBuilder:
 		return self.width
 
 	@property
-	def finalized(self):
+	def _finalized(self):
 		type_handle = core.BNFinalizeTypeBuilder(self._handle)
 		assert type_handle is not None, "core.BNFinalizeTypeBuilder returned None"
 		return type_handle

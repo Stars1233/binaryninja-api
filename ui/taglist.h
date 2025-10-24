@@ -193,10 +193,10 @@ class BINARYNINJAUIAPI TagList : public QTreeView, public FilterTarget
 	void navigateToNext();
 	void navigateToPrev();
 
-	void scrollToFirstItem() override;
-	void scrollToCurrentItem() override;
-	void selectFirstItem() override;
-	void activateFirstItem() override;
+	virtual void scrollToFirstItem() override;
+	virtual void scrollToCurrentItem() override;
+	virtual void ensureSelection() override;
+	virtual void activateSelection() override;
 };
 
 /*!

@@ -211,8 +211,8 @@ class BINARYNINJAUIAPI StringsView : public TableViewBase, public View, public F
 	virtual void setFilter(const std::string& filter) override;
 	virtual void scrollToFirstItem() override;
 	virtual void scrollToCurrentItem() override;
-	virtual void selectFirstItem() override;
-	virtual void activateFirstItem() override;
+	virtual void ensureSelection() override;
+	virtual void activateSelection() override;
 	virtual QFont getFont() override { return m_itemDelegate->getFont(); }
 
 	bool getIncludeStringsOverlappingCode() const { return m_list->getIncludeStringsOverlappingCode(); };

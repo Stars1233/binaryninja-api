@@ -72,26 +72,25 @@ public:
 			scrollTo(currentIndex);
 	}
 
-	void selectFirstItem() override
+	void ensureSelection() override
 	{
-		if (model()->rowCount() > 0) {
-			QModelIndex top = indexAt(rect().topLeft());
-			if (top.isValid()) {
-				selectionModel()->select(top, QItemSelectionModel::ClearAndSelect);
-				setCurrentIndex(top);
-			}
+		QModelIndex current = selectionModel()->currentIndex();
+		if (current.isValid() || model()->rowCount() == 0)
+			return;
+
+		if (auto top = indexAt(rect().topLeft()); top.isValid())
+		{
+			selectionModel()->select(top, QItemSelectionModel::ClearAndSelect);
+			setCurrentIndex(top);
 		}
 	}
 
-	void activateFirstItem() override
+
+	void activateSelection() override
 	{
-		if (model()->rowCount() > 0) {
-			QModelIndex topLeft = indexAt(rect().topLeft());
-			if (topLeft.isValid()) {
-				setCurrentIndex(topLeft);
-				emit activated(topLeft);
-			}
-		}
+		ensureSelection();
+		if (auto current = selectionModel()->currentIndex(); current.isValid())
+			emit activated(current);
 	}
 
 	SharedCacheAPI::CacheSymbol getSymbolAtRow(int row) const

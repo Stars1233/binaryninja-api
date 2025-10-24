@@ -359,8 +359,8 @@ class BINARYNINJAUIAPI SymbolList : public QListView, public FilterTarget
 
 	virtual void scrollToFirstItem() override;
 	virtual void scrollToCurrentItem() override;
-	virtual void selectFirstItem() override;
-	virtual void activateFirstItem() override;
+	virtual void ensureSelection() override;
+	virtual void activateSelection() override;
 	virtual void setFilter(const std::string& filter) override;
 
 	bool hasSymbols();

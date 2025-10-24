@@ -276,8 +276,8 @@ class BINARYNINJAUIAPI LogView : public SidebarWidget, public FilterTarget
 
 		void scrollToFirstItem() override;
 		void scrollToCurrentItem() override;
-		void selectFirstItem() override;
-		void activateFirstItem() override {}
+		void ensureSelection() override;
+		void activateSelection() override {}
 		void closeFilter() override;
 
 		// std::pair<size_t, size_t> GetSelectionIndexAndOffsetFromPosition(const QPoint& position) const;

@@ -129,9 +129,9 @@ public:
 
 	void scrollToCurrentItem() override {}
 
-	void selectFirstItem() override {}
+	void ensureSelection() override {}
 
-	void activateFirstItem() override {}
+	void activateSelection() override {}
 };
 
 class WarpFunctionInfoWidget : public QWidget

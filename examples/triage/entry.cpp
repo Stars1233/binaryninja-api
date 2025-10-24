@@ -271,15 +271,18 @@ void EntryTreeView::scrollToCurrentItem()
 }
 
 
-void EntryTreeView::selectFirstItem()
+void EntryTreeView::ensureSelection()
 {
-	setCurrentIndex(m_model->index(0, 0, QModelIndex()));
+	if (auto current = currentIndex(); !current.isValid())
+		setCurrentIndex(m_model->index(0, 0, QModelIndex()));
 }
 
 
-void EntryTreeView::activateFirstItem()
+void EntryTreeView::activateSelection()
 {
-	entryDoubleClicked(m_model->index(0, 0, QModelIndex()));
+	ensureSelection();
+	if (auto current = currentIndex(); current.isValid())
+		entryDoubleClicked(current);
 }
 
 

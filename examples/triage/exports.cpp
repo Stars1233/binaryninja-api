@@ -438,15 +438,18 @@ void ExportsTreeView::scrollToCurrentItem()
 }
 
 
-void ExportsTreeView::selectFirstItem()
+void ExportsTreeView::ensureSelection()
 {
-	setCurrentIndex(m_model->index(0, 0, QModelIndex()));
+	if (auto current = currentIndex(); !current.isValid())
+		setCurrentIndex(m_model->index(0, 0, QModelIndex()));
 }
 
 
-void ExportsTreeView::activateFirstItem()
+void ExportsTreeView::activateSelection()
 {
-	exportDoubleClicked(m_model->index(0, 0, QModelIndex()));
+	ensureSelection();
+	if (auto current = currentIndex(); current.isValid())
+		exportDoubleClicked(current);
 }
 
 

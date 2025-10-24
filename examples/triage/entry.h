@@ -49,8 +49,8 @@ class EntryTreeView : public QTreeView, public FilterTarget
 	virtual void setFilter(const std::string& filterText) override;
 	virtual void scrollToFirstItem() override;
 	virtual void scrollToCurrentItem() override;
-	virtual void selectFirstItem() override;
-	virtual void activateFirstItem() override;
+	virtual void ensureSelection() override;
+	virtual void activateSelection() override;
 	virtual void closeFilter() override;
 
   protected:

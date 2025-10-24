@@ -343,15 +343,18 @@ void ImportsTreeView::scrollToCurrentItem()
 }
 
 
-void ImportsTreeView::selectFirstItem()
+void ImportsTreeView::ensureSelection()
 {
-	setCurrentIndex(m_model->index(0, 0, QModelIndex()));
+	if (auto current = currentIndex(); !current.isValid())
+		setCurrentIndex(m_model->index(0, 0, QModelIndex()));
 }
 
 
-void ImportsTreeView::activateFirstItem()
+void ImportsTreeView::activateSelection()
 {
-	importDoubleClicked(m_model->index(0, 0, QModelIndex()));
+	ensureSelection();
+	if (auto current = currentIndex(); current.isValid())
+		importDoubleClicked(current);
 }
 
 

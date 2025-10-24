@@ -175,8 +175,8 @@ class BINARYNINJAUIAPI ProjectTree: public QTreeView, public FilterTarget
 
 	virtual void scrollToFirstItem() override;
 	virtual void scrollToCurrentItem() override;
-	virtual void selectFirstItem() override;
-	virtual void activateFirstItem() override;
+	virtual void ensureSelection() override;
+	virtual void activateSelection() override;
 	virtual void setFilter(const std::string& filter) override;
 
 protected:
@@ -198,8 +198,8 @@ class BINARYNINJAUIAPI RecentsList: public QListWidget, public FilterTarget
 
 	virtual void scrollToFirstItem() override;
 	virtual void scrollToCurrentItem() override;
-	virtual void selectFirstItem() override;
-	virtual void activateFirstItem() override;
+	virtual void ensureSelection() override;
+	virtual void activateSelection() override;
 	virtual void setFilter(const std::string& filter) override;
 
 public:

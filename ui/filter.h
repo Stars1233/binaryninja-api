@@ -22,8 +22,16 @@ class BINARYNINJAUIAPI FilterTarget
 	virtual void setFilter(const std::string& filter) = 0;
 	virtual void scrollToFirstItem() = 0;
 	virtual void scrollToCurrentItem() = 0;
-	virtual void selectFirstItem() = 0;
-	virtual void activateFirstItem() = 0;
+
+	// Select an item, typically the first, if none is already selected.
+	virtual void ensureSelection() = 0;
+
+	// Activate the selected item, typically in response to the user
+	// pressing the return key.
+	virtual void activateSelection() = 0;
+
+	// Transfer focus away from the `FilterEdit`. By default, focus
+	// is transferred to `this` if it is an instance of `QWidget`.
 	virtual void closeFilter();
 };
 

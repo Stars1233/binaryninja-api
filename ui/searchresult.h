@@ -325,8 +325,8 @@ public:
 	virtual void setFilter(const std::string&) override {}
 	virtual void scrollToFirstItem() override {}
 	virtual void scrollToCurrentItem() override {}
-	virtual void selectFirstItem() override {}
-	virtual void activateFirstItem() override;
+	virtual void ensureSelection() override {}
+	virtual void activateSelection() override;
 
 protected:
 	virtual void keyPressEvent(QKeyEvent* e) override;

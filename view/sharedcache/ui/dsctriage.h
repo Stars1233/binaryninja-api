@@ -150,24 +150,23 @@ public:
 		}
 	}
 
-	void selectFirstItem() override {
-		if (model()->rowCount() > 0) {
-			QModelIndex top = indexAt(rect().topLeft());
-			if (top.isValid()) {
-				selectionModel()->select(top, QItemSelectionModel::ClearAndSelect);
-				setCurrentIndex(top);
-			}
+	void ensureSelection() override {
+		QModelIndex current = selectionModel()->currentIndex();
+		if (current.isValid() && !isRowHidden(current.row()))
+			return;
+
+		if (auto top = indexAt(rect().topLeft()); top.isValid())
+		{
+			selectionModel()->select(top, QItemSelectionModel::ClearAndSelect);
+			setCurrentIndex(top);
 		}
 	}
 
-	void activateFirstItem() override {
-		if (model()->rowCount() > 0) {
-			QModelIndex topLeft = indexAt(rect().topLeft());
-			if (topLeft.isValid()) {
-				setCurrentIndex(topLeft);
-				emit activated(topLeft);
-			}
-		}
+
+	void activateSelection() override {
+		ensureSelection();
+		if (auto current = selectionModel()->currentIndex(); current.isValid())
+			emit activated(current);
 	}
 
 signals:

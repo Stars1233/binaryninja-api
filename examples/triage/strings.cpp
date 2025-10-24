@@ -288,15 +288,18 @@ void StringsTreeView::scrollToCurrentItem()
 }
 
 
-void StringsTreeView::selectFirstItem()
+void StringsTreeView::ensureSelection()
 {
-	setCurrentIndex(m_model->index(0, 0, QModelIndex()));
+	if (auto current = currentIndex(); !current.isValid())
+		setCurrentIndex(m_model->index(0, 0, QModelIndex()));
 }
 
 
-void StringsTreeView::activateFirstItem()
+void StringsTreeView::activateSelection()
 {
-	stringDoubleClicked(m_model->index(0, 0, QModelIndex()));
+	ensureSelection();
+	if (auto current = currentIndex(); current.isValid())
+		stringDoubleClicked(current);
 }
 
 

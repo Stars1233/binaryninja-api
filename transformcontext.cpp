@@ -30,12 +30,33 @@ string TransformContext::GetFileName() const
 }
 
 
+vector<string> TransformContext::GetAvailableTransforms() const
+{
+	size_t count;
+	char** transforms = BNTransformContextGetAvailableTransforms(m_object, &count);
+
+	vector<string> result;
+	result.reserve(count);
+
+	for (size_t i = 0; i < count; i++)
+		result.push_back(transforms[i]);
+	BNFreeStringList(transforms, count);
+	return result;
+}
+
+
 string TransformContext::GetTransformName() const
 {
 	char* name = BNTransformContextGetTransformName(m_object);
 	string result = name;
 	BNFreeString(name);
 	return result;
+}
+
+
+void TransformContext::SetTransformName(const string& transformName)
+{
+	BNTransformContextSetTransformName(m_object, transformName.c_str());
 }
 
 

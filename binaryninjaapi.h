@@ -9160,7 +9160,9 @@ namespace BinaryNinja {
 
 		Ref<BinaryView> GetInput() const;
 		std::string GetFileName() const;
+		std::vector<std::string> GetAvailableTransforms() const;
 		std::string GetTransformName() const;
+		void SetTransformName(const std::string& transformName);
 		void SetTransformParameters(const std::map<std::string, DataBuffer>& params);
 		void SetTransformParameter(const std::string& name, const DataBuffer& data);
 		bool HasTransformParameter(const std::string& name) const;

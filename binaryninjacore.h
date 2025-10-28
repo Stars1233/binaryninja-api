@@ -37,7 +37,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 142
+#define BN_CURRENT_CORE_ABI_VERSION 143
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -4741,7 +4741,9 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeTransformContext(BNTransformContext* context);
 	BINARYNINJACOREAPI BNBinaryView* BNTransformContextGetInput(BNTransformContext* context);
 	BINARYNINJACOREAPI char* BNTransformContextGetFileName(BNTransformContext* context);
+	BINARYNINJACOREAPI char** BNTransformContextGetAvailableTransforms(BNTransformContext* context, size_t* count);
 	BINARYNINJACOREAPI char* BNTransformContextGetTransformName(BNTransformContext* context);
+	BINARYNINJACOREAPI void BNTransformContextSetTransformName(BNTransformContext* context, const char* transformName);
 	BINARYNINJACOREAPI void BNTransformContextSetTransformParameters(BNTransformContext* context, BNTransformParameter* params, size_t paramCount);
 	BINARYNINJACOREAPI void BNTransformContextSetTransformParameter(BNTransformContext* context, const char* name, BNDataBuffer* data);
 	BINARYNINJACOREAPI bool BNTransformContextHasTransformParameter(BNTransformContext* context, const char* name);

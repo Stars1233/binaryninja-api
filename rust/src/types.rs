@@ -1668,7 +1668,7 @@ impl Structure {
     ///
     /// We must pass a [`TypeContainer`] here so that we can resolve base structure members, as they
     /// are treated as members through this function. Typically, you get the [`TypeContainer`]
-    /// through the binary view with [`BinaryViewExt::get_type_container`].
+    /// through the binary view with [`BinaryViewExt::type_container`].
     pub fn members_at_offset(
         &self,
         container: &TypeContainer,

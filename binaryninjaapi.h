@@ -9170,6 +9170,7 @@ namespace BinaryNinja {
 		std::string GetExtractionMessage() const;
 		BNTransformResult GetExtractionResult() const;
 		BNTransformResult GetTransformResult() const;
+		void SetTransformResult(BNTransformResult result);
 		Ref<Metadata> GetMetadata() const;
 		Ref<TransformContext> GetParent() const;
 		size_t GetChildCount() const;

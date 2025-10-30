@@ -115,6 +115,12 @@ BNTransformResult TransformContext::GetTransformResult() const
 }
 
 
+void TransformContext::SetTransformResult(BNTransformResult result)
+{
+	BNTransformContextSetTransformResult(m_object, result);
+}
+
+
 Ref<Metadata> TransformContext::GetMetadata() const
 {
 	return new Metadata(BNTransformContextGetMetadata(m_object));

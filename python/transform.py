@@ -21,16 +21,19 @@
 import traceback
 import ctypes
 import abc
+import io
+import zipfile
 from typing import List, Optional, Union
 
 # Binary Ninja components
 import binaryninja
-from .log import log_error_for_exception
+from .log import log_error_for_exception, log_error
 from . import databuffer
 from . import binaryview
 from . import metadata
 from . import _binaryninjacore as core
-from .enums import TransformType, TransformResult
+from .enums import TransformCapabilities, TransformResult, TransformType
+from .settings import Settings
 
 
 class _TransformMetaClass(type):
@@ -254,7 +257,7 @@ class Transform(metaclass=_TransformMetaClass):
 
 	def _can_decode(self, ctxt, input):
 		try:
-			input_obj = binaryview.BinaryView(handle=core.BNNewViewReference(input))
+			input_obj = binaryview.BinaryView(handle=input)
 			return self.can_decode(input_obj)
 		except:
 			log_error_for_exception("Unhandled Python exception in Transform._can_decode")
@@ -549,6 +552,11 @@ class TransformContext:
 		"""Get the transform result"""
 		return TransformResult(core.BNTransformContextGetTransformResult(self.handle))
 
+	@transform_result.setter
+	def transform_result(self, result: TransformResult):
+		"""Set the transform result"""
+		core.BNTransformContextSetTransformResult(self.handle, result)
+
 	@property
 	def parent(self) -> Optional['TransformContext']:
 		"""Get the parent context"""
@@ -808,3 +816,137 @@ class TransformSession:
 		for i, ctx in enumerate(contexts):
 			context_array[i] = ctx.handle
 		core.BNTransformSessionSetSelectedContexts(self.handle, context_array, len(contexts))
+
+
+class ZipPython(Transform):
+	"""
+	``ZipPython`` is a transform that handles ZIP archive decoding using Python's built-in zipfile module.
+	It supports password-protected archives and context-aware extraction of multiple files. It is provided
+	as a reference implementation and may not be as performant as native implementations. By default, this
+	Transform is not registered; to use it, call `ZipPython.register()`.
+	"""
+	transform_type = TransformType.DecodeTransform
+	capabilities = TransformCapabilities.TransformSupportsDetection | TransformCapabilities.TransformSupportsContext
+	name = "ZipPython"
+	long_name = "Zip (Python)"
+	group = "Container"
+
+	def can_decode(self, input) -> bool:
+		try:
+			head = input.read(0, 4)
+			if len(head) < 4 or head[0:2] != b"PK":
+				return False
+			signature = head[2] | (head[3] << 8)
+			return signature in (0x0403, 0x0201, 0x0605, 0x0708, 0x0606, 0x0706, 0x0505)
+		except Exception:
+			log_error("ZipPython: failed to read from BinaryView for signature check")
+			return False
+
+	def perform_decode(self, data: bytes, params: dict) -> bytes | None:
+		try:
+			zf = zipfile.ZipFile(io.BytesIO(data), "r")
+		except Exception:
+			log_error("ZipPython: failed to open data as ZIP")
+			return None
+
+		filename = None
+		if "filename" in params:
+			p = params["filename"]
+			filename = p.decode("utf-8", "replace") if isinstance(p, (bytes, bytearray)) else str(p)
+		elif zf.namelist():
+			filename = zf.namelist()[0]
+		try:
+			if filename:
+				with zf.open(filename, "r") as f:
+					return f.read()
+		except (KeyError, RuntimeError, zipfile.BadZipFile, zipfile.LargeZipFile):
+			log_error(f"ZipPython: failed to extract member '{filename}' from ZIP")
+			return None
+
+	def perform_encode(self, data, params):
+		return None
+
+	def perform_decode_with_context(self, context, params) -> bool:
+		"""
+		``perform_decode_with_context`` implements context-aware ZIP extraction.
+		Two-phase flow:
+		- Phase 1 (discovery): populate available_files, return False.
+		- Phase 2 (extraction): for each requested file, create a child context and return
+			True if all succeeded, False otherwise.
+		"""
+		try:
+			zf = zipfile.ZipFile(io.BytesIO(context.input.read(0, context.input.length)), "r")
+		except Exception:
+			context.transform_result = TransformResult.TransformFailure
+			log_error(f"ZipPython: failed to open context input as ZIP: len={context.input.length}")
+			return False
+
+		# Build the file list (non-directories only)
+		files: List[str] = [n for n in zf.namelist() if not n.endswith("/")]
+
+		# Phase 1: discovery
+		if not context.has_available_files:
+			context.set_available_files(files)
+			return False
+
+		# Phase 2: extraction
+		requested = context.requested_files
+		if not requested:
+			return False
+
+		passwords = Settings().get_string_list('files.container.defaultPasswords')
+		if "password" in params:
+			p = params["password"]
+			passwords.insert(0, p.decode("utf-8", "replace") if isinstance(p, (bytes, bytearray)) else str(p))
+		passwords = [None] + passwords
+
+		complete = True
+		for name in requested:
+			if name not in files:
+				msg = f"Requested file '{name}' not found in ZIP"
+				context.create_child(databuffer.DataBuffer(b""), name, result=TransformResult.TransformFailure, message=msg)
+				complete = False
+				continue
+
+			content = None
+			error = None
+			successful_password = None
+			for password in passwords:
+				try:
+					if password is None:
+						with zf.open(name, "r") as f:
+							content = f.read()
+					else:
+						pwd = password.encode('utf-8') if isinstance(password, str) else password
+						with zf.open(name, "r", pwd=pwd) as f:
+							content = f.read()
+					successful_password = password
+					break
+
+				except RuntimeError as e:
+					error = e
+					if 'password' not in str(e).lower() and 'encrypted' not in str(e).lower():
+						break
+				except Exception as e:
+					error = e
+					break
+
+			if successful_password is not None and successful_password in passwords:
+				passwords.remove(successful_password)
+				passwords.insert(0, successful_password)
+
+			if content is not None:
+				context.create_child(databuffer.DataBuffer(content), name)
+			else:
+				if error is None:
+					error = RuntimeError(f"Failed to decrypt '{name}' with any provided password")
+				if isinstance(error, RuntimeError) and 'password' in str(error).lower():
+					transformresult = TransformResult.TransformRequiresPassword
+				else:
+					transformresult = TransformResult.TransformFailure
+					log_error(f"ZipPython: failed to extract requested file '{name}': {error}")
+
+				context.create_child(databuffer.DataBuffer(b""), name, result=transformresult, message=str(error))
+				complete = False
+
+		return complete

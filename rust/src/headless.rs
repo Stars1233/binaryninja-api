@@ -26,7 +26,7 @@ use crate::enterprise::EnterpriseCheckoutStatus;
 use crate::main_thread::{MainThreadAction, MainThreadHandler};
 use crate::progress::ProgressCallback;
 use crate::rc::Ref;
-use binaryninjacore_sys::{BNInitPlugins};
+use binaryninjacore_sys::BNInitPlugins;
 use std::sync::mpsc::Sender;
 use std::sync::Mutex;
 use std::thread::JoinHandle;

@@ -8254,6 +8254,19 @@ namespace BinaryNinja {
 			return BNSetMemoryRegionFill(m_object, name.c_str(), fill);
 		}
 
+		std::string GetMemoryRegionDisplayName(const std::string& name)
+		{
+			char* displayName = BNGetMemoryRegionDisplayName(m_object, name.c_str());
+			std::string result = displayName;
+			BNFreeString(displayName);
+			return result;
+		}
+
+		bool SetMemoryRegionDisplayName(const std::string& name, const std::string& displayName)
+		{
+			return BNSetMemoryRegionDisplayName(m_object, name.c_str(), displayName.c_str());
+		}
+
 		bool IsMemoryRegionLocal(const std::string& name)
 		{
 			return BNIsMemoryRegionLocal(m_object, name.c_str());

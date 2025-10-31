@@ -2685,6 +2685,12 @@ class MemoryMap:
 	def set_memory_region_fill(self, name: str, fill: int) -> bool:
 		return core.BNSetMemoryRegionFill(self.handle, name, fill)
 
+	def get_memory_region_display_name(self, name: str) -> str:
+		return core.BNGetMemoryRegionDisplayName(self.handle, name)
+
+	def set_memory_region_display_name(self, name: str, display_name: str) -> bool:
+		return core.BNSetMemoryRegionDisplayName(self.handle, name, display_name)
+
 	def is_memory_region_local(self, name: str) -> bool:
 		return core.BNIsMemoryRegionLocal(self.handle, name)
 

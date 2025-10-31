@@ -37,7 +37,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 144
+#define BN_CURRENT_CORE_ABI_VERSION 145
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -4399,6 +4399,8 @@ extern "C"
 	BINARYNINJACOREAPI bool BNSetMemoryRegionRebaseable(BNBinaryView* view, const char* name, bool rebaseable);
 	BINARYNINJACOREAPI uint8_t BNGetMemoryRegionFill(BNBinaryView* view, const char* name);
 	BINARYNINJACOREAPI bool BNSetMemoryRegionFill(BNBinaryView* view, const char* name, uint8_t fill);
+	BINARYNINJACOREAPI char* BNGetMemoryRegionDisplayName(BNBinaryView* view, const char* name);
+	BINARYNINJACOREAPI bool BNSetMemoryRegionDisplayName(BNBinaryView* view, const char* name, const char* displayName);
 	BINARYNINJACOREAPI bool BNIsMemoryRegionLocal(BNBinaryView* view, const char* name);
 	BINARYNINJACOREAPI void BNResetMemoryMap(BNBinaryView* view);
 

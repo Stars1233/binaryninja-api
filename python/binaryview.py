@@ -504,7 +504,7 @@ class StringReference:
 
 	@property
 	def value(self) -> str:
-		return self._view.read(self._start, self._length).decode(self._decodings[self._type])
+		return self._view.read(self._start, self._length).decode(self._decodings[self._type], errors='replace')
 
 	@property
 	def raw(self) -> bytes:

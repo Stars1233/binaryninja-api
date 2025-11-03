@@ -202,6 +202,16 @@ Ref<Symbol> Function::GetSymbol() const
 	return new Symbol(BNGetFunctionSymbol(m_object));
 }
 
+bool Function::IsExported() const
+{
+	Ref<Symbol> sym = GetSymbol();
+	if (!sym)
+		return false;
+
+	BNSymbolBinding binding = sym->GetBinding();
+	return (binding == BNSymbolBinding::GlobalBinding) || (binding == BNSymbolBinding::WeakBinding);
+}
+
 
 bool Function::WasAutomaticallyDiscovered() const
 {

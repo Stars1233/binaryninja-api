@@ -12352,6 +12352,11 @@ namespace BinaryNinja {
 		*/
 		Ref<Symbol> GetSymbol() const;
 
+		/*!
+			\return Whether the function's symbol is globally or weakly bound (treated as exported)
+		*/
+		bool IsExported() const;
+
 		/*! Whether this function was automatically discovered by analysis
 
 			\return Whether the function was automatically discovered

@@ -27,7 +27,7 @@ from dataclasses import dataclass
 # Binary Ninja components
 from . import _binaryninjacore as core
 from .enums import (
-	AnalysisSkipReason, FunctionGraphType, SymbolType, InstructionTextTokenType, HighlightStandardColor,
+	AnalysisSkipReason, FunctionGraphType, SymbolType, SymbolBinding, InstructionTextTokenType, HighlightStandardColor,
 	HighlightColorStyle, DisassemblyOption, IntegerDisplayType, FunctionAnalysisSkipOverride, FunctionUpdateType,
 	BuiltinType, ExprFolding, EarlyReturn, SwitchRecovery
 )
@@ -598,6 +598,16 @@ class Function:
 		sym = core.BNGetFunctionSymbol(self.handle)
 		assert sym is not None, "core.BNGetFunctionSymbol returned None"
 		return types.CoreSymbol(sym)
+
+	@property
+	def is_exported(self) -> bool:
+		"""
+		Whether the function is exported (read-only).
+
+		A function is considered exported when its symbol binding is global or weak.
+		"""
+		binding = self.symbol.binding
+		return binding in (SymbolBinding.GlobalBinding, SymbolBinding.WeakBinding)
 
 	@property
 	def auto(self) -> bool:

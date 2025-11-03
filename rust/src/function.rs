@@ -26,7 +26,7 @@ use crate::{
     platform::Platform,
     references::CodeReference,
     string::*,
-    symbol::Symbol,
+    symbol::{Binding, Symbol},
     tags::{Tag, TagReference, TagType},
     types::{IntegerDisplayType, QualifiedName, Type},
 };
@@ -342,6 +342,12 @@ impl Function {
             let sym = BNGetFunctionSymbol(self.handle);
             Symbol::ref_from_raw(sym)
         }
+    }
+
+    /// Returns true when the function's symbol binding marks it as exported.
+    pub fn is_exported(&self) -> bool {
+        let symbol = self.symbol();
+        matches!(symbol.binding(), Binding::Global | Binding::Weak)
     }
 
     pub fn workflow(&self) -> Option<Ref<Workflow>> {

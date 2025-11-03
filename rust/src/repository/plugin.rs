@@ -11,15 +11,15 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 #[repr(transparent)]
 pub struct RepositoryPlugin {
-    handle: NonNull<BNPlugin>,
+    handle: NonNull<BNRepoPlugin>,
 }
 
 impl RepositoryPlugin {
-    pub(crate) unsafe fn from_raw(handle: NonNull<BNPlugin>) -> Self {
+    pub(crate) unsafe fn from_raw(handle: NonNull<BNRepoPlugin>) -> Self {
         Self { handle }
     }
 
-    pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNPlugin>) -> Ref<Self> {
+    pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNRepoPlugin>) -> Ref<Self> {
         Ref::new(Self { handle })
     }
 
@@ -33,7 +33,7 @@ impl RepositoryPlugin {
 
     /// String of the plugin author
     pub fn author(&self) -> String {
-        let result = unsafe { BNPluginGetAuthorUrl(self.handle.as_ptr()) };
+        let result = unsafe { BNPluginGetAuthor(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { BnString::into_string(result as *mut c_char) }
     }
@@ -287,7 +287,7 @@ unsafe impl RefCountable for RepositoryPlugin {
 }
 
 impl CoreArrayProvider for RepositoryPlugin {
-    type Raw = *mut BNPlugin;
+    type Raw = *mut BNRepoPlugin;
     type Context = ();
     type Wrapped<'a> = Guard<'a, Self>;
 }

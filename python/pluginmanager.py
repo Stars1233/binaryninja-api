@@ -34,7 +34,7 @@ class RepoPlugin:
 	``RepoPlugin`` is mostly read-only, however you can install/uninstall enable/disable plugins. RepoPlugins are
 	created by parsing the plugins.json in a plugin repository.
 	"""
-	def __init__(self, handle: core.BNPluginHandle):
+	def __init__(self, handle: core.BNRepoPluginHandle):
 		self.handle = handle
 
 	def __del__(self):
@@ -289,7 +289,7 @@ class Repository:
 		for plugin in self.plugins:
 			if plugin_path == plugin.path:
 				return plugin
-		raise KeyError(plugin_path)
+		raise KeyError()
 
 	@property
 	def url(self) -> str:
@@ -337,23 +337,24 @@ class RepositoryManager:
 	"""
 	def __init__(self):
 		binaryninja._init_plugins()
+		self.handle = core.BNGetRepositoryManager()
 
 	def __getitem__(self, repo_path: str) -> Repository:
 		for repo in self.repositories:
 			if repo_path == repo.path:
 				return repo
-		raise KeyError(repo_path)
+		raise KeyError()
 
 	def check_for_updates(self) -> bool:
 		"""Check for updates for all managed Repository objects"""
-		return core.BNRepositoryManagerCheckForUpdates()
+		return core.BNRepositoryManagerCheckForUpdates(self.handle)
 
 	@property
 	def repositories(self) -> List[Repository]:
 		"""List of Repository objects being managed"""
 		result = []
 		count = ctypes.c_ulonglong(0)
-		repos = core.BNRepositoryManagerGetRepositories(count)
+		repos = core.BNRepositoryManagerGetRepositories(self.handle, count)
 		assert repos is not None, "core.BNRepositoryManagerGetRepositories returned None"
 		try:
 			for i in range(count.value):
@@ -375,7 +376,7 @@ class RepositoryManager:
 	@property
 	def default_repository(self) -> Repository:
 		"""Gets the default Repository"""
-		repo_handle = core.BNRepositoryManagerGetDefaultRepository()
+		repo_handle = core.BNRepositoryManagerGetDefaultRepository(self.handle)
 		assert repo_handle is not None, "core.BNRepositoryManagerGetDefaultRepository returned None"
 		repo_handle_ref = core.BNNewRepositoryReference(repo_handle)
 		assert repo_handle_ref is not None, "core.BNNewRepositoryReference returned None"
@@ -405,4 +406,4 @@ class RepositoryManager:
 		if not isinstance(url, str) or not isinstance(repopath, str):
 			raise ValueError("Expected url or repopath to be of type str.")
 
-		return core.BNRepositoryManagerAddRepository(url, repopath)
+		return core.BNRepositoryManagerAddRepository(self.handle, url, repopath)

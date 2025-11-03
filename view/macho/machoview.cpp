@@ -1630,6 +1630,30 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 		}
 		EndBulkAddSegments();
 
+		if (auto memoryMap = GetMemoryMap())
+		{
+			for (auto& segment : header.segments)
+			{
+				if (segment.initprot == MACHO_VM_PROT_NONE || !segment.vmsize)
+					continue;
+
+				auto region = memoryMap->GetActiveMemoryRegionAt(segment.vmaddr);
+				if (region.empty())
+					continue;
+
+				std::string segmentName(segment.segname, std::find(segment.segname, std::end(segment.segname), '\0'));
+				memoryMap->SetMemoryRegionDisplayName(region, segmentName);
+
+				if (segment.vmsize == segment.filesize)
+					continue;
+
+				uint64_t zeroFillStart = segment.vmaddr + segment.filesize;
+				auto zeroFillRegion = memoryMap->GetActiveMemoryRegionAt(zeroFillStart);
+				if (!zeroFillRegion.empty())
+					memoryMap->SetMemoryRegionDisplayName(zeroFillRegion, segmentName + " (zero fill)");
+			}
+		}
+
 		for (auto& section : header.sections)
 		{
 			char sectionName[17];

@@ -2442,12 +2442,19 @@ class AdvancedILFunctionList:
 
 class MemoryMap:
 	r"""
-	The MemoryMap object is used to describe a system level MemoryMap for which a BinaryView is loaded into. A loaded
-	BinaryView has a view into the MemoryMap which is described by the Segments defined in that BinaryView. The MemoryMap
-	object allows for the addition of multiple, arbitrary overlapping regions of memory. Segmenting of the address space is
-	automatically handled when the MemoryMap is modified and in the case where a portion of the system address space has
-	multiple defined regions, the default ordering gives priority to the most recently added region. This feature is
-	experimental and under active development.
+		The MemoryMap object describes a system-level memory map into which a BinaryView is loaded. Each BinaryView
+		exposes its portion of the MemoryMap through the Segments defined within that view.
+
+		A MemoryMap can contain multiple, arbitrarily overlapping memory regions. When modified, address space
+		segmentation is automatically managed. If multiple regions overlap, the most recently added region takes
+		precedence by default.
+
+		All MemoryMap APIs support undo and redo operations. During BinaryView::Init, these APIs should be used conditionally:
+		* Initial load: Use the MemoryMap APIs to define the memory regions that compose the system.
+		* Database load: Do not use the MemoryMap APIs, as the regions are already persisted and will be restored automatically.
+
+		This conditional usage prevents redundant operations and ensures database consistency. Using these APIs when loading
+		from a database will also mark the analysis as modified, which is undesirable.
 
 	:Example:
 

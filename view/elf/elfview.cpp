@@ -474,7 +474,7 @@ bool ElfView::Init()
 	{
 		if (settings->Contains("loader.imageBase"))
 			preferredImageBase = settings->Get<uint64_t>("loader.imageBase", this);
-			
+
 		if (settings->Contains("loader.platform"))
 		{
 			BNSettingsScope scope = SettingsAutoScope;
@@ -665,7 +665,7 @@ bool ElfView::Init()
 		if (m_elfSections[i].size != 0)
 		{
 			if (m_programHeaders.size() == 0)
-			{	
+			{
 				// We have an object file so we'll just create segments for the sections
 				uint32_t flags = 0;
 				if (semantics == ReadOnlyCodeSectionSemantics)
@@ -675,15 +675,15 @@ bool ElfView::Init()
 				else if (semantics == ReadOnlyDataSectionSemantics)
 					flags = SegmentReadable;
 				if ((m_commonHeader.type == ET_DYN) && (!m_parseOnly))
-				{	
+				{
 					// We have a shared object file without program headers so we'll create segments for the sections
 					// based on the section address.
 					size_t size = m_elfSections[i].type == ELF_SHT_NOBITS ? 0 : m_elfSections[i].size;
 					uint64_t adjustedSectionAddr = m_elfSections[i].address + imageBaseAdjustment;
 					AddAutoSegment(adjustedSectionAddr, m_elfSections[i].size, m_elfSections[i].offset, size, flags);
-				}	
-				else 
-				{			
+				}
+				else
+				{
 					m_elfSections[i].address = segmentStart;
 					size_t size = m_elfSections[i].type == ELF_SHT_NOBITS ? 0 : m_elfSections[i].size;
 					uint64_t adjustedSectionAddr = m_elfSections[i].address + imageBaseAdjustment;

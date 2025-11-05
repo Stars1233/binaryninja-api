@@ -2549,6 +2549,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "warp"
+version = "1.0.1"
+source = "git+https://github.com/Vector35/warp/?tag=1.0.1#c9cfe5b7a07acaccb0d9b294c0ac68741c559e94"
+dependencies = [
+ "bon",
+ "flatbuffers",
+ "flate2",
+ "itertools 0.14.0",
+ "uuid",
+]
+
+[[package]]
 name = "warp_headless"
 version = "0.1.0"
 dependencies = [
@@ -2589,7 +2601,7 @@ dependencies = [
  "thiserror 2.0.12",
  "uuid",
  "walkdir",
- "warp",
+ "warp 1.0.1",
 ]
 
 [[package]]
@@ -2619,7 +2631,7 @@ dependencies = [
  "thiserror 2.0.12",
  "uuid",
  "walkdir",
- "warp",
+ "warp 1.0.0",
 ]
 
 [[package]]

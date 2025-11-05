@@ -49,7 +49,7 @@ fn load_bundled_signatures() {
         log::debug!("{:#?}", user_disk_container);
         add_cached_container(user_disk_container);
     }
-    log::info!("Loading bundled files took {:?}", start.elapsed());
+    log::info!("Loading files took {:?}", start.elapsed());
     background_task.finish();
 }
 
@@ -60,7 +60,7 @@ fn load_network_container() {
         let network_client = NetworkClient::new(url.clone(), api_key.clone());
         // Before constructing the container, let's make sure that the server is OK.
         if let Err(e) = network_client.status() {
-            log::error!("Server '{}' failed to connect: {}", url, e);
+            log::warn!("Server '{}' failed to connect: {}", url, e);
             return;
         }
 

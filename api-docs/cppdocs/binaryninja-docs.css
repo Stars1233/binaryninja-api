@@ -397,11 +397,13 @@ tr#projectrow {
 }
 
 #MSearchBox {
-    width: calc(var(--sidebar-width) - calc(2 * var(--spacing-medium)) - 1px);
+    width: calc(var(--sidebar-width) - calc(2 * var(--spacing-medium)) - 50px);
+    display: inline-block;
+    vertical-align: top;
 }
 
 #MSearchField {
-    width: calc(var(--sidebar-width) - calc(2 * var(--spacing-medium)) - 66px);
+    width: calc(var(--sidebar-width) - calc(2 * var(--spacing-medium)) - 113px);
     padding-left: 10px;
     top: -1px;
 }
@@ -513,7 +515,7 @@ tr#projectrow {
     overflow: hidden;
     position: relative;
     box-shadow: none;
-    display: block;
+    display: inline-block;
     margin-top: 0;
 }
 
@@ -1304,10 +1306,35 @@ pre.fragment {
 }
 
 /* ============================================================================
- * DARK MODE TOGGLE (Hidden - CSS-only system preference)
+ * DARK MODE TOGGLE
  * ============================================================================ */
-#bn-darkmode-toggle {
-    display: none;
+.bn-darkmode-toggle {
+    display: inline-block;
+    width: 33px;
+    height: var(--searchbar-height);
+    border: 1px solid var(--border-color);
+    background-color: var(--page-bg);
+    color: var(--page-text);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: var(--searchbar-height);
+    border-radius: var(--searchbar-border-radius);
+    vertical-align: top;
+    margin-left: 5px;
+    margin-right: 3px;
+    text-align: center;
+    padding: 0;
+}
+
+.bn-darkmode-toggle:hover {
+    background-color: var(--table-header-bg);
+    border-color: var(--bn-red);
+}
+
+@media screen and (max-width: 1024px) {
+    .bn-darkmode-toggle {
+        display: none;
+    }
 }
 
 /* ============================================================================
@@ -1355,6 +1382,9 @@ html.dark-mode .darkmode_inverted_image object[type="image/svg+xml"] {
 
 /* Collapsed sidebar state */
 #side-nav.collapsed {
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
     overflow: visible !important;
 }
 

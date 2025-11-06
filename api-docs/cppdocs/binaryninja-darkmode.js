@@ -1,40 +1,67 @@
 /**
- * Binary Ninja Dark Mode - System Preference with Cookie Persistence
+ * Binary Ninja Dark Mode - System Preference with localStorage Persistence
  * Follows system color scheme automatically via CSS
- * Provides console toggle for testing with cookie-based persistence
+ * Provides console toggle for testing with localStorage-based persistence
  */
 
 (function() {
     'use strict';
 
-    const COOKIE_NAME = 'bn-docs-theme';
-    const COOKIE_DAYS = 365;
+    const STORAGE_KEY = 'bn-docs-theme';
+    const STORAGE_TIMESTAMP_KEY = 'bn-docs-theme-timestamp';
+    const EXPIRY_HOURS = 24;
 
     /**
-     * Get cookie value by name
+     * Get theme from localStorage if not expired
      */
-    function getCookie(name) {
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) return parts.pop().split(';').shift();
-        return null;
+    function getTheme() {
+        try {
+            const theme = localStorage.getItem(STORAGE_KEY);
+            const timestamp = localStorage.getItem(STORAGE_TIMESTAMP_KEY);
+
+            if (!theme || !timestamp) {
+                return null;
+            }
+
+            // Check if expired (24 hours)
+            const now = Date.now();
+            const age = now - parseInt(timestamp, 10);
+            const maxAge = EXPIRY_HOURS * 60 * 60 * 1000; // 24 hours in ms
+
+            if (age > maxAge) {
+                // Expired, remove and return null
+                removeTheme();
+                return null;
+            }
+
+            return theme;
+        } catch (e) {
+            return null;
+        }
     }
 
     /**
-     * Set cookie value
+     * Set theme in localStorage with timestamp
      */
-    function setCookie(name, value, days) {
-        const date = new Date();
-        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-        const expires = `expires=${date.toUTCString()}`;
-        document.cookie = `${name}=${value};${expires};path=/`;
+    function setTheme(value) {
+        try {
+            localStorage.setItem(STORAGE_KEY, value);
+            localStorage.setItem(STORAGE_TIMESTAMP_KEY, Date.now().toString());
+        } catch (e) {
+            // Silently fail if localStorage is unavailable
+        }
     }
 
     /**
-     * Delete cookie
+     * Remove theme from localStorage
      */
-    function deleteCookie(name) {
-        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/`;
+    function removeTheme() {
+        try {
+            localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem(STORAGE_TIMESTAMP_KEY);
+        } catch (e) {
+            // Silently fail if localStorage is unavailable
+        }
     }
 
     /**
@@ -57,42 +84,78 @@
     }
 
     /**
-     * Console-accessible toggle function with cookie persistence
+     * Console-accessible toggle function with localStorage persistence
      * Usage: bnToggleDarkMode('dark'), bnToggleDarkMode('light'), or bnToggleDarkMode('auto')
      */
     window.bnToggleDarkMode = function(mode) {
         if (mode === 'dark') {
             applyTheme('dark');
-            setCookie(COOKIE_NAME, 'dark', COOKIE_DAYS);
-            console.log('Dark mode: FORCED ON (saved to cookie, will persist across reloads)');
+            setTheme('dark');
         } else if (mode === 'light') {
             applyTheme('light');
-            setCookie(COOKIE_NAME, 'light', COOKIE_DAYS);
-            console.log('Dark mode: FORCED OFF (saved to cookie, will persist across reloads)');
+            setTheme('light');
         } else if (mode === 'auto') {
             applyTheme('auto');
-            deleteCookie(COOKIE_NAME);
-            console.log('Dark mode: AUTO (following system preference, cookie cleared)');
-        } else {
-            console.log('Usage: bnToggleDarkMode("dark"), bnToggleDarkMode("light"), or bnToggleDarkMode("auto")');
-            console.log('Current setting:', getCookie(COOKIE_NAME) || 'auto (system preference)');
+            removeTheme();
         }
+    };
+
+    /**
+     * Update button icon based on current theme
+     */
+    function updateButtonIcon() {
+        const button = document.getElementById('bn-darkmode-toggle');
+        if (!button) return;
+
+        const savedTheme = getTheme();
+
+        if (savedTheme === 'light') {
+            button.textContent = '☀';
+            button.title = 'Light mode (click for Dark)';
+        } else if (savedTheme === 'dark') {
+            button.textContent = '☾';
+            button.title = 'Dark mode (click for Light)';
+        } else {
+            // No saved theme - show system preference
+            const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (isDarkMode) {
+                button.textContent = '☾';
+                button.title = 'System: Dark (click for Light)';
+            } else {
+                button.textContent = '☀';
+                button.title = 'System: Light (click for Dark)';
+            }
+        }
+    }
+
+    /**
+     * Cycle between light and dark mode
+     */
+    window.cycleDarkMode = function() {
+        const savedTheme = getTheme();
+
+        if (savedTheme === 'light') {
+            window.bnToggleDarkMode('dark');
+        } else {
+            // From dark or system -> go to light
+            window.bnToggleDarkMode('light');
+        }
+
+        updateButtonIcon();
     };
 
     /**
      * Initialize theme on page load
      */
     function init() {
-        const savedTheme = getCookie(COOKIE_NAME);
+        const savedTheme = getTheme();
 
         if (savedTheme) {
             applyTheme(savedTheme);
-            console.log(`Binary Ninja Docs: Theme loaded from cookie: ${savedTheme}`);
-        } else {
-            console.log('Binary Ninja Docs: Following system preference (no cookie set)');
         }
 
-        console.log('Use bnToggleDarkMode("dark"), bnToggleDarkMode("light"), or bnToggleDarkMode("auto") to change theme');
+        // Update button icon after a short delay to ensure DOM is ready
+        setTimeout(updateButtonIcon, 100);
     }
 
     // Initialize on page load

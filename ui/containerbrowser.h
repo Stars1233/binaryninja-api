@@ -102,6 +102,7 @@ class BINARYNINJAUIAPI ContainerBrowser : public QDialog
 	static QString toHexDump(const QByteArray& data, int bytesPerLine = 16);
 	static QString formatMetadata(BinaryNinja::Ref<BinaryNinja::Metadata> metadata, int indent = 0);
 	QModelIndex findNodeByPath(const QStringList& path);
+	QModelIndex findFirstLeaf();
 
 public:
 	ContainerBrowser(TransformSessionRef session, QWidget* parent = nullptr);

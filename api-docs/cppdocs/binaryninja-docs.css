@@ -429,6 +429,10 @@ tr#projectrow {
         display: none;
     }
 
+    .sidebar-toggle {
+        display: none;
+    }
+
     #top {
         position: relative;
         width: 100%;
@@ -1325,9 +1329,9 @@ html.dark-mode .darkmode_inverted_image object[type="image/svg+xml"] {
  * ============================================================================ */
 
 .sidebar-toggle {
-    position: absolute;
-    top: 10px;
-    right: 10px;
+    position: fixed;
+    bottom: 20px;
+    left: calc(var(--sidebar-width) - 50px);
     z-index: 1000;
     width: 30px;
     height: 30px;
@@ -1351,15 +1355,11 @@ html.dark-mode .darkmode_inverted_image object[type="image/svg+xml"] {
 
 /* Collapsed sidebar state */
 #side-nav.collapsed {
-    width: 0 !important;
-    min-width: 0 !important;
-    max-width: 0 !important;
-    overflow: visible;
+    overflow: visible !important;
 }
 
 #side-nav.collapsed .sidebar-toggle {
     left: 10px;
-    right: auto;
 }
 
 /* Hide header/top when collapsed */

@@ -143,6 +143,7 @@ nav:
             - Type Libraries: 'dev/typelibraries.md'
         - Important Concepts:
             - 'dev/concepts.md'
+            - Outlining: 'dev/outlining.md'
             - User Informed Data Flow: 'dev/uidf.md'
             - Workflows: 'dev/workflows.md'
         - Creating Themes: 'dev/themes.md'

@@ -159,7 +159,7 @@ Full Class List
 {underline}
 
 ''')
-		
+
 		# Add sub-toctree for parent modules that have nested modules
 		if modulename.count(".") == 0 and modulename in nested_modules and nested_modules[modulename]:
 			modulefile.write(".. toctree::\n")
@@ -168,7 +168,12 @@ Full Class List
 			for nested_name, nested_filename in nested_modules[modulename]:
 				modulefile.write(f"   {nested_name} <{nested_filename}>\n")
 			modulefile.write("\n")
-		
+
+		# Include module-level docstring
+		modulefile.write(f'''.. automodule:: {module.__name__}
+
+''')
+
 		# Generate custom summary table
 		classes = list(classlist(module))
 		if classes:

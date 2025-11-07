@@ -41,19 +41,28 @@ TransformSession::~TransformSession()
 
 Ref<BinaryView> TransformSession::GetCurrentView() const
 {
-	return new BinaryView(BNTransformSessionGetCurrentView(m_object));
+	BNBinaryView* view = BNTransformSessionGetCurrentView(m_object);
+	if (!view)
+		return nullptr;
+	return new BinaryView(view);
 }
 
 
 Ref<TransformContext> TransformSession::GetRootContext() const
 {
-	return new TransformContext(BNTransformSessionGetRootContext(m_object));
+	BNTransformContext* context = BNTransformSessionGetRootContext(m_object);
+	if (!context)
+		return nullptr;
+	return new TransformContext(context);
 }
 
 
 Ref<TransformContext> TransformSession::GetCurrentContext() const
 {
-	return new TransformContext(BNTransformSessionGetCurrentContext(m_object));
+	BNTransformContext* context = BNTransformSessionGetCurrentContext(m_object);
+	if (!context)
+		return nullptr;
+	return new TransformContext(context);
 }
 
 

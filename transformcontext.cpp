@@ -17,7 +17,10 @@ TransformContext::~TransformContext()
 
 Ref<BinaryView> TransformContext::GetInput() const
 {
-	return new BinaryView(BNTransformContextGetInput(m_object));
+	BNBinaryView* view = BNTransformContextGetInput(m_object);
+	if (!view)
+		return nullptr;
+	return new BinaryView(view);
 }
 
 
@@ -123,7 +126,10 @@ void TransformContext::SetTransformResult(BNTransformResult result)
 
 Ref<Metadata> TransformContext::GetMetadata() const
 {
-	return new Metadata(BNTransformContextGetMetadata(m_object));
+	BNMetadata* metadata = BNTransformContextGetMetadata(m_object);
+	if (!metadata)
+		return nullptr;
+	return new Metadata(metadata);
 }
 
 

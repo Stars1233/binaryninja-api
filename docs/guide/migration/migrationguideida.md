@@ -48,7 +48,7 @@ Some major exceptions are:
 
 The hotkey for Cross-References in Binary Ninja will match your IDA muscle-memory, however the look is simlar to Ghidra with a pinned UI element containing tabs for references. To get the full IDA experience, change the [`ui.defaultXrefInterface`](settings.md#ui.defaultXrefInterface) setting to `dialog`.
 
-<!-- TODO: Make a screenshot -->
+![xref icon >](../../img/xref-setting.png "Xref Icon")
 
 ## Theme
 

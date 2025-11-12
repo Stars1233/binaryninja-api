@@ -1,9 +1,9 @@
 # WARP
 
-Binary Ninja ships a first party plugin for [WARP] a format for transferring analysis
-information, such as function names and types. This integration is responsible for matching unique functions in a binary
-and automatically applying information to the analysis. As well as providing the user the ability to select from a set
-of possible functions, when identifying the unique function fails.
+Binary Ninja ships a first party plugin for [WARP], a format for transferring analysis information including function
+names, parameter names, and types. The plugin is responsible for matching unique functions in a binary and automatically
+applying information to the analysis. It also provides the user the ability to select from a set of possible functions
+when identifying the unique function fails.
 
 The bundled plugin is open source and is located [here](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/warp).
 
@@ -12,8 +12,8 @@ The bundled plugin is open source and is located [here](https://github.com/Vecto
 ## How WARP Works
 
 WARP works by making a function GUID based off the byte contents of the function. Because WARP creates this GUID based
-off the byte contents, the functions are expected to be an exact match, aside from variant instructions.
-To use WARP, you only need to know that the function GUID's must match across binaries for the function information to be considered.
+off the byte contents, the functions are expected to be an exact match, aside from variant instructions. To use WARP,
+you only need to know that the function GUID's must match across binaries for the function information to be considered.
 
 To read more about how WARP works, please see the GitHub repository [here](https://github.com/vector35/warp).
 
@@ -46,13 +46,14 @@ Files are automatically loaded from two locations when Binary Ninja starts:
     - Can be disabled using the setting `warp.container.loadUserFiles`.
 
 ???+ Danger "Warning"
-    Always place your signature libraries in your user directory. The installation path is wiped whenever Binary Ninja auto-updates. You can locate it with `Open Plugin Folder` in the command palette and navigate "up" a directory.
+    Always place your signature libraries in your user directory. The installation path is wiped whenever Binary Ninja 
+    auto-updates. You can locate it with `Open Plugin Folder` in the command palette and navigate "up" a directory.
 
 ### Manually
 
-Aside from using the signature directory you can load any WARP file manually using the
-command `WARP\\Load File` or via the UI sidebar, they both do the same thing. Once the file is
-loaded, you do not need to load if for every view, it is available globally.
+Aside from using the signature directory you can load any WARP file manually using the command `WARP\\Load File` or via
+the UI sidebar, they both do the same thing. Once the file is loaded, you do not need to load it for every view, it is
+available globally.
 
 ???+ Info "Tip"
     When loading signatures you may encounter a dialog asking to "Override file target?" this happens when your file
@@ -114,9 +115,10 @@ make the files load quicker, turn off compression.
 
 ## Networked Functionality
 
-WARP for Binary Ninja provides the ability to lazily pull data (functions, types) from a WARP server, by default, networked
-functionality is disabled, as it requires sending the functions platform (`windows-x86`) and GUID (`2f893a32-8592-54e2-8052-207603976686`)
-which can be considered sensitive information, see [Connecting](#connecting) to learn how to enable this functionality.
+WARP for Binary Ninja provides the ability to lazily pull data (functions, types) from a WARP server. By default,
+networked functionality is disabled since it requires sending the functions platform (`windows-x86`) and GUID
+(`2f893a32-8592-54e2-8052-207603976686`) which can be considered sensitive information. See [Connecting](#connecting) to
+learn how to enable this functionality.
 
 ### Connecting
 
@@ -228,7 +230,7 @@ The function GUID will differ if the instruction highlights are not exactly the 
 
 When running the matcher manually, you may get a warning about no relocatable regions found; this means you have no defined
 sections or segments in your view. For WARP to work we must have some range of address space to work with, without it the
-function GUID's will likely be inconsistent if the functions can be based at different addresses.
+function GUIDs will likely be inconsistent if the functions can be based at different addresses.
 
 ### Failed to connect to the server
 

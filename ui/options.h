@@ -60,11 +60,12 @@ class BINARYNINJAUIAPI OptionsDialog : public QDialog
 
   private Q_SLOTS:
 	void defaults(int index);
-	void cancel();
-	void open();
 	void addSettingsViewForType(const std::string& bvtName);
 	void removeTabAndSettingsView(int index);
 	void viewTabChanged(int index);
 	void viewTabCloseRequested(int index);
 	void viewTypeSelectionChanged();
+  public Q_SLOTS:
+	virtual void accept() override;
+	virtual void reject() override;
 };

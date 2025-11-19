@@ -280,7 +280,7 @@ class BasicBlockList:
 		elif isinstance(i, slice):
 			result = []
 			if i.start < 0 or i.start >= len(self) or i.stop < 0 or i.stop >= len(self):
-				raise IndexError(f"Slice {i} out of bounds for FunctionList of size {len(self)}")
+				raise IndexError(f"Slice {i} out of bounds for BasicBlockList of size {len(self)}")
 
 			for j in range(i.start, i.stop, i.step if i.step is not None else 1):
 				block = core.BNNewBasicBlockReference(self._blocks[j])
@@ -401,7 +401,7 @@ class TagList:
 		elif isinstance(i, slice):
 			result = []
 			if i.start < 0 or i.start >= len(self) or i.stop < 0 or i.stop >= len(self):
-				raise IndexError(f"Slice {i} out of bounds for FunctionList of size {len(self)}")
+				raise IndexError(f"Slice {i} out of bounds for TagList of size {len(self)}")
 
 			for j in range(i.start, i.stop, i.step if i.step is not None else 1):
 				core_tag = core.BNNewTagReference(self._tags[j].tag)

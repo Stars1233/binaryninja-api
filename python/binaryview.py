@@ -80,14 +80,12 @@ from . import platform as _platform
 from . import deprecation
 from . import typecontainer
 from . import externallibrary
-from . import project
 from . import undo
 from . import stringrecognizer
 
 
 PathType = Union[str, os.PathLike]
 InstructionsType = Generator[Tuple[List['_function.InstructionTextToken'], int], None, None]
-NotificationType = Mapping['BinaryDataNotification', 'BinaryDataNotificationCallbacks']
 ProgressFuncType = Callable[[int, int], bool]
 DataMatchCallbackType = Callable[[int, 'databuffer.DataBuffer'], bool]
 LineMatchCallbackType = Callable[[int, 'lineardisassembly.LinearDisassemblyLine'], bool]
@@ -127,10 +125,10 @@ class ReferenceSource:
 		return self.function.get_low_level_il_at(self.address, self.arch)
 
 	@property
-	def llils(self) -> Iterator[lowlevelil.LowLevelILInstruction]:
+	def llils(self) -> List[lowlevelil.LowLevelILInstruction]:
 		"""Returns the low level il instructions at the current location if any exists"""
 		if self.function is None or self.arch is None:
-			return
+			return []
 		return self.function.get_low_level_ils_at(self.address, self.arch)
 
 	@property
@@ -306,7 +304,7 @@ class BinaryDataNotification:
 	>>>
 	"""
 
-	def __init__(self, notifications: NotificationType = None):
+	def __init__(self, notifications: Optional[NotificationType] = None):
 		self.notifications = notifications
 
 	def notification_barrier(self, view: 'BinaryView') -> int:
@@ -826,7 +824,7 @@ class BinaryDataNotificationCallbacks:
 		self._notify = notify
 		self._cb = core.BNBinaryDataNotification()
 		self._cb.context = 0
-		if (not hasattr(notify, 'notifications')) or (hasattr(notify, 'notifications') and notify.notifications is None):
+		if (not hasattr(notify, 'notifications')) or (notify.notifications is None):
 			self._cb.notificationBarrier = self._cb.notificationBarrier
 			self._cb.dataWritten = self._cb.dataWritten.__class__(self._data_written)
 			self._cb.dataInserted = self._cb.dataInserted.__class__(self._data_inserted)
@@ -9369,7 +9367,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		return result.value
 
 	class QueueGenerator:
-		def __init__(self, t, results):
+		def __init__(self, t: threading.Thread, results: queue.Queue):
 			self.thread = t
 			self.results = results
 			t.start()
@@ -9388,7 +9386,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 	def find_all_data(
 	    self, start: int, end: int, data: bytes, flags: FindFlag = FindFlag.FindCaseSensitive,
 	    progress_func: Optional[ProgressFuncType] = None, match_callback: Optional[DataMatchCallbackType] = None
-	) -> QueueGenerator:
+	) -> Union[QueueGenerator, bool]:
 		"""
 		``find_all_data`` searches for the bytes ``data`` starting at the virtual address ``start``
 		until the virtual address ``end``. Once a match is found, the ``match_callback`` is called.
@@ -9464,7 +9462,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 	    self, start: int, end: int, text: str, settings: Optional[_function.DisassemblySettings] = None,
 	    flags=FindFlag.FindCaseSensitive, graph_type: _function.FunctionViewTypeOrName = FunctionGraphType.NormalFunctionGraph, progress_func=None,
 	    match_callback=None
-	) -> QueueGenerator:
+	) -> Union[QueueGenerator, bool]:
 		"""
 		``find_all_text`` searches for string ``text`` occurring in the linear view output starting
 		at the virtual address ``start`` until the virtual address ``end``. Once a match is found,
@@ -9559,7 +9557,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 	    self, start: int, end: int, constant: int, settings: Optional[_function.DisassemblySettings] = None,
 	    graph_type: _function.FunctionViewTypeOrName = FunctionGraphType.NormalFunctionGraph, progress_func: Optional[ProgressFuncType] = None,
 	    match_callback: Optional[LineMatchCallbackType] = None
-	) -> QueueGenerator:
+	) -> Union[QueueGenerator, bool]:
 		"""
 		``find_all_constant`` searches for the integer constant ``constant`` starting at the
 		virtual address ``start`` until the virtual address ``end``. Once a match is found,
@@ -9632,8 +9630,8 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 
 			return self.QueueGenerator(t, results)
 
-	def search(self, pattern: str, start: int = None, end: int = None, raw: bool = False, ignore_case: bool = False, overlap: bool = False, align: int = 1,
-		limit: int = None, progress_callback: Optional[ProgressFuncType] = None, match_callback: Optional[DataMatchCallbackType] = None) -> QueueGenerator:
+	def search(self, pattern: str, start: Optional[int] = None, end: Optional[int] = None, raw: bool = False, ignore_case: bool = False, overlap: bool = False, align: int = 1,
+		limit: Optional[int] = None, progress_callback: Optional[ProgressFuncType] = None, match_callback: Optional[DataMatchCallbackType] = None) -> QueueGenerator:
 		r"""
 		Searches for matches of the specified ``pattern`` within this BinaryView with an optionally provided address range specified by ``start`` and ``end``.
 		This is the API used by the advanced binary search UI option. The search pattern can be interpreted in various ways:
@@ -11355,7 +11353,10 @@ class TypedDataAccessor:
 			if isinstance(self.type, (_types.IntegerType, _types.IntegerBuilder)):
 				signed = bool(self.type.signed)
 			to_write = data.to_bytes(len(self), TypedDataAccessor.byte_order(self.endian), signed=signed)  # type: ignore
-		elif isinstance(data, float) and isinstance(self.type, (_types.FloatType, _types.FloatBuilder)):
+		elif isinstance(data, float):
+			if not isinstance(self.type, (_types.FloatType, _types.FloatBuilder)):
+				raise TypeError(f"Can't set the value of type {type(self.type)} to float value")
+
 			endian = "<" if self.endian == Endianness.LittleEndian else ">"
 			if self.type.width == 2:
 				code = "e"

@@ -21,7 +21,7 @@
 import ctypes
 import threading
 import traceback
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 # Binary Ninja components
 import binaryninja
@@ -41,7 +41,7 @@ from . import interaction
 
 
 class FlowGraphEdge:
-	def __init__(self, branch_type, source, target, points, back_edge, style):
+	def __init__(self, branch_type: Union[BranchType, int], source: 'FlowGraphNode', target: 'FlowGraphNode', points: List[Tuple[float, float]], back_edge: bool, style: 'EdgeStyle'):
 		self.type = BranchType(branch_type)
 		self.source = source
 		self.target = target
@@ -85,7 +85,7 @@ class EdgeStyle:
 
 
 class FlowGraphNode:
-	def __init__(self, graph=None, handle=None):
+	def __init__(self, graph: Optional['FlowGraph'] = None, handle=None):
 		_handle = handle
 		if _handle is None:
 			if graph is None:
@@ -343,7 +343,7 @@ class FlowGraphNode:
 
 
 class FlowGraphLayoutRequest:
-	def __init__(self, graph, callback=None):
+	def __init__(self, graph: 'FlowGraph', callback=None):
 		self.on_complete = callback
 		self._cb = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(self._complete)
 		self.handle = core.BNStartFlowGraphLayout(graph.handle, None, self._cb)

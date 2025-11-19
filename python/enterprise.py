@@ -320,7 +320,7 @@ class LicenseCheckout:
 	"""
 	Helper class for scripts to make use of a license checkout in a scope.
 
-	:param duration: Duration between refreshes
+	:param duration: Duration in seconds between refreshes
 	:param _cache: Deprecated but left in for compatibility
 	:param release: If the license should be released at the end of scope. If `False`, you
 					can either manually release it later or it will expire after `duration`.
@@ -334,11 +334,11 @@ class LicenseCheckout:
 		... 		print(hex(bv.start))
 		# License is released at end of scope
 	"""
-	def __init__(self, duration=900, _cache=True, release=True):
+	def __init__(self, duration: int = 900, _cache: bool = True, release: bool = True):
 		"""
 		Get a new license checkout
 
-		:param duration: Duration between refreshes
+		:param duration: Duration in seconds between refreshes
 		:param _cache: Deprecated but left in for compatibility
 		:param release: If the license should be released at the end of scope. If `False`, you
 		                can either manually release it later or it will expire after `duration`.

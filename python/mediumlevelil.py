@@ -3273,7 +3273,7 @@ class MediumLevelILExpr:
 
 	.. note:: Deprecated. Use ExpressionIndex instead
 	"""
-	def __init__(self, index):
+	def __init__(self, index: int):
 		self._index = index
 
 	def __int__(self):

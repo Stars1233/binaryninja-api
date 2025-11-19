@@ -552,7 +552,7 @@ class MutableTypeBuilder(Generic[TB]):
 
 
 class TypeBuilderAttributes(dict):
-	def __init__(self, builder, *args):
+	def __init__(self, builder: 'TypeBuilder', *args):
 		super(TypeBuilderAttributes, self).__init__(*args)
 		self._builder = builder
 

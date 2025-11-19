@@ -1073,7 +1073,7 @@ class BackgroundTask(metaclass=_BackgroundTaskMetaclass):
 	:param initial_progress_text: text description of the task to display in the status bar in the UI, defaults to `""`
 	:param can_cancel: whether to enable cancellation of the task, defaults to `False`
 	"""
-	def __init__(self, initial_progress_text="", can_cancel=False, handle=None):
+	def __init__(self, initial_progress_text: str = "", can_cancel: bool = False, handle=None):
 		if handle is None:
 			self.handle = core.BNBeginBackgroundTask(initial_progress_text, can_cancel)
 		else:

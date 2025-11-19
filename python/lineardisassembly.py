@@ -31,7 +31,7 @@ from .enums import (LinearDisassemblyLineType, LinearViewObjectIdentifierType)
 
 
 class LinearDisassemblyLine:
-	def __init__(self, line_type, func, block, contents):
+	def __init__(self, line_type: LinearDisassemblyLineType, func: Optional[_function.Function], block: Optional[basicblock.BasicBlock], contents: _function.DisassemblyTextLine):
 		self.type = line_type
 		self.function = func
 		self.block = block
@@ -82,7 +82,7 @@ class LinearDisassemblyLine:
 
 
 class LinearViewObjectIdentifier:
-	def __init__(self, name, start=None, end=None):
+	def __init__(self, name: str, start: Optional[int] = None, end: Optional[int] = None):
 		self._name = name
 		self._start = start
 		self._end = end
@@ -166,7 +166,7 @@ class LinearViewObjectIdentifier:
 
 
 class LinearViewObject:
-	def __init__(self, handle, parent=None):
+	def __init__(self, handle, parent: Optional['LinearViewObject'] = None):
 		self.handle = handle
 		self._parent = parent
 
@@ -187,21 +187,21 @@ class LinearViewObject:
 		return result
 
 	@property
-	def first_child(self):
+	def first_child(self) -> Optional['LinearViewObject']:
 		result = core.BNGetFirstLinearViewObjectChild(self.handle)
 		if not result:
 			return None
 		return LinearViewObject(result, self)
 
 	@property
-	def last_child(self):
+	def last_child(self) -> Optional['LinearViewObject']:
 		result = core.BNGetLastLinearViewObjectChild(self.handle)
 		if not result:
 			return None
 		return LinearViewObject(result, self)
 
 	@property
-	def previous(self):
+	def previous(self) -> Optional['LinearViewObject']:
 		if self._parent is None:
 			return None
 		result = core.BNGetPreviousLinearViewObjectChild(self._parent.handle, self.handle)
@@ -210,7 +210,7 @@ class LinearViewObject:
 		return LinearViewObject(result, self._parent)
 
 	@property
-	def next(self):
+	def next(self) -> Optional['LinearViewObject']:
 		if self._parent is None:
 			return None
 		result = core.BNGetNextLinearViewObjectChild(self._parent.handle, self.handle)
@@ -219,26 +219,26 @@ class LinearViewObject:
 		return LinearViewObject(result, self._parent)
 
 	@property
-	def start(self):
+	def start(self) -> int:
 		return core.BNGetLinearViewObjectStart(self.handle)
 
 	@property
-	def end(self):
+	def end(self) -> int:
 		return core.BNGetLinearViewObjectEnd(self.handle)
 
 	@property
-	def parent(self):
+	def parent(self) -> Optional['LinearViewObject']:
 		return self._parent
 
 	@property
-	def identifier(self):
+	def identifier(self) -> LinearViewObjectIdentifier:
 		ident = core.BNGetLinearViewObjectIdentifier(self.handle)
 		result = LinearViewObjectIdentifier._from_api_object(ident)
 		core.BNFreeLinearViewObjectIdentifier(ident)
 		return result
 
 	@property
-	def cursor(self):
+	def cursor(self) -> 'LinearViewCursor':
 		root = self
 		while root.parent is not None:
 			root = root.parent
@@ -254,20 +254,20 @@ class LinearViewObject:
 	def ordering_index_total(self):
 		return core.BNGetLinearViewObjectOrderingIndexTotal(self.handle)
 
-	def child_for_address(self, addr):
+	def child_for_address(self, addr) -> Optional['LinearViewObject']:
 		result = core.BNGetLinearViewObjectChildForAddress(self.handle, addr)
 		if not result:
 			return None
 		return LinearViewObject(result, self)
 
-	def child_for_identifier(self, ident):
+	def child_for_identifier(self, ident) -> Optional['LinearViewObject']:
 		ident_obj = ident._to_core_struct()
 		result = core.BNGetLinearViewObjectChildForIdentifier(self.handle, ident_obj)
 		if not result:
 			return None
 		return LinearViewObject(result, self)
 
-	def child_for_ordering_index(self, idx):
+	def child_for_ordering_index(self, idx) -> Optional['LinearViewObject']:
 		result = core.BNGetLinearViewObjectChildForOrderingIndex(self.handle, idx)
 		if not result:
 			return None
@@ -501,11 +501,13 @@ class LinearViewObject:
 
 
 class LinearViewCursor:
-	def __init__(self, root_object, handle=None):
+	def __init__(self, root_object: Optional[LinearViewObject], handle=None):
 		if handle is not None:
 			self.handle = handle
-		else:
+		elif root_object is not None:
 			self.handle = core.BNCreateLinearViewCursor(root_object.handle)
+		else:
+			raise TypeError("At least one of root_object or handle must not be None")
 
 	def __del__(self):
 		if core is not None:
@@ -565,7 +567,7 @@ class LinearViewCursor:
 		return not (self.before_begin or self.after_end)
 
 	@property
-	def current_object(self):
+	def current_object(self) -> Optional['LinearViewObject']:
 		count = ctypes.c_ulonglong(0)
 		path = core.BNGetLinearViewCursorPathObjects(self.handle, count)
 		assert path is not None, "core.BNGetLinearViewCursorPathObjects returned None"
@@ -576,7 +578,7 @@ class LinearViewCursor:
 		return result
 
 	@property
-	def path(self):
+	def path(self) -> List[LinearViewObjectIdentifier]:
 		count = ctypes.c_ulonglong(0)
 		path = core.BNGetLinearViewCursorPath(self.handle, count)
 		assert path is not None, "core.BNGetLinearViewCursorPath returned None"
@@ -587,7 +589,7 @@ class LinearViewCursor:
 		return result
 
 	@property
-	def path_objects(self):
+	def path_objects(self) -> List[LinearViewObject]:
 		count = ctypes.c_ulonglong(0)
 		path = core.BNGetLinearViewCursorPathObjects(self.handle, count)
 		assert path is not None, "core.BNGetLinearViewCursorPathObjects returned None"
@@ -632,10 +634,10 @@ class LinearViewCursor:
 	def seek_to_ordering_index(self, idx):
 		core.BNSeekLinearViewCursorToOrderingIndex(self.handle, idx)
 
-	def previous(self):
+	def previous(self) -> bool:
 		return core.BNLinearViewCursorPrevious(self.handle)
 
-	def next(self):
+	def next(self) -> bool:
 		return core.BNLinearViewCursorNext(self.handle)
 
 	@staticmethod
@@ -650,16 +652,16 @@ class LinearViewCursor:
 			core.BNFreeLinearDisassemblyLines(lines, count)
 
 	@property
-	def lines(self):
+	def lines(self) -> List['LinearDisassemblyLine']:
 		current = self.current_object
 		count = ctypes.c_ulonglong(0)
 		return LinearViewCursor._make_lines(core.BNGetLinearViewCursorLines(self.handle, count), count.value, current)
 
-	def duplicate(self):
+	def duplicate(self) -> 'LinearViewCursor':
 		return LinearViewCursor(None, handle=core.BNDuplicateLinearViewCursor(self.handle))
 
 	@staticmethod
-	def compare(a, b):
+	def compare(a: 'LinearViewCursor', b: 'LinearViewCursor'):
 		return core.BNCompareLinearViewCursors(a.handle, b.handle)
 
 	@property

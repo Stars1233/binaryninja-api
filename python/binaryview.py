@@ -8764,7 +8764,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		src_names = (core.BNQualifiedName * count)()
 		dst_names = (core.BNQualifiedName * count)()
 		lib_names = (ctypes.c_char_p * count)()
-		for (i, src, (dst, lib)) in enumerate(entries.items()):
+		for (i, (src, (dst, lib))) in enumerate(entries.items()):
 			src_names[i] = src._to_core_struct()
 			dst_names[i] = dst._to_core_struct()
 			lib_names[i] = lib.encode("utf-8")

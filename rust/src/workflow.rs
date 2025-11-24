@@ -12,6 +12,7 @@ use crate::high_level_il::HighLevelILFunction;
 use crate::low_level_il::{LowLevelILMutableFunction, LowLevelILRegularFunction};
 use crate::medium_level_il::MediumLevelILFunction;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
+use crate::section::Section;
 use crate::segment::{Segment, SegmentFlags};
 use crate::string::{BnString, IntoCStr};
 use std::ffi::c_char;
@@ -213,6 +214,71 @@ impl AnalysisContext {
     /// NOTE: This is a lock-free alternative to [`BinaryView::offset_backed_by_file`].
     pub fn is_offset_backed_by_file(&self, offset: u64) -> bool {
         unsafe { BNAnalysisContextIsOffsetBackedByFile(self.handle.as_ptr(), offset) }
+    }
+
+    /// Check if an offset has code semantics in the cached section map.
+    ///
+    /// NOTE: This is a lock-free alternative to [`BinaryView::is_offset_code_semantics`].
+    pub fn is_offset_code_semantics(&self, offset: u64) -> bool {
+        unsafe { BNAnalysisContextIsOffsetCodeSemantics(self.handle.as_ptr(), offset) }
+    }
+
+    /// Check if an offset has external semantics in the cached section map.
+    ///
+    /// NOTE: This is a lock-free alternative to [`BinaryView::is_offset_extern_semantics`].
+    pub fn is_offset_extern_semantics(&self, offset: u64) -> bool {
+        unsafe { BNAnalysisContextIsOffsetExternSemantics(self.handle.as_ptr(), offset) }
+    }
+
+    /// Check if an offset has writable semantics in the cached section map.
+    ///
+    /// NOTE: This is a lock-free alternative to [`BinaryView::is_offset_writable_semantics`].
+    pub fn is_offset_writable_semantics(&self, offset: u64) -> bool {
+        unsafe { BNAnalysisContextIsOffsetWritableSemantics(self.handle.as_ptr(), offset) }
+    }
+
+    /// Check if an offset has read-only semantics in the cached section map.
+    ///
+    /// NOTE: This is a lock-free alternative to [`BinaryView::is_offset_readonly_semantics`].
+    pub fn is_offset_readonly_semantics(&self, offset: u64) -> bool {
+        unsafe { BNAnalysisContextIsOffsetReadOnlySemantics(self.handle.as_ptr(), offset) }
+    }
+
+    /// Get all sections from the cached section map.
+    ///
+    /// NOTE: This is a lock-free alternative to [`BinaryView::sections`].
+    pub fn sections(&self) -> Array<Section> {
+        unsafe {
+            let mut count = 0;
+            let sections = BNAnalysisContextGetSections(self.handle.as_ptr(), &mut count);
+            Array::new(sections, count, ())
+        }
+    }
+
+    /// Get a section by name from the cached section map.
+    ///
+    /// NOTE: This is a lock-free alternative to [`BinaryView::section_by_name`].
+    pub fn section_by_name(&self, name: impl IntoCStr) -> Option<Ref<Section>> {
+        unsafe {
+            let raw_name = name.to_cstr();
+            let name_ptr = raw_name.as_ptr();
+            let raw_section_ptr = BNAnalysisContextGetSectionByName(self.handle.as_ptr(), name_ptr);
+            match raw_section_ptr.is_null() {
+                false => Some(Section::ref_from_raw(raw_section_ptr)),
+                true => None,
+            }
+        }
+    }
+
+    /// Get all sections containing the given address from the cached section map.
+    ///
+    /// NOTE: This is a lock-free alternative to [`BinaryView::sections_at`].
+    pub fn sections_at(&self, addr: u64) -> Array<Section> {
+        unsafe {
+            let mut count = 0;
+            let sections = BNAnalysisContextGetSectionsAt(self.handle.as_ptr(), addr, &mut count);
+            Array::new(sections, count, ())
+        }
     }
 
     /// Get the start address (the lowest address) from the cached [`MemoryMap`].

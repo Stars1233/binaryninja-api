@@ -11483,6 +11483,15 @@ namespace BinaryNinja {
 		Ref<Segment> GetSegmentAt(uint64_t addr);
 		std::vector<BNAddressRange> GetMappedAddressRanges();
 		std::vector<BNAddressRange> GetBackedAddressRanges();
+
+		// Section map access - lock-free access to cached SectionMap
+		bool IsOffsetCodeSemantics(uint64_t offset);
+		bool IsOffsetExternSemantics(uint64_t offset);
+		bool IsOffsetWritableSemantics(uint64_t offset);
+		bool IsOffsetReadOnlySemantics(uint64_t offset);
+		std::vector<Ref<Section>> GetSections();
+		Ref<Section> GetSectionByName(const std::string& name);
+		std::vector<Ref<Section>> GetSectionsAt(uint64_t addr);
 	};
 
 	// Explicit template specialization declarations for AnalysisContext::GetSetting<T>

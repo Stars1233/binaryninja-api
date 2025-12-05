@@ -706,7 +706,6 @@ class PythonScriptingInstance(ScriptingInstance):
 			self.current_addr = 0
 			self.current_selection_begin = 0
 			self.current_selection_end = 0
-			self.current_dbg = None
 
 			# Selections that were current as of last issued command
 			self.active_view = None
@@ -716,7 +715,6 @@ class PythonScriptingInstance(ScriptingInstance):
 			self.active_selection_begin = 0
 			self.active_selection_end = 0
 			self.active_file_offset = None
-			self.active_dbg = None
 			self.active_il_index = 0
 			self.selection_start_il_index = 0
 			self.active_il_function = None
@@ -834,7 +832,6 @@ from binaryninja import *
 			self.active_addr = self.current_addr
 			self.active_selection_begin = self.current_selection_begin
 			self.active_selection_end = self.current_selection_end
-			self.active_dbg = self.current_dbg
 
 			self.locals.blacklist_enabled = False
 
@@ -925,13 +922,11 @@ from binaryninja import *
 			# So `from debugger import DebuggerController` would not work.
 			from debugger import DebuggerController
 			self.DebuggerController = DebuggerController
-			self.debugger_imported = True
 		else:
 			if settings.contains('corePlugins.debugger') and settings.get_bool('corePlugins.debugger') and \
 				(os.environ.get('BN_DISABLE_CORE_DEBUGGER') is None):
 				from .debugger import DebuggerController
 				self.DebuggerController = DebuggerController
-				self.debugger_imported = True
 
 	@abc.abstractmethod
 	def perform_stop(self):
@@ -1001,12 +996,6 @@ from binaryninja import *
 	@abc.abstractmethod
 	def perform_set_current_binary_view(self, view):
 		self.interpreter.current_view = view
-		if view is not None:
-			if self.debugger_imported:
-				self.interpreter.current_dbg = self.DebuggerController(view)
-
-		else:
-			self.interpreter.current_dbg = None
 
 		# This is a workaround that allows BN to properly free up resources when the last tab of a binary view is closed.
 		# Without this update, the interpreter local variables will NOT be updated until the user interacts with the
@@ -1544,11 +1533,6 @@ PythonScriptingProvider.register_magic_variable(
 PythonScriptingProvider.register_magic_variable(
 	"current_basic_block",
 	lambda instance: instance.interpreter.active_block
-)
-# todo: this is the debugger's responsibility
-PythonScriptingProvider.register_magic_variable(
-	"dbg",
-	lambda instance: instance.interpreter.active_dbg
 )
 
 

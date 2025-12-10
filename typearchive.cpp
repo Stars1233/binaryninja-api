@@ -232,6 +232,7 @@ TypeContainer TypeArchive::GetTypeContainer() const
 bool TypeArchive::AddTypes(const std::vector<QualifiedNameAndType>& types)
 {
 	std::vector<BNQualifiedNameAndType> apiTypes;
+	apiTypes.reserve(types.size());
 	for (auto& type : types)
 	{
 		BNQualifiedNameAndType qnat;

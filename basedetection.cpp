@@ -84,6 +84,7 @@ std::vector<BNBaseAddressDetectionReason> BaseAddressDetection::GetReasonsForBas
     if (!reasons)
         return result;
 
+    result.reserve(count);
     for (size_t i = 0; i < count; i++)
         result.push_back(reasons[i]);
 

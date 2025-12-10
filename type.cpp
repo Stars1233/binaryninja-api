@@ -2218,6 +2218,7 @@ TypeBuilder& TypeBuilder::AddPointerSuffix(BNPointerSuffix ps)
 TypeBuilder& TypeBuilder::SetPointerSuffix(const std::set<BNPointerSuffix>& suffix)
 {
 	std::vector<BNPointerSuffix> apiSuffix;
+	apiSuffix.reserve(suffix.size());
 	for (auto& s: suffix)
 	{
 		apiSuffix.push_back(s);

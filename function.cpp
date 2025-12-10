@@ -733,6 +733,7 @@ Confidence<vector<uint32_t>> Function::GetReturnRegisters() const
 {
 	BNRegisterSetWithConfidence regs = BNGetFunctionReturnRegisters(m_object);
 	vector<uint32_t> regList;
+	regList.reserve(regs.count);
 	for (size_t i = 0; i < regs.count; i++)
 		regList.push_back(regs.regs[i]);
 	Confidence<vector<uint32_t>> result(regList, regs.confidence);

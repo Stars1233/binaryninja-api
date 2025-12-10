@@ -1902,6 +1902,7 @@ vector<uint32_t> CoreArchitecture::GetAllSemanticFlagClasses()
 	uint32_t* regs = BNGetAllArchitectureSemanticFlagClasses(m_object, &count);
 
 	vector<uint32_t> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(regs[i]);
 
@@ -1916,6 +1917,7 @@ vector<uint32_t> CoreArchitecture::GetAllSemanticFlagGroups()
 	uint32_t* regs = BNGetAllArchitectureSemanticFlagGroups(m_object, &count);
 
 	vector<uint32_t> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(regs[i]);
 
@@ -1936,6 +1938,7 @@ vector<uint32_t> CoreArchitecture::GetFlagsRequiredForFlagCondition(BNLowLevelIL
 	uint32_t* flags = BNGetArchitectureFlagsRequiredForFlagCondition(m_object, cond, semClass, &count);
 
 	vector<uint32_t> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(flags[i]);
 
@@ -2079,6 +2082,7 @@ vector<uint32_t> CoreArchitecture::GetAllRegisterStacks()
 	uint32_t* regs = BNGetAllArchitectureRegisterStacks(m_object, &count);
 
 	vector<uint32_t> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(regs[i]);
 
@@ -2114,6 +2118,7 @@ vector<uint32_t> CoreArchitecture::GetAllIntrinsics()
 	uint32_t* regs = BNGetAllArchitectureIntrinsics(m_object, &count);
 
 	vector<uint32_t> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(regs[i]);
 

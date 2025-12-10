@@ -91,13 +91,16 @@ vector<DebugFunctionInfo> DebugInfo::GetFunctions(const string& parserName) cons
 		return {};
 
 	vector<DebugFunctionInfo> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; ++i)
 	{
 		vector<string> components;
+		components.reserve(functions[i].componentN);
 		for (size_t componentN = 0; componentN < functions[i].componentN; ++componentN)
 			components.emplace_back(functions[i].components[componentN]);
 
 		vector<VariableNameAndType> localVariables;
+		localVariables.reserve(functions[i].localVariableN);
 		for (size_t localVariableN = 0; localVariableN < functions[i].localVariableN; ++localVariableN)
 		{
 			auto& bnVar = functions[i].localVariables[localVariableN];

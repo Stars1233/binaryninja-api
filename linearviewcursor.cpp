@@ -68,6 +68,7 @@ vector<LinearViewObjectIdentifier> LinearViewCursor::GetPath() const
 	size_t count;
 	BNLinearViewObjectIdentifier* path = BNGetLinearViewCursorPath(m_object, &count);
 	vector<LinearViewObjectIdentifier> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		LinearViewObjectIdentifier id;

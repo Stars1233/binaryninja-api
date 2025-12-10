@@ -2418,6 +2418,7 @@ vector<Ref<Function>> BinaryView::GetAllEntryFunctions()
 		return {};
 
 	vector<Ref<Function>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(new Function(BNNewFunctionReference(funcs[i])));
 	BNFreeFunctionList(funcs, count);
@@ -4377,6 +4378,7 @@ vector<pair<QualifiedName, Ref<Type>>> BinaryView::GetDependencySortedTypes()
 	BNQualifiedNameAndType* types = BNGetAnalysisDependencySortedTypeList(m_object, &count);
 
 	vector<pair<QualifiedName, Ref<Type>>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		QualifiedName name = QualifiedName::FromAPIObject(&types[i].name);
@@ -4647,6 +4649,7 @@ std::vector<Ref<TypeLibrary>> BinaryView::GetTypeLibraries()
 	BNTypeLibrary** libs = BNGetBinaryViewTypeLibraries(m_object, &count);
 
 	vector<Ref<TypeLibrary>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; ++i)
 	{
 		result.push_back(new TypeLibrary(BNNewTypeLibraryReference(libs[i])));

@@ -34,6 +34,7 @@ PossibleValueSet PossibleValueSet::FromAPIObject(BNPossibleValueSet& value)
 	result.size = value.size;
 	if (value.state == LookupTableValue)
 	{
+		result.table.reserve(value.count);
 		for (size_t i = 0; i < value.count; i++)
 		{
 			LookupTableEntry entry;
@@ -45,6 +46,7 @@ PossibleValueSet PossibleValueSet::FromAPIObject(BNPossibleValueSet& value)
 	}
 	else if ((value.state == SignedRangeValue) || (value.state == UnsignedRangeValue))
 	{
+		result.ranges.reserve(value.count);
 		for (size_t i = 0; i < value.count; i++)
 			result.ranges.push_back(value.ranges[i]);
 	}

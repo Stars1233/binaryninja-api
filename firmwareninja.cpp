@@ -508,6 +508,7 @@ std::vector<FirmwareNinjaFunctionMemoryAccesses> FirmwareNinja::GetFunctionMemor
 		FirmwareNinjaFunctionMemoryAccesses info;
 		info.start = fma[i]->start;
 		info.count = fma[i]->count;
+		info.accesses.reserve(info.count);
 		for (size_t j = 0; j < info.count; j++)
 		{
 			BNFirmwareNinjaMemoryAccess access;

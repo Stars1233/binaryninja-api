@@ -446,6 +446,7 @@ std::vector<uint32_t> CorePlatform::GetGlobalRegisters()
 	uint32_t* regs = BNGetPlatformGlobalRegisters(m_object, &count);
 
 	std::vector<uint32_t> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.push_back(regs[i]);
 

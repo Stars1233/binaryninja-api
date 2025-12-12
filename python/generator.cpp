@@ -384,7 +384,14 @@ int main(int argc, char* argv[])
 			fprintf(enums, "\n\nclass %s(enum.IntEnum):\n", name.c_str());
 			for (auto& j : i.second->GetEnumeration()->GetMembers())
 			{
-				fprintf(enums, "\t%s = %" PRId32 "\n", j.name.c_str(), (int32_t)j.value);
+				if (i.second->IsSigned())
+				{
+					fprintf(enums, "\t%s = %" PRId64 "\n", j.name.c_str(), (int64_t)BNSignExtend(j.value, i.second->GetWidth(), 8));
+				}
+				else
+				{
+					fprintf(enums, "\t%s = %" PRIu64 "\n", j.name.c_str(), j.value);
+				}
 			}
 		}
 		else if ((i.second->GetClass() == BoolTypeClass) || (i.second->GetClass() == IntegerTypeClass)

@@ -87,6 +87,12 @@ The below steps are specific to different platforms that Binary Ninja runs on.  
 - While Windows 7 is not officially supported (by us, or Microsoft for that matter), it may work if all available Windows updates are installed (including non-security updates with certificate bundle updates).
 - If you install Windows without internet access and have never run Windows updates to install an update, you may have an incomplete Windows certificate store. You'll see errors when attempting to update about `CERTIFICATE VERIFICATION FAILED`.  If that is the case, you can either use something like `certutil.exe -generateSSTFromWU roots.sst` and then manually copy over the DST and Amazon certificates into your root store, or wait until the next time you have an update from Windows Update which should automatically refresh your certificate store.
 
+#### Defender Causes Slow Startup
+
+When launching Binary Ninja on windows, Defender can cause extremely long start-up times when first run after reboot. The fix is to explicitly <a href="https://learn.microsoft.com/en-us/defender-endpoint/configure-extension-file-exclusions-microsoft-defender-antivirus">white-list</a> the binaryninja.exe file.
+
+Note that the problem is especially exaccerbated by adding a large number of python dependencies for plugins as the initial python plugin loading triggering accessing all of the python modules is the slowest part of the scan process.
+
 #### Some Graphics Chipsets
 
 Some graphics chipsets may experience problems with [scaling](https://github.com/Vector35/binaryninja-api/issues/1529) resulting in the top menu disappearing. In that case, the simplest fix is to set the environment variable `QT_OPENGL=angle`.

@@ -46,7 +46,7 @@ protected:
 	class TypeBrowserModelData* m_model;
 	std::optional<std::weak_ptr<TypeBrowserTreeNode>> m_parent;
 	std::vector<std::shared_ptr<TypeBrowserTreeNode>> m_children;
-	std::map<const TypeBrowserTreeNode*, size_t> m_childIndices;
+	std::unordered_map<const TypeBrowserTreeNode*, size_t> m_childIndices;
 	bool m_hasGeneratedChildren;
 
 	TypeBrowserTreeNode(class TypeBrowserModelData* model, std::optional<std::weak_ptr<TypeBrowserTreeNode>> parent);

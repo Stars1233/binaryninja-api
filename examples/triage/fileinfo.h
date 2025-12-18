@@ -13,6 +13,7 @@ class FileInfoWidget : public QWidget
 
 	void addField(const QString& name, const QVariant& value);
 	void addCopyableField(const QString& name, const QVariant& value);
+	void addCopyableFieldWithElide(const QString& name, const QVariant& value, int maxWidth);
 	void addHashFields(BinaryViewRef view);
 
   public:

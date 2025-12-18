@@ -4,8 +4,12 @@
 #include "copyablelabel.h"
 #include <QClipboard>
 #include <QApplication>
+#include <QGuiApplication>
+#include <QScreen>
 #include <QToolTip>
 #include <QPainter>
+#include <QFontMetrics>
+#include <QScrollArea>
 #include <QtConcurrent/QtConcurrent>
 #include <QFuture>
 #include <QFutureWatcher>
@@ -16,6 +20,26 @@ void FileInfoWidget::addCopyableField(const QString& name, const QVariant& value
 
 	const auto valueLabel = new CopyableLabel(value.toString(), getThemeColor(AlphanumericHighlightColor));
 	valueLabel->setFont(getMonospaceFont(this));
+
+	this->m_layout->addWidget(new QLabel(name), row, column);
+	this->m_layout->addWidget(valueLabel, row++, column + 1);
+}
+
+void FileInfoWidget::addCopyableFieldWithElide(const QString& name, const QVariant& value, int maxWidth)
+{
+	auto& [row, column] = this->m_fieldPosition;
+
+	const auto fullText = value.toString();
+	const auto font = getMonospaceFont(this);
+	const QFontMetrics fontMetrics(font);
+	const auto elidedText = fontMetrics.elidedText(fullText, Qt::ElideMiddle, maxWidth);
+
+	const auto valueLabel = new CopyableLabel(elidedText, getThemeColor(AlphanumericHighlightColor));
+	valueLabel->setFont(font);
+	valueLabel->setCopyText(fullText);
+	valueLabel->setToolTip(fullText + "\n\nClick to Copy");
+	valueLabel->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+	valueLabel->setWordWrap(false);
 
 	this->m_layout->addWidget(new QLabel(name), row, column);
 	this->m_layout->addWidget(valueLabel, row++, column + 1);
@@ -115,13 +139,19 @@ FileInfoWidget::FileInfoWidget(QWidget* parent, BinaryViewRef bv)
 
 	const auto file = bv->GetFile();
 	const auto filePath = file->GetOriginalFilename();
-	this->addCopyableField("Path on disk: ", filePath.c_str());
+
+	// Calculate max path width as 50% of screen width
+	// Using screen width since the scroll area viewport isn't sized yet during construction
+	const int screenWidth = QGuiApplication::primaryScreen()->availableGeometry().width();
+	const int maxPathWidth = screenWidth / 2;
+
+	this->addCopyableFieldWithElide("Path on disk: ", filePath.c_str(), maxPathWidth);
 
 	// If triage view is opened from a project, show both actual filepath and path relative to project
 	if (const auto fileProjectRef = file->GetProjectFile())
 	{
 		const auto projectFilePath = file->GetProjectFile()->GetPathInProject();
-		this->addCopyableField("Path in project: ", projectFilePath.c_str());
+		this->addCopyableFieldWithElide("Path in project: ", projectFilePath.c_str(), maxPathWidth);
 	}
 
 	const auto fileSize = QString::number(view->GetLength(), 16).prepend("0x");

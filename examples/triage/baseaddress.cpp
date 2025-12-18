@@ -1,4 +1,6 @@
 #include "baseaddress.h"
+#include <QScrollArea>
+#include <QScrollBar>
 
 using namespace std;
 
@@ -175,6 +177,23 @@ void BaseAddressDetectionWidget::GetClickedBaseAddress(const QModelIndex& index)
 
 void BaseAddressDetectionWidget::HandleResults(const BaseAddressDetectionQtResults& results)
 {
+	// Save scroll position to prevent unwanted scrolling when hiding/showing widgets
+	QScrollArea* scrollArea = nullptr;
+	int savedVerticalScrollPosition = 0;
+	int savedHorizontalScrollPosition = 0;
+	QWidget* ancestor = parentWidget();
+	while (ancestor)
+	{
+		scrollArea = qobject_cast<QScrollArea*>(ancestor);
+		if (scrollArea)
+		{
+			savedVerticalScrollPosition = scrollArea->verticalScrollBar()->value();
+			savedHorizontalScrollPosition = scrollArea->horizontalScrollBar()->value();
+			break;
+		}
+		ancestor = ancestor->parentWidget();
+	}
+
 	if (!results.Status.empty())
 		m_status->setText(QString::fromStdString(results.Status));
 
@@ -238,11 +257,35 @@ void BaseAddressDetectionWidget::HandleResults(const BaseAddressDetectionQtResul
 	m_abortButton->setHidden(true);
 	m_startButton->setHidden(false);
 	m_startButton->setEnabled(true);
+
+	// Restore scroll position after widget visibility changes
+	if (scrollArea)
+	{
+		scrollArea->verticalScrollBar()->setValue(savedVerticalScrollPosition);
+		scrollArea->horizontalScrollBar()->setValue(savedHorizontalScrollPosition);
+	}
 }
 
 
 void BaseAddressDetectionWidget::DetectBaseAddress()
 {
+	// Save scroll position to prevent unwanted scrolling when hiding/showing widgets
+	QScrollArea* scrollArea = nullptr;
+	int savedVerticalScrollPosition = 0;
+	int savedHorizontalScrollPosition = 0;
+	QWidget* ancestor = parentWidget();
+	while (ancestor)
+	{
+		scrollArea = qobject_cast<QScrollArea*>(ancestor);
+		if (scrollArea)
+		{
+			savedVerticalScrollPosition = scrollArea->verticalScrollBar()->value();
+			savedHorizontalScrollPosition = scrollArea->horizontalScrollBar()->value();
+			break;
+		}
+		ancestor = ancestor->parentWidget();
+	}
+
 	HideResultsWidgets(true);
 	m_status->setText("Running...");
 	m_resultsTableWidget->clearContents();
@@ -254,6 +297,13 @@ void BaseAddressDetectionWidget::DetectBaseAddress()
 	connect(m_worker, &BaseAddressDetectionThread::finished, m_worker, &QObject::deleteLater);
 	m_worker->start();
 	m_abortButton->setHidden(false);
+
+	// Restore scroll position after widget visibility changes
+	if (scrollArea)
+	{
+		scrollArea->verticalScrollBar()->setValue(savedVerticalScrollPosition);
+		scrollArea->horizontalScrollBar()->setValue(savedHorizontalScrollPosition);
+	}
 }
 
 

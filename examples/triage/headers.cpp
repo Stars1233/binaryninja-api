@@ -95,8 +95,11 @@ GenericHeaders::GenericHeaders(BinaryViewRef data)
 	AddField("Type", QString::fromStdString(data->GetTypeName()));
 	if (data->GetDefaultPlatform())
 		AddField("Platform", QString::fromStdString(data->GetDefaultPlatform()->GetName()));
-	if (data->IsValidOffset(data->GetEntryPoint()))
+	auto entryFunctions = data->GetAllEntryFunctions();
+	if (!entryFunctions.empty() && data->GetEntryPoint() != 0)
 		AddField("Entry Point", QString("0x") + QString::number(data->GetEntryPoint(), 16), CodeHeaderField);
+	else
+		AddField("Entry Point", "None");
 	if (data->IsValidOffset(data->GetStart()))
 		AddField("Current Base", QString("0x") + QString::number(data->GetStart(), 16), AddressHeaderField);
 	AddField("Endianness", data->GetDefaultEndianness() == BigEndian ? "Big" : "Little");
@@ -128,8 +131,11 @@ PEHeaders::PEHeaders(BinaryViewRef data)
 		AddField("Type", QString::fromStdString(data->GetTypeName()));
 		if (data->GetDefaultPlatform())
 			AddField("Platform", QString::fromStdString(data->GetDefaultPlatform()->GetName()));
-		if (data->IsValidOffset(data->GetEntryPoint()))
+		auto entryFunctions = data->GetAllEntryFunctions();
+		if (!entryFunctions.empty() && data->GetEntryPoint() != 0)
 			AddField("Entry Point", QString("0x") + QString::number(data->GetEntryPoint(), 16), CodeHeaderField);
+		else
+			AddField("Entry Point", "None");
 		return;
 	}
 
@@ -159,7 +165,11 @@ PEHeaders::PEHeaders(BinaryViewRef data)
 	AddField("Image Base", QString("0x") + QString::number(base, 16), AddressHeaderField);
 
 	uint64_t entryPoint = currentBase + GetValueOfStructMember(data, optHeaderName, optHeaderStart, "addressOfEntryPoint");
-	AddField("Entry Point", QString("0x") + QString::number(entryPoint, 16), CodeHeaderField);
+	auto entryFunctions = data->GetAllEntryFunctions();
+	if (!entryFunctions.empty() && entryPoint != 0)
+		AddField("Entry Point", QString("0x") + QString::number(entryPoint, 16), CodeHeaderField);
+	else
+		AddField("Entry Point", "None");
 
 	uint64_t sectionAlign = GetValueOfStructMember(data, optHeaderName, optHeaderStart, "sectionAlignment");
 	AddField("Section Alignment", QString("0x") + QString::number(sectionAlign, 16));

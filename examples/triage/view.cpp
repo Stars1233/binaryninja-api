@@ -145,7 +145,7 @@ TriageView::TriageView(QWidget* parent, BinaryViewRef data) : QScrollArea(parent
 		layout->addWidget(m_byteView, 1);
 	}
 
-	setBinaryDataNavigable(m_byteView ? true : false);
+	setBinaryDataNavigable(true);
 	container->setLayout(layout);
 	setWidgetResizable(true);
 	setWidget(container);
@@ -204,6 +204,8 @@ bool TriageView::navigate(uint64_t addr)
 {
 	if (m_byteView)
 		return m_byteView->navigate(addr);
+
+	setCurrentOffset(addr);
 	return false;
 }
 

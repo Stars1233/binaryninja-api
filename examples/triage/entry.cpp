@@ -224,9 +224,6 @@ bool EntryTreeView::canCopySelection() const
 
 void EntryTreeView::entrySelected(const QModelIndex& cur, const QModelIndex&)
 {
-	FunctionRef func = m_model->getEntry(cur);
-	if (func)
-		m_view->setCurrentOffset(func->GetStart());
 }
 
 

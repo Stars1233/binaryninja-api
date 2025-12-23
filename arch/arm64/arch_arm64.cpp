@@ -2646,9 +2646,42 @@ class Arm64CallingConvention : public CallingConvention
 
 
 	virtual uint32_t GetIntegerReturnValueRegister() override { return REG_X0; }
+	virtual uint32_t GetHighIntegerReturnValueRegister() override { return REG_X1; }
 
 
 	virtual uint32_t GetFloatReturnValueRegister() override { return REG_V0; }
+
+
+	bool IsReturnTypeRegisterCompatible(BinaryView*, Type* type) override
+	{
+		if (!type)
+			return false;
+		if (type->IsFloat())
+			return true;
+		return type->GetWidth() <= 16;
+	}
+
+
+	Variable GetIndirectReturnValueLocation() override
+	{
+		return Variable::Register(REG_X8);
+	}
+
+
+	bool IsArgumentTypeRegisterCompatible(BinaryView*, Type* type) override
+	{
+		if (!type)
+			return false;
+		if (type->IsFloat())
+			return true;
+		return type->GetWidth() <= 16;
+	}
+
+
+	bool IsNonRegisterArgumentIndirect(BinaryView*, Type*) override
+	{
+		return true;
+	}
 };
 
 
@@ -2663,6 +2696,12 @@ public:
 	virtual bool AreArgumentRegistersUsedForVarArgs() override
 	{
 		return false;
+	}
+
+
+	virtual bool AreStackArgumentsNaturallyAligned() override
+	{
+		return true;
 	}
 };
 

@@ -32,8 +32,8 @@ use binaryninja::platform::Platform;
 use binaryninja::rc::Ref;
 use binaryninja::settings::{QueryOptions, Settings};
 use binaryninja::types::{
-    EnumerationBuilder, NamedTypeReference, NamedTypeReferenceClass, QualifiedName,
-    StructureBuilder, StructureType, Type, TypeClass,
+    EnumerationBuilder, NamedTypeReference, NamedTypeReferenceClass, StructureBuilder,
+    StructureType, Type, TypeClass,
 };
 use binaryninja::variable::NamedDataVariableWithType;
 
@@ -69,13 +69,13 @@ pub struct PDBParserInstance<'a, S: Source<'a> + 'a> {
     /// TypeIndex -> ParsedType enum used during parsing
     pub(crate) indexed_types: BTreeMap<TypeIndex, ParsedType>,
     /// QName -> Binja Type for finished types
-    pub(crate) named_types: BTreeMap<QualifiedName, Ref<Type>>,
+    pub(crate) named_types: BTreeMap<String, Ref<Type>>,
     /// Raw (mangled) name -> TypeIndex for resolving forward references
     pub(crate) full_type_indices: BTreeMap<String, TypeIndex>,
     /// Stack of types we're currently parsing
     pub(crate) type_stack: Vec<TypeIndex>,
     /// Stack of parent types we're parsing nested types inside of
-    pub(crate) namespace_stack: QualifiedName,
+    pub(crate) namespace_stack: Vec<String>,
     /// Type Index -> Does it return on the stack
     pub(crate) type_default_returnable: BTreeMap<TypeIndex, bool>,
 
@@ -291,9 +291,9 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     fn collect_name(
         &self,
         name: &NamedTypeReference,
-        unknown_names: &mut HashMap<QualifiedName, NamedTypeReferenceClass>,
+        unknown_names: &mut HashMap<String, NamedTypeReferenceClass>,
     ) {
-        let used_name = name.name();
+        let used_name = name.name().to_string();
         if let Some(&found) = unknown_names.get(&used_name) {
             if found != name.class() {
                 // Interesting case, not sure we care
@@ -314,7 +314,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     fn collect_names(
         &self,
         ty: &Type,
-        unknown_names: &mut HashMap<QualifiedName, NamedTypeReferenceClass>,
+        unknown_names: &mut HashMap<String, NamedTypeReferenceClass>,
     ) {
         match ty.type_class() {
             TypeClass::StructureTypeClass => {
@@ -366,7 +366,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             .bv
             .types()
             .iter()
-            .map(|qnat| qnat.name)
+            .map(|qnat| qnat.name.to_string())
             .collect::<HashSet<_>>();
 
         for ty in &self.named_types {

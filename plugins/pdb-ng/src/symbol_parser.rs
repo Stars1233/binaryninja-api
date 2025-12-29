@@ -1849,8 +1849,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             for (search_name, search_types) in name_to_type.iter() {
                 if last_name.contains(search_name) {
                     for search_type in search_types {
-                        let qualified_search_type = QualifiedName::from(search_type);
-                        if let Some(ty) = self.named_types.get(&qualified_search_type) {
+                        if let Some(ty) = self.named_types.get(search_type) {
                             // Fallback in case we don't find a specific one
                             t = Some(Conf::new(
                                 Type::named_type_from_type(search_type, ty.as_ref()),
@@ -1865,8 +1864,8 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                                     self.make_lengthy_type(ty, self.bv.start() + rva.0 as u64)?
                                 {
                                     // See if we have a type with this length
-                                    let lengthy_name: QualifiedName =
-                                        format!("${}$_extraBytes_{}", search_type, length).into();
+                                    let lengthy_name =
+                                        format!("${}$_extraBytes_{}", search_type, length);
 
                                     if let Some(ty) = self.named_types.get(&lengthy_name) {
                                         // Wow!
@@ -2008,7 +2007,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 /// Parse a vtable symbol name and return the parts for the vtable type.
 /// Takes the last element of (e.g., `"ClassName::`vftable'{for `BaseClass'}"`)
 /// and converts it to a vtable type name (e.g., `["ClassName", "BaseClass", "VTable"]`).
-fn parse_vtable_type_name(name: &QualifiedName) -> Option<QualifiedName> {
+fn parse_vtable_type_name(name: &QualifiedName) -> Option<String> {
     let (last, qualified_name_base) = name.items.split_last()?;
     let (class_name, rest) = last.split_once("::`vftable'")?;
 
@@ -2026,11 +2025,12 @@ fn parse_vtable_type_name(name: &QualifiedName) -> Option<QualifiedName> {
         .and_then(|(_, base_start)| base_start.split_once("'}"))
         .map(|(base, _)| base)
     {
-        parts.push(clean(base_class));
+        parts = vec![clean(base_class)];
     }
 
-    parts.push("VTable".to_string());
-    Some(QualifiedName::new(parts))
+    // We want only the last class name referenced in "parts", this is because the type we construct
+    // for the vtable will want to use the existing base vt defined in the binary view.
+    Some(format!("{}::VTable", parts.join("::")))
 }
 
 #[cfg(test)]
@@ -2043,7 +2043,7 @@ mod tests {
         // Simple vtables
         ("Base::`vftable'", &["Base", "VTable"]),
         // Multiple inheritance with {for}
-        ("MultiDerived::`vftable'{for `InterfaceA'}", &["MultiDerived", "InterfaceA", "VTable"]),
+        ("MultiDerived::`vftable'{for `InterfaceA'}", &["InterfaceA", "VTable"]),
         // Simple templates
         ("Container<int32_t>::`vftable'", &["Container<int32_t>", "VTable"]),
         ("Pair<int32_t,char>::`vftable'", &["Pair<int32_t,char>", "VTable"]),
@@ -2053,8 +2053,8 @@ mod tests {
         // Nested class inside template
         ("complex::HasNested<int32_t>::Nested::`vftable'", &["complex", "HasNested<int32_t>", "Nested", "VTable"]),
         // Template with {for} clause
-        ("TemplateMultiDerived<int32_t>::`vftable'{for `TemplateInterfaceA<int32_t>'}", &["TemplateMultiDerived<int32_t>", "TemplateInterfaceA<int32_t>", "VTable"]),
-        ("TemplateDiamond<int32_t>::`vftable'{for `TemplateLeftVirtual<int32_t>'}", &["TemplateDiamond<int32_t>", "TemplateLeftVirtual<int32_t>", "VTable"]),
+        ("TemplateMultiDerived<int32_t>::`vftable'{for `TemplateInterfaceA<int32_t>'}", &["TemplateInterfaceA<int32_t>", "VTable"]),
+        ("TemplateDiamond<int32_t>::`vftable'{for `TemplateLeftVirtual<int32_t>'}", &["TemplateLeftVirtual<int32_t>", "VTable"]),
         // Nested templates - note: "class " prefix gets stripped
         ("Wrapper<class Container<int32_t> >::`vftable'", &["Wrapper<Container<int32_t> >", "VTable"]),
         // Class/struct/enum keyword removal
@@ -2068,8 +2068,12 @@ mod tests {
         for (input, expected) in VTABLE_TEST_CASES {
             let name = QualifiedName::new(vec![input.to_string()]);
             let result = parse_vtable_type_name(&name);
-            let expected_qn = QualifiedName::new(expected.into_iter().cloned());
-            assert_eq!(result, Some(expected_qn), "Failed for input: {}", input);
+            assert_eq!(
+                result,
+                Some(expected.join("::")),
+                "Failed for input: {}",
+                input
+            );
         }
     }
 }

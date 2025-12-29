@@ -194,6 +194,31 @@ uint64_t readValidULEB128(DataBuffer& buffer, size_t& cursor)
 	return value;
 }
 
+static void CollectSectionByType(MachOHeader& header, section_64& sect)
+{
+	uint32_t sectionType = sect.flags & SECTION_TYPE;
+	switch (sectionType)
+	{
+		case S_MOD_INIT_FUNC_POINTERS:
+		case S_INIT_FUNC_OFFSETS:
+			header.moduleInitSections.push_back(sect);
+			break;
+		case S_SYMBOL_STUBS:
+			if (sect.flags & S_ATTR_SELF_MODIFYING_CODE)
+				header.symbolStubSections.push_back(sect);
+			break;
+		case S_NON_LAZY_SYMBOL_POINTERS:
+		case S_LAZY_SYMBOL_POINTERS:
+			header.symbolPointerSections.push_back(sect);
+			break;
+		case S_REGULAR:
+			// Fallback: kext bundles may use S_REGULAR for __got
+			if (strncmp(sect.sectname, "__got", 16) == 0)
+				header.symbolPointerSections.push_back(sect);
+			break;
+	}
+}
+
 
 MachoView::MachoView(const string& typeName, BinaryView* data, bool parseOnly): BinaryView(typeName, data->GetFile(), data),
 	m_universalImageOffset(0), m_parseOnly(parseOnly)
@@ -446,14 +471,8 @@ MachOHeader MachoView::HeaderForAddress(BinaryView* data, uint64_t address, bool
 							sect.flags,
 							sect.reserved1,
 							sect.reserved2);
-						if (!strncmp(sect.sectname, "__mod_init_func", 15) || !strncmp(sect.sectname, "__init_offsets", 14))
-							header.moduleInitSections.push_back(sect);
-						if ((sect.flags & (S_ATTR_SELF_MODIFYING_CODE | S_SYMBOL_STUBS)) == (S_ATTR_SELF_MODIFYING_CODE | S_SYMBOL_STUBS))
-							header.symbolStubSections.push_back(sect);
-						if ((sect.flags & S_NON_LAZY_SYMBOL_POINTERS) == S_NON_LAZY_SYMBOL_POINTERS)
-							header.symbolPointerSections.push_back(sect);
-						if ((sect.flags & S_LAZY_SYMBOL_POINTERS) == S_LAZY_SYMBOL_POINTERS)
-							header.symbolPointerSections.push_back(sect);
+
+						CollectSectionByType(header, sect);
 				}
 				header.segments.push_back(segment64);
 				m_allSegments.push_back(segment64);
@@ -549,14 +568,8 @@ MachOHeader MachoView::HeaderForAddress(BinaryView* data, uint64_t address, bool
 							sect.reserved1,
 							sect.reserved2,
 							sect.reserved3);
-						if (!strncmp(sect.sectname, "__mod_init_func", 15) || !strncmp(sect.sectname, "__init_offsets", 14))
-							header.moduleInitSections.push_back(sect);
-						if ((sect.flags & (S_ATTR_SELF_MODIFYING_CODE | S_SYMBOL_STUBS)) == (S_ATTR_SELF_MODIFYING_CODE | S_SYMBOL_STUBS))
-							header.symbolStubSections.push_back(sect);
-						if ((sect.flags & S_NON_LAZY_SYMBOL_POINTERS) == S_NON_LAZY_SYMBOL_POINTERS)
-							header.symbolPointerSections.push_back(sect);
-						if ((sect.flags & S_LAZY_SYMBOL_POINTERS) == S_LAZY_SYMBOL_POINTERS)
-							header.symbolPointerSections.push_back(sect);
+
+						CollectSectionByType(header, sect);
 				}
 				header.segments.push_back(segment64);
 				m_allSegments.push_back(segment64);
@@ -1938,7 +1951,7 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 		size_t i = 0;
 		reader.Seek(moduleInitSection.offset);
 
-		if (!strncmp(moduleInitSection.sectname, "__mod_init_func", 15))
+		if ((moduleInitSection.flags & SECTION_TYPE) == S_MOD_INIT_FUNC_POINTERS)
 		{
 			// The mod_init section contains a list of function pointers called at initialization
 			// if we don't have a defined entrypoint then use the first one in the list as the entrypoint
@@ -1964,7 +1977,7 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 				DefineAutoSymbol(symbol);
 			}
 		}
-		else if (!strncmp(moduleInitSection.sectname, "__init_offsets", 14))
+		else if ((moduleInitSection.flags & SECTION_TYPE) == S_INIT_FUNC_OFFSETS)
 		{
 			// The init_offsets section contains a list of 32-bit RVA offsets to functions called at initialization
 			// if we don't have a defined entrypoint then use the first one in the list as the entrypoint

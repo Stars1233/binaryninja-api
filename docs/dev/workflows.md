@@ -296,6 +296,9 @@ workflow.insert("core.function.generateHighLevelIL", ["analysis.plugins.xorStrin
 workflow.register()
 ```
 
+!!! note
+	You do not need to worry about permanently overwriting core.module.metaAnalysis or any other core workflow. Workflows are reconstructed fresh each time Binary Ninja starts, and plugin modifications are applied afterward during initialization. Any changes made programmatically in your plugin only affect the current session.
+
 The example above demonstrates how the auto-generated control setting allows users to enable or disable an activity directly through the settings UI. This provides a convenient way to control the execution of custom analysis steps without modifying the code. As shown in the image below, the control setting automatically appears in a function's context menu under the *Function Analysis* group. By defaulting the setting to false, users can selectively enable the custom analysis step for specific functions as needed.
 
 Please refer to the [Activity Eligibility](#activity-eligibility) section for more details on setting-based eligibility and control settings.

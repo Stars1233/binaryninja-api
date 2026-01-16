@@ -3644,7 +3644,7 @@ class Function:
 
 	def query_metadata(self, key: str) -> 'metadata.MetadataValueType':
 		"""
-		`query_metadata` retrieves metadata associated with the given key stored in the current function.
+		`query_metadata` retrieves metadata associated with the given key stored in the current Function.
 
 		:param str key: key to query
 		:rtype: metadata associated with the key
@@ -3652,6 +3652,33 @@ class Function:
 		md_handle = core.BNFunctionQueryMetadata(self.handle, key)
 		if md_handle is None:
 			raise KeyError(key)
+		return metadata.Metadata(handle=md_handle).value
+
+	def get_metadata(self, key: str, default: Any = None) -> 'metadata.MetadataValueType | Any':
+		"""
+		`get_metadata` retrieves a metadata value associated with the given key stored in the current Function.
+
+		This method behaves like `dict.get()`:
+		- If the key exists, its metadata value is returned.
+		- If the key does not exist and `default` is not provided, `None` is returned.
+		- If the key does not exist and `default` is provided, `default` is returned.
+
+		:param str key: key to query
+		:param default: value to return if the key does not exist (defaults to None)
+		:rtype: metadata associated with the key or the default value
+		:Example:
+
+			>>> current_function.store_metadata("integer", 1337)
+			>>> current_function.get_metadata("integer")
+			1337L
+			>>> current_function.get_metadata("missing")
+			None
+			>>> current_function.get_metadata("missing", 42)
+			42
+		"""
+		md_handle = core.BNFunctionQueryMetadata(self.handle, key)
+		if md_handle is None:
+			return default
 		return metadata.Metadata(handle=md_handle).value
 
 	def remove_metadata(self, key: str) -> None:

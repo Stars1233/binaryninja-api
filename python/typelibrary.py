@@ -19,7 +19,7 @@
 # IN THE SOFTWARE.
 
 import ctypes
-from typing import Optional, List, Dict, Union
+from typing import Any, Optional, List, Dict, Union
 import uuid
 
 # Binary Ninja components
@@ -233,12 +233,15 @@ class TypeLibrary:
 		"""
 		return core.BNFinalizeTypeLibrary(self.handle)
 
-	def query_metadata(self, key: str) -> Optional['metadata.MetadataValueType']:
+	def query_metadata(self, key: str) -> 'metadata.MetadataValueType':
 		"""
 		`query_metadata` retrieves a metadata associated with the given key stored in the type library
 
 		:param string key: key to query
 		:rtype: metadata associated with the key
+		..note: As of Binary Ninja 5.3 this API now raises KeyError on failure. Please use `get_metadata`
+		  for a non-raising version of the API.
+
 		:Example:
 
 			>>> lib.store_metadata("ordinals", {"9": "htons"})
@@ -247,7 +250,34 @@ class TypeLibrary:
 		"""
 		md_handle = core.BNTypeLibraryQueryMetadata(self.handle, key)
 		if md_handle is None:
-			return None
+			raise KeyError(key)
+		return metadata.Metadata(handle=md_handle).value
+
+	def get_metadata(self, key: str, default: Any = None) -> 'metadata.MetadataValueType | Any':
+		"""
+		`get_metadata` retrieves a metadata value associated with the given key stored in the current BinaryView.
+
+		This method behaves like `dict.get()`:
+		- If the key exists, its metadata value is returned.
+		- If the key does not exist and `default` is not provided, `None` is returned.
+		- If the key does not exist and `default` is provided, `default` is returned.
+
+		:param str key: key to query
+		:param default: value to return if the key does not exist (defaults to None)
+		:rtype: metadata associated with the key or the default value
+		:Example:
+
+			>>> tl.store_metadata("integer", 1337)
+			>>> tl.get_metadata("integer")
+			1337L
+			>>> tl.get_metadata("missing")
+			None
+			>>> tl.get_metadata("missing", 42)
+			42
+		"""
+		md_handle = core.BNTypeLibraryQueryMetadata(self.handle, key)
+		if md_handle is None:
+			return default
 		return metadata.Metadata(handle=md_handle).value
 
 	def store_metadata(self, key: str, md: metadata.Metadata) -> None:

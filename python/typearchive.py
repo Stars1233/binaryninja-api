@@ -20,7 +20,7 @@
 
 import ctypes
 import traceback
-from typing import Optional, List, Dict, Union, Tuple
+from typing import Any, Optional, List, Dict, Union, Tuple
 
 # Binary Ninja components
 import binaryninja
@@ -603,9 +603,12 @@ class TypeArchive:
 		finally:
 			core.BNFreeStringList(ids, count.value)
 
-	def query_metadata(self, key: str) -> Optional['metadata.MetadataValueType']:
+	def query_metadata(self, key: str) -> 'metadata.MetadataValueType':
 		"""
 		Look up a metadata entry in the archive
+
+		..note: As of Binary Ninja 5.3 this API now raises KeyError on failure. Please use `get_metadata`
+		  for a non-raising version of the API.
 
 		:param string key: key to query
 		:rtype: Metadata associated with the key, if it exists. Otherwise, None
@@ -618,7 +621,34 @@ class TypeArchive:
 		"""
 		md_handle = core.BNTypeArchiveQueryMetadata(self.handle, key)
 		if md_handle is None:
-			return None
+			raise KeyError(key)
+		return metadata.Metadata(handle=md_handle).value
+
+	def get_metadata(self, key: str, default: Any = None) -> 'metadata.MetadataValueType | Any':
+		"""
+		`get_metadata` retrieves a metadata value associated with the given key stored in the current TypeArchive.
+
+		This method behaves like `dict.get()`:
+		- If the key exists, its metadata value is returned.
+		- If the key does not exist and `default` is not provided, `None` is returned.
+		- If the key does not exist and `default` is provided, `default` is returned.
+
+		:param str key: key to query
+		:param default: value to return if the key does not exist (defaults to None)
+		:rtype: metadata associated with the key or the default value
+		:Example:
+
+			>>> ta.store_metadata("integer", 1337)
+			>>> ta.get_metadata("integer")
+			1337L
+			>>> ta.get_metadata("missing")
+			None
+			>>> ta.get_metadata("missing", 42)
+			42
+		"""
+		md_handle = core.BNTypeArchiveQueryMetadata(self.handle, key)
+		if md_handle is None:
+			return default
 		return metadata.Metadata(handle=md_handle).value
 
 	def store_metadata(self, key: str, md: 'metadata.MetadataValueType') -> None:

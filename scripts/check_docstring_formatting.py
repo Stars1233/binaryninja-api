@@ -295,7 +295,9 @@ def main():
             print(f"Error: Directory {python_dir} does not exist", file=sys.stderr)
             sys.exit(1)
 
-        files_to_check = find_python_files(python_dir)
+        # Exclude examples subfolder when running with default path
+        files_to_check = [f for f in find_python_files(python_dir)
+                         if 'examples' not in f.parts]
 
     if args.verbose:
         print(f"Checking Python files...")

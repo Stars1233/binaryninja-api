@@ -6,7 +6,7 @@ You can list all available container transforms (those with detection support) u
 
 ```python
 >>> [x.name for x in Transform if getattr(x, "supports_detection", False)]
-['Gzip', 'Zlib', 'Zip', 'CaRT', 'IntelHex', 'SRec', 'TiTxt', 'IMG4', 'LZFSE']
+['Gzip', 'Zlib', 'XZ', 'Zip', 'CaRT', 'Tar', 'CPIO', 'IntelHex', 'SRec', 'TiTxt', 'IMG4', 'LZFSE']
 ```
 
 ## Overview
@@ -185,9 +185,9 @@ if child.metadata_obj:
 When testing your container transform, you can use the Python API directly:
 
 ```python
-from binaryninja import TransformSession
+from binaryninja import TransformSession, load
 
-# Test with a file
+# Test basic extraction
 session = TransformSession("test_container.bin")
 
 # Process and check results
@@ -199,6 +199,72 @@ else:
     if ctx.parent and ctx.parent.has_available_files:
         print(f"Available files: {ctx.parent.available_files}")
 ```
+
+### Loading Extracted Files
+
+After processing, select the context and load it as a BinaryView:
+
+```python
+# Select the final context for loading
+session.set_selected_contexts(session.current_context)
+
+# Load the extracted file
+with load(session.current_view) as view:
+    print(f"Loaded: {view.file.filename}")
+    print(f"View type: {view.view_type}")
+```
+
+### Manual Transform Selection
+
+When auto-detection fails (e.g., Base64 has no magic bytes), you can manually specify the transform:
+
+```python
+# Create session and process the container
+session = TransformSession("archive.zip")
+if not session.process():
+    print("Failed to extract archive")
+    return
+
+# Get the extracted file context
+extracted_ctx = session.current_context
+
+# Manually set the transform to apply
+extracted_ctx.set_transform_name("Base64")
+
+# Process from this context to apply the transform
+if not session.process_from(extracted_ctx):
+    print("Failed to apply Base64 transform")
+    return
+
+# Select and load the final decoded file
+final_ctx = session.current_context
+session.set_selected_contexts(final_ctx)
+
+with load(session.current_view) as bv:
+    print(f"Loaded: {bv.file.filename}")
+    print(f"View type: {bv.view_type}")
+    print(f"Transform chain: {bv.file.virtual_path}")
+```
+
+### Transform Chaining
+
+TransformSession automatically handles multi-layer extraction:
+
+```python
+# Process a nested container (e.g., tar.gz or tar.xz)
+session = TransformSession("archive.tar.gz")
+
+# Single process() call handles the entire chain
+if session.process():
+    # Load the final extracted file
+    session.set_selected_contexts(session.current_context)
+    with load(session.current_view) as bv:
+        # View the complete extraction chain
+        print(bv.file.virtual_path)
+        # Example output: 'Gzip(/path/to/archive.tar.gz)::Tar()::extracted'
+```
+
+### UI Testing Modes
 
 For interactive testing in the UI:
 

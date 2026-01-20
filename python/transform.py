@@ -689,7 +689,7 @@ class TransformContext:
 
 class TransformSession:
 	"""
-	``TransformSession`` manages the extraction workflow for container files (ZIP, 7z, IMG4, etc.),
+	``TransformSession`` manages the extraction workflow for container files (ZIP, TAR, IMG4, etc.),
 	handling multi-stage extraction, file selection, and transform application.
 
 	Sessions automatically detect and apply appropriate transforms to navigate through nested containers,

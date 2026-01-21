@@ -49,9 +49,10 @@ struct BINARYNINJAUIAPI CommandListItem
 	QString extraSearchableText;
 	QVariant action;
 	Qt::TextElideMode secondaryElide = Qt::ElideRight;
+	int score = 0;
 	bool addToRecents = true;
 	bool includeUnfiltered = true;
-	int score = 0;
+	bool scoreFast = false;
 };
 
 
@@ -137,6 +138,8 @@ public:
 	);
 	virtual ~CommandListScoreWorker();
 
+	static int scoreItem(const CommandListItem* item, const QString& lowerFilter, const std::string& filterStr);
+
 Q_SIGNALS:
 	void dataFetched(int request, const std::vector<std::pair<CommandListItem*, int>>& items);
 	void noMoreDataToFetch(int request);
@@ -200,6 +203,7 @@ class BINARYNINJAUIAPI CommandListModel : public QAbstractItemModel
 
 	void loadRecentItems();
 	std::vector<CommandListItem> generateFastCommandList();
+	void scoreFastCommandList();
 	void sortCommandList(std::vector<CommandListItem>& list);
 	void mergeCommandList(std::vector<CommandListItem>& output, std::vector<CommandListItem>&& input);
 	void startScoreListThread();

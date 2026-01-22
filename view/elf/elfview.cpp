@@ -1762,8 +1762,6 @@ bool ElfView::Init()
 
 				virtualReader.Seek(gotEntry);
 				auto target = virtualReader.ReadPointer();
-				if (!target)
-					continue;
 
 				BNRelocationInfo relocInfo;
 				memset(&relocInfo, 0, sizeof(BNRelocationInfo));
@@ -3160,6 +3158,7 @@ extern "C"
 	BINARYNINJAPLUGIN bool CorePluginInit()
 #endif
 	{
+
 		InitElfViewType();
 		return true;
 	}

@@ -828,6 +828,16 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 				il.FlagBit(4, IL_FLAG_SO_7, 0))))))))))))))))))))))))))))))))));
 			break;
 
+        case PPC_ID_MFSPR:
+           REQUIRE2OPS
+           il.AddInstruction(il.SetRegister(4, oper0->reg, il.Unimplemented()));
+           break;
+
+        case PPC_ID_MFMSR:
+           REQUIRE1OP
+           il.AddInstruction(il.SetRegister(4, oper0->reg, il.Unimplemented()));
+           break;
+
 		case PPC_ID_MCRF:
 		{
 			REQUIRE2OPS
@@ -1087,6 +1097,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		*/
 		case PPC_ID_LWZX:
 		case PPC_ID_LWZUX:
+        case PPC_ID_LWARX:
 			REQUIRE3OPS
 			ei0 = operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l);              // d(rA) or 0
 			ei0 = il.Load(4, il.Add(addressSize_l, ei0, operToIL_a(il, oper2, addressSize_l))); // [d(rA) + d(rB)]
@@ -1458,6 +1469,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 
 		/* store word indexed [with update] */
 		case PPC_ID_STWX:
+        case PPC_ID_STWCX:
 		case PPC_ID_STWUX: /* store(size, addr, val) */
 			REQUIRE3OPS
 			if (addressSize_l == 8)

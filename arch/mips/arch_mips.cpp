@@ -3001,6 +3001,7 @@ public:
 	}
 };
 
+
 class MipsImportedFunctionRecognizer: public FunctionRecognizer
 {
 private:
@@ -3021,9 +3022,15 @@ private:
 		if (lui.operation != LLIL_SET_REG)
 			return false;
 		LowLevelILInstruction luiOperand = lui.GetSourceExpr<LLIL_SET_REG>();
+		if (luiOperand.operation == LLIL_SX)
+			luiOperand = luiOperand.GetSourceExpr<LLIL_SX>();
+		if (luiOperand.operation == LLIL_ZX)
+			luiOperand = luiOperand.GetSourceExpr<LLIL_ZX>();
+
 		if (!LowLevelILFunction::IsConstantType(luiOperand.operation))
 			return false;
-		if (luiOperand.size != func->GetArchitecture()->GetAddressSize())
+		// mips64 is going to load this in two 32-bit halves, so it shouldn't be address size
+		if (luiOperand.size < 4)
 			return false;
 		uint64_t pltHi = luiOperand.GetConstant();
 		uint32_t pltReg = lui.GetDestRegister<LLIL_SET_REG>();
@@ -3056,7 +3063,7 @@ private:
 				ldAddrRightOperandValue = -ldAddrRightOperandValue;
 			entry = pltHi + ldAddrRightOperandValue;
 		}
-		else if (ldAddrOperand.operation != LLIL_REG) //If theres no constant
+		else if (ldAddrOperand.operation != LLIL_REG) // If there's no constant
 			return false;
 
 		Ref<Symbol> sym = data->GetSymbolByAddress(entry);
@@ -3069,6 +3076,11 @@ private:
 		if (add.operation != LLIL_SET_REG)
 			return false;
 		LowLevelILInstruction addOperand = add.GetSourceExpr<LLIL_SET_REG>();
+
+		if (addOperand.operation == LLIL_SX)
+			addOperand = addOperand.GetSourceExpr<LLIL_SX>();
+		if (addOperand.operation == LLIL_ZX)
+			addOperand = addOperand.GetSourceExpr<LLIL_ZX>();
 
 		if (addOperand.operation == LLIL_ADD)
 		{
@@ -3083,7 +3095,7 @@ private:
 			if (addRightOperand.GetConstant() != (ldAddrRightOperandValue & 0xffffffff))
 				return false;
 		}
-		else if ((addOperand.operation != LLIL_REG) || (addOperand.GetSourceRegister<LLIL_REG>() != pltReg)) //Simple assignment
+		else if ((addOperand.operation != LLIL_REG) || (addOperand.GetSourceRegister<LLIL_REG>() != pltReg)) // Simple assignment
 			return false;
 
 		LowLevelILInstruction jump = il->GetInstruction(3);
@@ -3094,9 +3106,14 @@ private:
 			if (jump.GetDestRegister<LLIL_SET_REG>() != pltReg)
 				return false;
 			LowLevelILInstruction luiOperand = jump.GetSourceExpr<LLIL_SET_REG>();
+			if (luiOperand.operation == LLIL_SX)
+				luiOperand = luiOperand.GetSourceExpr<LLIL_SX>();
+			if (luiOperand.operation == LLIL_ZX)
+				luiOperand = luiOperand.GetSourceExpr<LLIL_ZX>();
+
 			if (!LowLevelILFunction::IsConstantType(luiOperand.operation))
 				return false;
-			if (luiOperand.size != func->GetArchitecture()->GetAddressSize())
+			if (luiOperand.size < 4)
 				return false;
 			if (((uint64_t) luiOperand.GetConstant()) != pltHi)
 				return false;
@@ -3219,9 +3236,15 @@ private:
 		if (lui.operation != LLIL_SET_REG)
 			return false;
 		LowLevelILInstruction luiOperand = lui.GetSourceExpr<LLIL_SET_REG>();
+		if (luiOperand.operation == LLIL_SX)
+			luiOperand = luiOperand.GetSourceExpr<LLIL_SX>();
+		if (luiOperand.operation == LLIL_ZX)
+			luiOperand = luiOperand.GetSourceExpr<LLIL_ZX>();
+
 		if (!LowLevelILFunction::IsConstantType(luiOperand.operation))
 			return false;
-		if (luiOperand.size != func->GetArchitecture()->GetAddressSize())
+		/* mips64 is going to load this in two 32 bit halves so it shouldn't be address size */
+		if (luiOperand.size < 4)
 			return false;
 		uint64_t addrPastGot = luiOperand.GetConstant();
 		uint32_t pltReg = lui.GetDestRegister<LLIL_SET_REG>();
@@ -3254,7 +3277,7 @@ private:
 				ldAddrRightOperandValue = -ldAddrRightOperandValue;
 			entry = addrPastGot + ldAddrRightOperandValue;
 		}
-		else if (ldAddrOperand.operation != LLIL_REG) //If theres no constant
+		else if (ldAddrOperand.operation != LLIL_REG) // If there's no constant
 			return false;
 
 		Ref<Symbol> sym = data->GetSymbolByAddress(entry);
@@ -3267,6 +3290,12 @@ private:
 		if (add.operation != LLIL_SET_REG)
 			return false;
 		LowLevelILInstruction addOperand = add.GetSourceExpr<LLIL_SET_REG>();
+		if(addOperand.operation == LLIL_SX) {
+			addOperand = addOperand.GetSourceExpr<LLIL_SX>();
+		}
+		if(addOperand.operation == LLIL_ZX) {
+			addOperand = addOperand.GetSourceExpr<LLIL_ZX>();
+		}
 
 		if (addOperand.operation == LLIL_ADD)
 		{
@@ -3281,7 +3310,7 @@ private:
 			if (addRightOperand.GetConstant() != ldAddrRightOperandValue)
 				return false;
 		}
-		else if ((addOperand.operation != LLIL_REG) || (addOperand.GetSourceRegister<LLIL_REG>() != pltReg)) //Simple assignment
+		else if ((addOperand.operation != LLIL_REG) || (addOperand.GetSourceRegister<LLIL_REG>() != pltReg)) // Simple assignment
 			return false;
 
 		LowLevelILInstruction jump = il->GetInstruction(3);
@@ -3292,9 +3321,14 @@ private:
 			if (jump.GetDestRegister<LLIL_SET_REG>() != pltReg)
 				return false;
 			LowLevelILInstruction luiOperand = jump.GetSourceExpr<LLIL_SET_REG>();
+			if(luiOperand.operation == LLIL_SX)
+				luiOperand = luiOperand.GetSourceExpr<LLIL_SX>();
+			if(luiOperand.operation == LLIL_ZX)
+				luiOperand = luiOperand.GetSourceExpr<LLIL_ZX>();
+
 			if (!LowLevelILFunction::IsConstantType(luiOperand.operation))
 				return false;
-			if (luiOperand.size != func->GetArchitecture()->GetAddressSize())
+			if (luiOperand.size < 4)
 				return false;
 			if (((uint64_t) luiOperand.GetConstant()) != addrPastGot)
 				return false;
@@ -3751,6 +3785,9 @@ extern "C"
 		mipseb->RegisterFunctionRecognizer(new MipsImportedFunctionRecognizer());
 		mips3->RegisterFunctionRecognizer(new MipsImportedFunctionRecognizer());
 		mips3el->RegisterFunctionRecognizer(new MipsImportedFunctionRecognizer());
+		mips64el->RegisterFunctionRecognizer(new MipsImportedFunctionRecognizer());
+		mips64eb->RegisterFunctionRecognizer(new MipsImportedFunctionRecognizer());
+		cnmips64eb->RegisterFunctionRecognizer(new MipsImportedFunctionRecognizer());
 
 		mipseb->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
 		mipsel->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());

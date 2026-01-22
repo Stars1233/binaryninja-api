@@ -2293,6 +2293,11 @@ public:
 	{
 	}
 
+    virtual bool IsStackReservedForArgumentRegisters() override
+    {
+        return true;
+    }
+
 
 	virtual vector<uint32_t> GetIntegerArgumentRegisters() override
 	{

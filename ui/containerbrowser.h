@@ -8,6 +8,7 @@
 #include <QLabel>
 #include <QDialogButtonBox>
 #include <QModelIndex>
+#include <QSplitter>
 
 #include "binaryninjaapi.h"
 #include "uitypes.h"
@@ -84,6 +85,7 @@ class BINARYNINJAUIAPI ContainerBrowser : public QDialog
 	QLineEdit* m_filter = nullptr;
 	QTreeView* m_tree = nullptr;
 	QPlainTextEdit* m_preview = nullptr;
+	QSplitter* m_splitter = nullptr;
 	QLabel* m_status = nullptr;
 	QLabel* m_extractionStatus = nullptr;
 	QDialogButtonBox* m_buttons = nullptr;
@@ -91,6 +93,8 @@ class BINARYNINJAUIAPI ContainerBrowser : public QDialog
 
 	QStringList m_pendingSelectionPath;
 	QStringList m_selectedPaths;
+	int m_lastPreviewSize = 0;
+	int m_dialogWidth = 0;
 
 	void connectSignals();
 	void updatePreviewForIndex(const QModelIndex& proxyIndex);

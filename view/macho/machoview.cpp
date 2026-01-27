@@ -23,7 +23,9 @@ using namespace std;
 
 static MachoViewType* g_machoViewType = nullptr;
 
-static string CommandToString(uint32_t lcCommand)
+namespace {
+
+string CommandToString(uint32_t lcCommand)
 {
 	switch(lcCommand)
 	{
@@ -91,7 +93,7 @@ static string CommandToString(uint32_t lcCommand)
 }
 
 
-static string BuildPlatformToString(uint32_t platform)
+string BuildPlatformToString(uint32_t platform)
 {
 	switch (platform)
 	{
@@ -110,7 +112,7 @@ static string BuildPlatformToString(uint32_t platform)
 }
 
 
-static string BuildToolToString(uint32_t tool)
+string BuildToolToString(uint32_t tool)
 {
 	switch (tool)
 	{
@@ -127,7 +129,7 @@ static string BuildToolToString(uint32_t tool)
 }
 
 
-static string BuildToolVersionToString(uint32_t version)
+string BuildToolVersionToString(uint32_t version)
 {
 	uint32_t major = (version >> 16) & 0xffff;
 	uint32_t minor = (version >> 8) & 0xff;
@@ -139,15 +141,7 @@ static string BuildToolVersionToString(uint32_t version)
 }
 
 
-void BinaryNinja::InitMachoViewType()
-{
-	static MachoViewType type;
-	BinaryViewType::Register(&type);
-	g_machoViewType = &type;
-}
-
-
-static int64_t readSLEB128(DataBuffer& buffer, size_t length, size_t &offset)
+int64_t readSLEB128(DataBuffer& buffer, size_t length, size_t &offset)
 {
 	uint8_t cur;
 	int64_t value = 0;
@@ -165,7 +159,7 @@ static int64_t readSLEB128(DataBuffer& buffer, size_t length, size_t &offset)
 }
 
 
-static uint64_t readLEB128(DataBuffer& p, size_t end, size_t &offset)
+uint64_t readLEB128(DataBuffer& p, size_t end, size_t &offset)
 {
 	uint64_t result = 0;
 	int bit = 0;
@@ -194,7 +188,7 @@ uint64_t readValidULEB128(DataBuffer& buffer, size_t& cursor)
 	return value;
 }
 
-static void CollectSectionByType(MachOHeader& header, section_64& sect)
+void CollectSectionByType(MachOHeader& header, section_64& sect)
 {
 	uint32_t sectionType = sect.flags & SECTION_TYPE;
 	switch (sectionType)
@@ -219,6 +213,150 @@ static void CollectSectionByType(MachOHeader& header, section_64& sect)
 	}
 }
 
+// TODO: This logic for determining semantics for XNU segments is duplicated in kernelcache.
+// Protection combinations used in XNU. Named to match the conventions in arm_vm_init.c
+constexpr uint32_t PROT_RNX  = SegmentReadable | SegmentContainsData | SegmentDenyWrite | SegmentDenyExecute;
+constexpr uint32_t PROT_ROX  = SegmentReadable | SegmentExecutable | SegmentContainsCode | SegmentDenyWrite;
+constexpr uint32_t PROT_RWNX = SegmentReadable | SegmentWritable | SegmentContainsData | SegmentDenyExecute;
+
+struct XNUSegmentProtection {
+	std::string_view name;
+	uint32_t protection;
+};
+
+// Protections taken from arm_vm_prot_init at
+// https://github.com/apple-oss-distributions/xnu/blob/xnu-12377.1.9/osfmk/arm64/arm_vm_init.c
+constexpr std::array<XNUSegmentProtection, 22> s_initialSegmentProtections = {{
+	// Core XNU Kernel Segments
+	{"__TEXT",           PROT_RNX},
+	{"__TEXT_EXEC",      PROT_ROX},
+	{"__DATA_CONST",     PROT_RWNX},
+	{"__DATA",           PROT_RWNX},
+	{"__HIB",            PROT_RWNX},
+	{"__BOOTDATA",       PROT_RWNX},
+	{"__KLD",            PROT_ROX},
+	{"__KLDDATA",        PROT_RNX},
+	{"__LINKEDIT",       PROT_RWNX},
+	{"__LAST",           PROT_ROX},
+	{"__LASTDATA_CONST", PROT_RWNX},
+
+	// Prelinked Kext Segments
+	{"__PRELINK_TEXT",   PROT_RWNX},
+	{"__PLK_DATA_CONST", PROT_RWNX},
+	{"__PLK_TEXT_EXEC",  PROT_ROX},
+	{"__PRELINK_DATA",   PROT_RWNX},
+	{"__PLK_LINKEDIT",   PROT_RWNX},
+	{"__PRELINK_INFO",   PROT_RWNX},
+	{"__PLK_LLVM_COV",   PROT_RWNX},
+
+	// PPL (Page Protection Layer) Segments
+	{"__PPLTEXT",        PROT_ROX},
+	{"__PPLTRAMP",       PROT_ROX},
+	{"__PPLDATA_CONST",  PROT_RNX},
+	{"__PPLDATA",        PROT_RWNX},
+}};
+
+std::string FormatSegmentFlags(uint32_t flags)
+{
+	std::string perms;
+	perms += (flags & SegmentReadable) ? 'R' : '-';
+	perms += (flags & SegmentWritable) ? 'W' : '-';
+	perms += (flags & SegmentExecutable) ? 'X' : '-';
+
+	std::string type;
+	if (flags & SegmentContainsCode)
+		type = " [CODE]";
+	else if (flags & SegmentContainsData)
+		type = " [DATA]";
+
+	std::string denies;
+	if (flags & SegmentDenyWrite)
+		denies += 'W';
+	if (flags & SegmentDenyExecute)
+		denies += 'X';
+	if (!denies.empty())
+		denies = fmt::format(" (deny:{})", denies);
+
+	return fmt::format("{}{}{}", perms, type, denies);
+}
+
+// XNU maps certain segments with specific protections regardless of what is in the load command.
+uint32_t SegmentFlagsForKnownXNUSegment(std::string_view segmentName)
+{
+	for (const auto& entry : s_initialSegmentProtections)
+	{
+		if (segmentName == entry.name)
+			return entry.protection;
+	}
+	return 0;
+}
+
+uint32_t SegmentFlagsFromMachOProtections(int initProt, int maxProt)
+{
+	uint32_t flags = 0;
+	if (initProt & MACHO_VM_PROT_READ)
+		flags |= SegmentReadable;
+	if (initProt & MACHO_VM_PROT_WRITE)
+		flags |= SegmentWritable;
+	if (initProt & MACHO_VM_PROT_EXECUTE)
+		flags |= SegmentExecutable;
+	if ((initProt & MACHO_VM_PROT_WRITE) == 0 && (maxProt & MACHO_VM_PROT_WRITE) == 0)
+		flags |= SegmentDenyWrite;
+	if ((initProt & MACHO_VM_PROT_EXECUTE) == 0 && (maxProt & MACHO_VM_PROT_EXECUTE) == 0)
+		flags |= SegmentDenyExecute;
+	return static_cast<BNSegmentFlag>(flags);
+}
+
+// Determine segment flags for Mach-O segments, applying XNU overrides if necessary.
+uint32_t SegmentFlagsForSegment(bool isXNU, const segment_command_64& segment)
+{
+	std::string_view segmentName(segment.segname, std::find(segment.segname, std::end(segment.segname), '\0'));
+	uint32_t flagsFromLoadCommand = SegmentFlagsFromMachOProtections(segment.initprot, segment.maxprot);
+	if (!isXNU)
+		return flagsFromLoadCommand;
+
+	if (uint32_t flagsFromKnownXNUSegment = SegmentFlagsForKnownXNUSegment(segmentName))
+	{
+		constexpr int MASK = ~(SegmentContainsData | SegmentContainsCode);
+		if ((flagsFromKnownXNUSegment & MASK) != (flagsFromLoadCommand & MASK))
+			LogDebugF("Overriding segment protections from load command ({}) with known segment protections {} for segment {} ({:#x} - {:#x})",
+				FormatSegmentFlags(flagsFromLoadCommand), FormatSegmentFlags(flagsFromKnownXNUSegment), segmentName,
+				segment.vmaddr, segment.vmaddr + segment.vmsize);
+		return flagsFromKnownXNUSegment;
+	}
+
+	return flagsFromLoadCommand;
+}
+
+// Determine overridden section semantics for XNU mapped segments.
+// Returns 0 if no overrides are necessary (not XNU or no overrides for the segment).
+uint32_t OverriddenSectionSemanticsForSection(bool isXNU, const section_64& section)
+{
+	if (!isXNU)
+		return 0;
+
+	std::string_view segmentName(section.segname, std::find(section.segname, std::end(section.segname), '\0'));
+	int flags = SegmentFlagsForKnownXNUSegment(segmentName);
+	if (!flags)
+		return 0;
+
+	if (flags & SegmentExecutable)
+	  return ReadOnlyCodeSectionSemantics;
+
+	if (flags & SegmentWritable)
+	  return ReadWriteDataSectionSemantics;
+
+	return ReadOnlyDataSectionSemantics;
+}
+
+} // unnamed namespace
+
+void BinaryNinja::InitMachoViewType()
+{
+	static MachoViewType type;
+	BinaryViewType::Register(&type);
+	g_machoViewType = &type;
+}
 
 MachoView::MachoView(const string& typeName, BinaryView* data, bool parseOnly): BinaryView(typeName, data->GetFile(), data),
 	m_universalImageOffset(0), m_parseOnly(parseOnly)
@@ -1612,6 +1750,13 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 		}
 	}
 
+	// If the binary contains a __KLD segment, segment flags will be based on XNU's known
+	// initial segment permissions rather than the flags stored in the Mach-O headers.
+	bool isXNU = std::any_of(header.segments.begin(), header.segments.end(),
+		[](const segment_command_64& seg) {
+			return strncmp(seg.segname, "__KLD", 16) == 0;
+	});
+
 	if (!(m_header.ident.filetype == MH_FILESET && isMainHeader)) \
 	{
 		BeginBulkAddSegments();
@@ -1619,19 +1764,7 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 			if ((segment.initprot == MACHO_VM_PROT_NONE) || (!segment.vmsize))
 				continue;
 
-			uint32_t flags = 0;
-			if (segment.initprot & MACHO_VM_PROT_READ)
-				flags |= SegmentReadable;
-			if (segment.initprot & MACHO_VM_PROT_WRITE)
-				flags |= SegmentWritable;
-			if (segment.initprot & MACHO_VM_PROT_EXECUTE)
-				flags |= SegmentExecutable;
-			if (((segment.initprot & MACHO_VM_PROT_WRITE) == 0) &&
-			    ((segment.maxprot & MACHO_VM_PROT_WRITE) == 0))
-				flags |= SegmentDenyWrite;
-			if (((segment.initprot & MACHO_VM_PROT_EXECUTE) == 0) &&
-			    ((segment.maxprot & MACHO_VM_PROT_EXECUTE) == 0))
-				flags |= SegmentDenyExecute;
+			uint32_t flags = SegmentFlagsForSegment(isXNU, segment);
 
 			// if we're positive we have an entry point for some reason, force the segment
 			// executable. this helps with kernel images.
@@ -1803,6 +1936,9 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 			header.chainStartsPresent = true;
 			header.chainStarts = header.sections[i];
 		}
+
+		if (uint32_t overriddenSemantics = OverriddenSectionSemanticsForSection(isXNU, header.sections[i]))
+			semantics = static_cast<BNSectionSemantics>(overriddenSemantics);
 
 		AddAutoSection(header.sectionNames[i], header.sections[i].addr, header.sections[i].size, semantics, type, header.sections[i].align);
 	}

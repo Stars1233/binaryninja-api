@@ -252,11 +252,7 @@ where
             .to_bytes_with_nul()
             .to_vec()
     } else {
-        Metadata::new_of_type(MetadataType::KeyValueDataType)
-            .get_json_string()
-            .ok()?
-            .as_ref()
-            .to_vec()
+        "{}".to_cstr().to_bytes_with_nul().to_vec()
     };
     let handle = unsafe {
         BNLoadBinaryView(

@@ -2337,7 +2337,7 @@ class Arm64ImportedFunctionRecognizer : public FunctionRecognizer
 		LowLevelILInstruction ldOperand = ld.GetSourceExpr<LLIL_SET_REG>();
 		if (ldOperand.operation != LLIL_LOAD)
 			return false;
-		if (ldOperand.size != func->GetArchitecture()->GetAddressSize())
+		if (ldOperand.size != func->GetPlatform()->GetAddressSize())
 			return false;
 		LowLevelILInstruction ldAddrOperand = ldOperand.GetSourceExpr<LLIL_LOAD>();
 		uint64_t entry = pltPage;
@@ -2359,7 +2359,6 @@ class Arm64ImportedFunctionRecognizer : public FunctionRecognizer
 		}
 		else if (ldAddrOperand.operation != LLIL_REG)  // If theres no constant
 			return false;
-
 		targetReg = ld.GetDestRegister<LLIL_SET_REG>();
 		Ref<Symbol> sym = data->GetSymbolByAddress(entry);
 		if (!sym)
@@ -2370,17 +2369,18 @@ class Arm64ImportedFunctionRecognizer : public FunctionRecognizer
 		LowLevelILInstruction add = il->GetInstruction(2);
 		if (add.operation != LLIL_SET_REG)
 			return false;
-		if (add.GetDestRegister<LLIL_SET_REG>() != pltReg)
+		BNRegisterInfo destRegInfo = func->GetArchitecture()->GetRegisterInfo(add.GetDestRegister<LLIL_SET_REG>());
+		if (destRegInfo.fullWidthRegister != pltReg)
 			return false;
 		LowLevelILInstruction addOperand = add.GetSourceExpr<LLIL_SET_REG>();
-
 		if (addOperand.operation == LLIL_ADD)
 		{
 			LowLevelILInstruction addLeftOperand = addOperand.GetLeftExpr<LLIL_ADD>();
 			LowLevelILInstruction addRightOperand = addOperand.GetRightExpr<LLIL_ADD>();
 			if (addLeftOperand.operation != LLIL_REG)
 				return false;
-			if (addLeftOperand.GetSourceRegister<LLIL_REG>() != pltReg)
+			BNRegisterInfo addLeftRegInfo = func->GetArchitecture()->GetRegisterInfo(addLeftOperand.GetSourceRegister<LLIL_REG>());
+			if (addLeftRegInfo.fullWidthRegister != pltReg)
 				return false;
 			if (!LowLevelILFunction::IsConstantType(addRightOperand.operation))
 				return false;
@@ -2399,7 +2399,8 @@ class Arm64ImportedFunctionRecognizer : public FunctionRecognizer
                                             jump.GetDestExpr<LLIL_TAILCALL>();
 		if (jumpOperand.operation != LLIL_REG)
 			return false;
-		if (jumpOperand.GetSourceRegister<LLIL_REG>() != targetReg)
+		BNRegisterInfo targetRegInfo = func->GetArchitecture()->GetRegisterInfo(targetReg);
+		if (jumpOperand.GetSourceRegister<LLIL_REG>() != targetRegInfo.fullWidthRegister)
 			return false;
 
 		Ref<Symbol> funcSym = Symbol::ImportedFunctionFromImportAddressSymbol(sym, func->GetStart());

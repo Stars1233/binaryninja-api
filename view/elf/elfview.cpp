@@ -66,7 +66,8 @@ ElfView::ElfView(BinaryView* data, bool parseOnly): BinaryView("ELF", data->GetF
 		throw ElfFormatException(errorMsg);
 
 	m_elf32 = m_ident.fileClass == 1;
-	m_addressSize = (m_ident.fileClass == 1 || (m_plat && m_plat->GetName() == "linux-32")) ? 4 : 8;
+	m_addressSize = (m_ident.fileClass == 1 || (m_plat && m_plat->GetName() == "linux-x32") ||
+		(m_plat && m_plat->GetName() == "linux-ilp32")) ? 4 : 8;
 	m_endian = endian;
 	m_relocatable = m_commonHeader.type == ET_DYN || m_commonHeader.type == ET_REL;
 	m_objectFile = m_commonHeader.type == ET_REL;

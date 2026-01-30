@@ -71,7 +71,7 @@ public:
            LogWarn("IMG4 payload contains keybag, which is not currently supported.");
         }
 
-        context->SetChild(DataBuffer(payload.payload.data, payload.payload.length), filename);
+        context->SetChild(DataBuffer(payload.payload.data, payload.payload.length), filename, TransformSuccess, "", true);
 
         return true;
     }

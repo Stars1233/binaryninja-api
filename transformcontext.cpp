@@ -173,9 +173,9 @@ Ref<TransformContext> TransformContext::GetChild(const string& filename) const
 }
 
 
-Ref<TransformContext> TransformContext::SetChild(const DataBuffer& data, const string& filename, BNTransformResult result, const std::string& message)
+Ref<TransformContext> TransformContext::SetChild(const DataBuffer& data, const string& filename, BNTransformResult result, const std::string& message, bool filenameIsDescriptor)
 {
-	BNTransformContext* child = BNTransformContextSetChild(m_object, data.GetBufferObject(), filename.c_str(), result, message.c_str());
+	BNTransformContext* child = BNTransformContextSetChild(m_object, data.GetBufferObject(), filename.c_str(), result, message.c_str(), filenameIsDescriptor);
 	if (!child)
 		return nullptr;
 	return new TransformContext(child);

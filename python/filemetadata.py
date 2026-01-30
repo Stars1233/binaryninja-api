@@ -210,7 +210,13 @@ class FileMetadata:
 
 	@property
 	def virtual_path(self) -> str:
-		"""The virtual path of the file including container and internal path (e.g., 'archive.zip:folder/file.bin') (read/write)"""
+		"""
+		``virtual_path`` is a logical (non-filesystem) path that describes how this file was derived from container transform system.
+
+		This path records provenance for files extracted from the transform system. It may include a sequence of transform steps and selection names.
+
+		.. note:: An empty `virtual_path` indicates the file has not yet been processed by the transform system. If `virtual_path` matches `filename`, the file is not the result of an extraction or transform.
+		"""
 		return core.BNGetVirtualPath(self.handle)
 
 	@virtual_path.setter

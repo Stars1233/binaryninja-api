@@ -681,15 +681,16 @@ class TransformContext:
 			return None
 		return TransformContext(child)
 
-	def create_child(self, data: databuffer.DataBuffer, filename: str = "", result: TransformResult = TransformResult.TransformSuccess, message: str = "") -> 'TransformContext':
+	def create_child(self, data: databuffer.DataBuffer, filename: str = "", result: TransformResult = TransformResult.TransformSuccess, message: str = "", filename_is_descriptor: bool = False) -> 'TransformContext':
 		"""Create a new child context with the given data, filename, result status, and message
 
 		:param data: The data for the child context
 		:param filename: The filename for the child context (default: "")
 		:param result: Transform result for the child (default: TransformResult.TransformSuccess)
 		:param message: Extraction message for the child (default: "")
+		:param filename_is_descriptor: Whether the filename is a descriptor that should be combined with parent (default: False)
 		"""
-		child = core.BNTransformContextSetChild(self.handle, data.handle, filename, result, message)
+		child = core.BNTransformContextSetChild(self.handle, data.handle, filename, result, message, filename_is_descriptor)
 		if child is None:
 			raise RuntimeError("Failed to create child context")
 		return TransformContext(child)

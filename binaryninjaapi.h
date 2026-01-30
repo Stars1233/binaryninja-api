@@ -9277,7 +9277,7 @@ namespace BinaryNinja {
 		size_t GetChildCount() const;
 		std::vector<Ref<TransformContext>> GetChildren() const;
 		Ref<TransformContext> GetChild(const std::string& filename = "") const;
-		Ref<TransformContext> SetChild(const DataBuffer& data, const std::string& filename = "", BNTransformResult result = TransformSuccess, const std::string& message = "");
+		Ref<TransformContext> SetChild(const DataBuffer& data, const std::string& filename = "", BNTransformResult result = TransformSuccess, const std::string& message = "", bool filenameIsDescriptor = false);
 		bool IsLeaf() const;
 		bool IsRoot() const;
 		std::vector<std::string> GetAvailableFiles() const;

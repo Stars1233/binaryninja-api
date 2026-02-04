@@ -17488,6 +17488,8 @@ namespace BinaryNinja {
 		static uint32_t* GetCalleeSavedRegistersCallback(void* ctxt, size_t* count);
 		static uint32_t* GetIntegerArgumentRegistersCallback(void* ctxt, size_t* count);
 		static uint32_t* GetFloatArgumentRegistersCallback(void* ctxt, size_t* count);
+		static uint32_t* GetRequiredArgumentRegistersCallback(void* ctxt, size_t* count);
+		static uint32_t* GetRequiredClobberedRegistersCallback(void* ctxt, size_t* count);
 		static void FreeRegisterListCallback(void* ctxt, uint32_t* regs, size_t len);
 
 		static bool AreArgumentRegistersSharedIndexCallback(void* ctxt);
@@ -17520,6 +17522,21 @@ namespace BinaryNinja {
 
 		virtual std::vector<uint32_t> GetIntegerArgumentRegisters();
 		virtual std::vector<uint32_t> GetFloatArgumentRegisters();
+
+		/*! Gets the set of registers that must be arguments for heuristic calling convention
+			detection to consider this calling convention as a valid option.
+
+			\return The set of registers that must be arguments
+		*/
+		virtual std::vector<uint32_t> GetRequiredArgumentRegisters();
+
+		/*! Gets the set of registers that must be clobbered for heuristic calling convention
+			detection to consider this calling convention as a valid option.
+
+			\return The set of registers that must be clobbered
+		*/
+		virtual std::vector<uint32_t> GetRequiredClobberedRegisters();
+
 		virtual bool AreArgumentRegistersSharedIndex();
 		virtual bool AreArgumentRegistersUsedForVarArgs();
 		virtual bool IsStackReservedForArgumentRegisters();
@@ -17552,6 +17569,8 @@ namespace BinaryNinja {
 
 		virtual std::vector<uint32_t> GetIntegerArgumentRegisters() override;
 		virtual std::vector<uint32_t> GetFloatArgumentRegisters() override;
+		virtual std::vector<uint32_t> GetRequiredArgumentRegisters() override;
+		virtual std::vector<uint32_t> GetRequiredClobberedRegisters() override;
 		virtual bool AreArgumentRegistersSharedIndex() override;
 		virtual bool AreArgumentRegistersUsedForVarArgs() override;
 		virtual bool IsStackReservedForArgumentRegisters() override;

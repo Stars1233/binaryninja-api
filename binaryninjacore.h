@@ -2833,6 +2833,8 @@ extern "C"
 		uint32_t* (*getCalleeSavedRegisters)(void* ctxt, size_t* count);
 		uint32_t* (*getIntegerArgumentRegisters)(void* ctxt, size_t* count);
 		uint32_t* (*getFloatArgumentRegisters)(void* ctxt, size_t* count);
+		uint32_t* (*getRequiredArgumentRegisters)(void* ctxt, size_t* count);
+		uint32_t* (*getRequiredClobberedRegisters)(void* ctxt, size_t* count);
 		void (*freeRegisterList)(void* ctxt, uint32_t* regs, size_t len);
 
 		bool (*areArgumentRegistersSharedIndex)(void* ctxt);
@@ -7496,6 +7498,8 @@ extern "C"
 
 	BINARYNINJACOREAPI uint32_t* BNGetIntegerArgumentRegisters(BNCallingConvention* cc, size_t* count);
 	BINARYNINJACOREAPI uint32_t* BNGetFloatArgumentRegisters(BNCallingConvention* cc, size_t* count);
+	BINARYNINJACOREAPI uint32_t* BNGetRequiredArgumentRegisters(BNCallingConvention* cc, size_t* count);
+	BINARYNINJACOREAPI uint32_t* BNGetRequiredClobberedRegisters(BNCallingConvention* cc, size_t* count);
 	BINARYNINJACOREAPI bool BNAreArgumentRegistersSharedIndex(BNCallingConvention* cc);
 	BINARYNINJACOREAPI bool BNAreArgumentRegistersUsedForVarArgs(BNCallingConvention* cc);
 	BINARYNINJACOREAPI bool BNIsStackReservedForArgumentRegisters(BNCallingConvention* cc);

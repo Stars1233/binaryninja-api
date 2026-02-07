@@ -1,4 +1,4 @@
-# Migrating from Ghidra
+# Migrating From Ghidra
 
 ## Starting Binary Ninja
 
@@ -15,9 +15,13 @@ It's worth digging into Binary Ninja's [settings](../../settings.md) and seeing 
 <!-- TODO : Can you analyze a file while Ghidra is running its analysis?
 ## Analyzing While Analyzing -->
 
-## Importing Data
+## Importing Data From Ghidra
 
 See [the Ghidra import documentation](./ghidraimport.md)
+
+## Exporting Data To Ghidra
+
+See [the Ghidra export documentation](./ghidraexport.md)
 
 ## Keybindings
 

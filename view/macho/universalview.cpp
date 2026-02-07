@@ -30,7 +30,7 @@ void BinaryNinja::InitUniversalViewType()
 			"type" : "array",
 			"sorted" : false,
 			"default" : [],
-			"description" : "Specify an architecture preference for automatic loading of a Mach-O file from a Universal archive. When unset, headless operation defaults to the first available architecture, while interactive operation presents all available architectures for selection.",
+			"description" : "Architectures to prefer when loading Universal (fat) Mach-O archives, in order of priority. Determines which architecture is pre-selected in the architecture picker, or loaded automatically when prompting is set to 'automatic' or 'never'.",
 			"ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
 			})");
 

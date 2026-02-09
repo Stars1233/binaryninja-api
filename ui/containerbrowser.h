@@ -91,10 +91,13 @@ class BINARYNINJAUIAPI ContainerBrowser : public QDialog
 	QDialogButtonBox* m_buttons = nullptr;
 	AllColumnsFilterProxyModel* m_proxy = nullptr;
 
+	QPushButton* m_openWithOptionsButton = nullptr;
+
 	QStringList m_pendingSelectionPath;
 	QStringList m_selectedPaths;
 	int m_lastPreviewSize = 0;
 	int m_dialogWidth = 0;
+	bool m_openWithOptionsRequested = false;
 
 	void connectSignals();
 	void updatePreviewForIndex(const QModelIndex& proxyIndex);
@@ -113,6 +116,7 @@ public:
 	ContainerBrowser(TransformSessionRef session, QWidget* parent = nullptr);
 
 	QStringList selectedPaths() const { return m_selectedPaths; }
+	bool openWithOptionsRequested() const { return m_openWithOptionsRequested; }
 
-	static std::vector<TransformContextRef> openContainerFile(const QString& path, bool forceShowDialog = false);
+	static std::vector<TransformContextRef> openContainerFile(const QString& path, bool forceShowDialog = false, bool* outOpenWithOptions = nullptr);
 };

@@ -2,6 +2,17 @@
 
 Binary Ninja is designed with user privacy in mind. During normal operation, **no binary data from files you are analyzing is sent to any server**. This page documents every category of network communication that Binary Ninja may perform, what data is transmitted, and how to disable each one.
 
+**Scope:** This privacy policy applies only to the downloadable, paid editions of Binary Ninja. Third-party plugins and the free demo edition may have different data collection practices and are not covered by this policy.
+
+## Data Usage
+
+The data described on this page is used only for two purposes:
+
+1. **Directly operating the requested service** — for example, checking whether an update is available, downloading a plugin, or looking up a function signature.
+2. **Aggregate demographic information** — such as understanding which operating systems, platforms, and architectures are actively in use so we can make informed decisions about adding or removing support for them.
+
+Data is never sold or shared with third parties, and is never used to identify or profile individual users beyond what is necessary to provide the services described below.
+
 ## Update Checking
 
 By default, Binary Ninja periodically checks for software updates.

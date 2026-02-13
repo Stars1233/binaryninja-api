@@ -20,7 +20,7 @@
 
 import ctypes
 import typing
-from typing import Generator, List, Union, Tuple, Optional, Iterable, Dict, Generic, TypeVar, Callable
+from typing import Generator, List, Union, Tuple, Optional, Iterable, Dict, Generic, TypeVar, Callable, overload
 from dataclasses import dataclass
 import uuid
 
@@ -728,7 +728,7 @@ class TypeBuilder:
 
 	@staticmethod
 	def named_type_from_type_and_id(
-	    type_id: str, name: QualifiedNameType, type: Optional['Type'] = None
+	    type_id: str, name: QualifiedNameType, type: Optional[SomeType] = None
 	) -> 'NamedTypeReferenceBuilder':
 		return NamedTypeReferenceBuilder.named_type_from_type_and_id(type_id, name, type)
 
@@ -740,7 +740,7 @@ class TypeBuilder:
 
 	@staticmethod
 	def pointer(
-	    arch: 'architecture.Architecture', type: 'Type', const: BoolWithConfidenceType = BoolWithConfidence(False),
+	    arch: 'architecture.Architecture', type: SomeType, const: BoolWithConfidenceType = BoolWithConfidence(False),
 	    volatile: BoolWithConfidenceType = BoolWithConfidence(False),
 	    ref_type: ReferenceType = ReferenceType.PointerReferenceType
 	) -> 'PointerBuilder':
@@ -748,19 +748,19 @@ class TypeBuilder:
 
 	@staticmethod
 	def pointer_of_width(
-	    width: _int, type: 'Type', const: BoolWithConfidenceType = BoolWithConfidence(False),
+	    width: _int, type: SomeType, const: BoolWithConfidenceType = BoolWithConfidence(False),
 	    volatile: BoolWithConfidenceType = BoolWithConfidence(False),
 	    ref_type: ReferenceType = ReferenceType.PointerReferenceType
 	) -> 'PointerBuilder':
 		return PointerBuilder.create(type, width, None, const, volatile, ref_type)
 
 	@staticmethod
-	def array(type: 'Type', count: _int) -> 'ArrayBuilder':
+	def array(type: SomeType, count: _int) -> 'ArrayBuilder':
 		return ArrayBuilder.create(type, count)
 
 	@staticmethod
 	def function(
-	    ret: Optional['Type'] = None, params: Optional[ParamsType] = None,
+	    ret: Optional[SomeType] = None, params: Optional[ParamsType] = None,
 	    calling_convention: Optional['callingconvention.CallingConvention'] = None,
 	    variable_arguments: Optional[BoolWithConfidenceType] = None,
 	    stack_adjust: Optional[OffsetWithConfidenceType] = None
@@ -998,7 +998,7 @@ class WideCharBuilder(TypeBuilder):
 class PointerBuilder(TypeBuilder):
 	@classmethod
 	def create(
-	    cls, type: 'Type', width: int = 4, arch: Optional['architecture.Architecture'] = None,
+	    cls, type: SomeType, width: int = 4, arch: Optional['architecture.Architecture'] = None,
 	    const: BoolWithConfidenceType = False, volatile: BoolWithConfidenceType = False,
 	    ref_type: ReferenceType = ReferenceType.PointerReferenceType, platform: Optional['_platform.Platform'] = None,
 	    confidence: int = core.max_confidence
@@ -1811,7 +1811,13 @@ class EnumerationBuilder(TypeBuilder):
 		for member in self.members:
 			yield member
 
-	def __getitem__(self, value: Union[str, int, slice]):
+	@overload
+	def __getitem__(self, value: Union[str, int]) -> EnumerationMember: ...
+
+	@overload
+	def __getitem__(self, value: slice) -> List[EnumerationMember]: ...
+
+	def __getitem__(self, value: Union[str, int, slice]) -> EnumerationMember:
 		if isinstance(value, str):
 			for member in self.members:
 				if member.name == value:
@@ -1911,7 +1917,7 @@ class NamedTypeReferenceBuilder(TypeBuilder):
 
 	@staticmethod
 	def named_type_from_type_and_id(
-	    type_id: str, name: QualifiedNameType, type: Optional['Type'] = None
+	    type_id: str, name: QualifiedNameType, type: Optional[SomeType] = None
 	) -> 'NamedTypeReferenceBuilder':
 		if type is None:
 			return NamedTypeReferenceBuilder.create(NamedTypeReferenceClass.UnknownNamedTypeClass, type_id, name)
@@ -2418,12 +2424,12 @@ class Type:
 		return result
 
 	@staticmethod
-	def named_type_from_type(name: QualifiedNameType, type: 'Type') -> 'NamedTypeReferenceType':
+	def named_type_from_type(name: QualifiedNameType, type: SomeType) -> 'NamedTypeReferenceType':
 		return NamedTypeReferenceType.create_from_type(name, type)
 
 	@staticmethod
 	def named_type_from_type_and_id(
-	    type_id: str, name: QualifiedNameType, type: Optional['Type'] = None
+	    type_id: str, name: QualifiedNameType, type: Optional[SomeType] = None
 	) -> 'NamedTypeReferenceType':
 		return NamedTypeReferenceType.create_from_type(name, type, type_id)
 
@@ -2443,7 +2449,7 @@ class Type:
 
 	@staticmethod
 	def pointer(
-	    arch: 'architecture.Architecture', type: 'Type', const: BoolWithConfidenceType = BoolWithConfidence(False),
+	    arch: 'architecture.Architecture', type: SomeType, const: BoolWithConfidenceType = BoolWithConfidence(False),
 	    volatile: BoolWithConfidenceType = BoolWithConfidence(False),
 	    ref_type: ReferenceType = ReferenceType.PointerReferenceType, width: _int = None
 	) -> 'PointerType':
@@ -2456,7 +2462,7 @@ class Type:
 
 	@staticmethod
 	def pointer_of_width(
-	    width: _int, type: 'Type', const: BoolWithConfidenceType = False, volatile: BoolWithConfidenceType = False,
+	    width: _int, type: SomeType, const: BoolWithConfidenceType = False, volatile: BoolWithConfidenceType = False,
 	    ref_type: ReferenceType = ReferenceType.PointerReferenceType
 	) -> 'PointerType':
 		return PointerType.create_with_width(width, type, const, volatile, ref_type)
@@ -3361,7 +3367,7 @@ class NamedTypeReferenceType(Type):
 
 	@classmethod
 	def create_from_type(
-	    cls, name: QualifiedNameType, type: Optional[Type], guid: Optional[str] = None,
+	    cls, name: QualifiedNameType, type: Optional[SomeType], guid: Optional[str] = None,
 	    platform: Optional['_platform.Platform'] = None, confidence: int = core.max_confidence,
 	    const: BoolWithConfidenceType = False, volatile: BoolWithConfidenceType = False
 	) -> 'NamedTypeReferenceType':

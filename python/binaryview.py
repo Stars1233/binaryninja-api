@@ -30,7 +30,7 @@ import pprint
 import inspect
 import os
 import uuid
-from typing import Callable, Generator, Optional, Union, Tuple, List, Mapping, Any, \
+from typing import Callable, Generator, Optional, Union, Tuple, List, Sequence, Mapping, Any, \
 	Iterator, Iterable, KeysView, ItemsView, ValuesView, Dict, overload
 from dataclasses import dataclass
 from enum import IntFlag
@@ -8561,7 +8561,7 @@ class BinaryView:
 		type_obj = type_obj.immutable_copy()
 		core.BNDefineUserAnalysisType(self.handle, _name, type_obj.handle)
 
-	def define_types(self, types: List[Tuple[str, Optional['_types.QualifiedNameType'], StringOrType]], progress_func: Optional[ProgressFuncType]) -> Mapping[str, '_types.QualifiedName']:
+	def define_types(self, types: Sequence[Tuple[str, Optional['_types.QualifiedNameType'], StringOrType]], progress_func: Optional[ProgressFuncType]) -> Mapping[str, '_types.QualifiedName']:
 		"""
 		``define_types`` registers multiple types as though calling :py:func:`define_type` multiple times.
 		The difference with this plural version is that it is optimized for adding many types
@@ -8613,7 +8613,7 @@ class BinaryView:
 			core.BNFreeStringList(result_ids, result_count)
 			core.BNFreeTypeNameList(result_names, result_count)
 
-	def define_user_types(self, types: List[Tuple[Optional['_types.QualifiedNameType'], StringOrType]], progress_func: Optional[ProgressFuncType]):
+	def define_user_types(self, types: Sequence[Tuple[Optional['_types.QualifiedNameType'], StringOrType]], progress_func: Optional[ProgressFuncType]):
 		"""
 		``define_user_types`` registers multiple types as though calling :py:func:`define_user_type` multiple times.
 		The difference with this plural version is that it is optimized for adding many types

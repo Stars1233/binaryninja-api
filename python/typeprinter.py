@@ -21,7 +21,7 @@ import abc
 import ctypes
 import dataclasses
 from json import dumps
-from typing import List, Tuple, Optional, Any
+from typing import List, Sequence, Tuple, Optional, Any
 
 import sys
 import traceback
@@ -305,7 +305,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 			log_error_for_exception("Unhandled Python exception in TypePrinter._free_lines")
 			return False
 
-	def _default_print_all_types(self, types_: List[Tuple[types.QualifiedNameType, types.Type]], data: binaryview.BinaryView, padding_cols = 64, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> str:
+	def _default_print_all_types(self, types_: Sequence[Tuple[types.QualifiedNameType, types.Type]], data: binaryview.BinaryView, padding_cols = 64, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> str:
 		cpp_names = (core.BNQualifiedName * len(types_))()
 		cpp_types = (ctypes.POINTER(core.BNType) * len(types_))()
 
@@ -427,7 +427,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 		"""
 		raise NotImplementedError()
 
-	def print_all_types(self, types: List[Tuple[types.QualifiedNameType, types.Type]], data: binaryview.BinaryView, padding_cols = 64, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> str:
+	def print_all_types(self, types: Sequence[Tuple[types.QualifiedNameType, types.Type]], data: binaryview.BinaryView, padding_cols = 64, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> str:
 		"""
 		Print all types to a single big string, including headers, sections, etc
 
@@ -541,7 +541,7 @@ class CoreTypePrinter(TypePrinter):
 		core.BNFreeTypeDefinitionLineList(core_lines, count.value)
 		return lines
 
-	def print_all_types(self, types_: List[Tuple[types.QualifiedNameType, types.Type]], data: binaryview.BinaryView, padding_cols = 64, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> str:
+	def print_all_types(self, types_: Sequence[Tuple[types.QualifiedNameType, types.Type]], data: binaryview.BinaryView, padding_cols = 64, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> str:
 		cpp_names = (core.BNQualifiedName * len(types_))()
 		cpp_types = (ctypes.POINTER(core.BNType) * len(types_))()
 

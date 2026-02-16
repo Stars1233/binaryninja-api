@@ -42,6 +42,8 @@ use std::{
     mem::MaybeUninit,
 };
 
+use std::ptr::NonNull;
+
 use crate::function_recognizer::FunctionRecognizer;
 use crate::relocation::{CustomRelocationHandlerHandle, RelocationHandler};
 
@@ -191,6 +193,30 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
         data: &[u8],
         addr: u64,
     ) -> Option<(usize, Vec<InstructionTextToken>)>;
+
+    /// Disassembles a raw byte sequence into a human-readable list of text tokens.
+    ///
+    /// This function is responsible for the visual representation of assembly instructions.
+    /// It does *not* define semantics (use [`Architecture::instruction_llil`] for that);
+    /// it simply tells the UI how to print the instruction. This variant includes contextual data, which
+    /// can be produced by analyze_basic_blocks
+    ///
+    /// # Returns
+    ///
+    /// An `Option` containing a tuple:
+    ///
+    /// * `usize`: The size of the decoded instruction in bytes. Is used to advance to the next instruction.
+    /// * `Vec<InstructionTextToken>`: A list of text tokens representing the instruction.
+    ///
+    /// Returns `None` if the bytes do not form a valid instruction.
+    fn instruction_text_with_context(
+        &self,
+        data: &[u8],
+        addr: u64,
+        _context: Option<NonNull<c_void>>,
+    ) -> Option<(usize, Vec<InstructionTextToken>)> {
+        self.instruction_text(data, addr)
+    }
 
     // TODO: Why do we need to return a boolean here? Does `None` not represent the same thing?
     /// Appends arbitrary low-level il instructions to `il`.
@@ -550,6 +576,19 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     fn handle(&self) -> Self::Handle;
 }
 
+pub trait ArchitectureWithFunctionContext: Architecture {
+    type FunctionArchContext: Send + Sync + 'static;
+
+    fn instruction_text_with_typed_context(
+        &self,
+        data: &[u8],
+        addr: u64,
+        _context: Option<&Self::FunctionArchContext>,
+    ) -> Option<(usize, Vec<InstructionTextToken>)> {
+        self.instruction_text(data, addr)
+    }
+}
+
 pub struct FunctionLifterContext {
     pub(crate) handle: *mut BNFunctionLifterContext,
 }
@@ -559,6 +598,20 @@ impl FunctionLifterContext {
         debug_assert!(!handle.is_null());
 
         FunctionLifterContext { handle }
+    }
+
+    pub fn get_function_arch_context<A: ArchitectureWithFunctionContext>(
+        &self,
+        _arch: &A,
+    ) -> Option<&A::FunctionArchContext> {
+        unsafe {
+            let ptr = (*self.handle).functionArchContext;
+            if ptr.is_null() {
+                None
+            } else {
+                Some(&*(ptr as *const A::FunctionArchContext))
+            }
+        }
     }
 }
 
@@ -690,6 +743,38 @@ impl Architecture for CoreArchitecture {
                 data.as_ptr(),
                 addr,
                 &mut consumed,
+                &mut result,
+                &mut count,
+            ) {
+                let instr_text_tokens = std::slice::from_raw_parts(result, count)
+                    .iter()
+                    .map(InstructionTextToken::from_raw)
+                    .collect();
+                BNFreeInstructionText(result, count);
+                Some((consumed, instr_text_tokens))
+            } else {
+                None
+            }
+        }
+    }
+
+    fn instruction_text_with_context(
+        &self,
+        data: &[u8],
+        addr: u64,
+        context: Option<NonNull<c_void>>,
+    ) -> Option<(usize, Vec<InstructionTextToken>)> {
+        let mut consumed = data.len();
+        let mut count: usize = 0;
+        let mut result: *mut BNInstructionTextToken = std::ptr::null_mut();
+        let ctx_ptr: *mut c_void = context.map_or(std::ptr::null_mut(), |p| p.as_ptr());
+        unsafe {
+            if BNGetInstructionTextWithContext(
+                self.handle,
+                data.as_ptr(),
+                addr,
+                &mut consumed,
+                ctx_ptr,
                 &mut result,
                 &mut count,
             ) {
@@ -1274,6 +1359,15 @@ where
     A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync + Sized,
     F: FnOnce(CustomArchitectureHandle<A>, CoreArchitecture) -> A,
 {
+    register_architecture_impl(name, func, |_| {})
+}
+
+fn register_architecture_impl<A, F, C>(name: &str, func: F, customize: C) -> &'static A
+where
+    A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync + Sized,
+    F: FnOnce(CustomArchitectureHandle<A>, CoreArchitecture) -> A,
+    C: FnOnce(&mut BNCustomArchitecture),
+{
     #[repr(C)]
     struct ArchitectureBuilder<A, F>
     where
@@ -1402,6 +1496,43 @@ where
         let result = unsafe { &mut *result };
 
         let Some((res_size, res_tokens)) = custom_arch.instruction_text(data, addr) else {
+            return false;
+        };
+
+        let res_tokens: Box<[BNInstructionTextToken]> = res_tokens
+            .into_iter()
+            .map(InstructionTextToken::into_raw)
+            .collect();
+        unsafe {
+            // NOTE: Freed with `cb_free_instruction_text`
+            let res_tokens = Box::leak(res_tokens);
+            *result = res_tokens.as_mut_ptr();
+            *count = res_tokens.len();
+            *len = res_size;
+        }
+        true
+    }
+
+    pub unsafe extern "C" fn cb_get_instruction_text_with_context<A>(
+        ctxt: *mut c_void,
+        data: *const u8,
+        addr: u64,
+        len: *mut usize,
+        context: *mut c_void,
+        result: *mut *mut BNInstructionTextToken,
+        count: *mut usize,
+    ) -> bool
+    where
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+    {
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+        let data = unsafe { std::slice::from_raw_parts(data, *len) };
+        let result = unsafe { &mut *result };
+        let context = NonNull::new(context);
+
+        let Some((res_size, res_tokens)) =
+            custom_arch.instruction_text_with_context(data, addr, context)
+        else {
             return false;
         };
 
@@ -2401,10 +2532,12 @@ where
         getAssociatedArchitectureByAddress: Some(cb_associated_arch_by_addr::<A>),
         getInstructionInfo: Some(cb_instruction_info::<A>),
         getInstructionText: Some(cb_get_instruction_text::<A>),
+        getInstructionTextWithContext: Some(cb_get_instruction_text_with_context::<A>),
         freeInstructionText: Some(cb_free_instruction_text),
         getInstructionLowLevelIL: Some(cb_instruction_llil::<A>),
         analyzeBasicBlocks: Some(cb_analyze_basic_blocks::<A>),
         liftFunction: Some(cb_lift_function::<A>),
+        freeFunctionArchContext: None,
 
         getRegisterName: Some(cb_reg_name::<A>),
         getFlagName: Some(cb_flag_name::<A>),
@@ -2471,6 +2604,8 @@ where
         skipAndReturnValue: Some(cb_skip_and_return_value::<A>),
     };
 
+    customize(&mut custom_arch);
+
     unsafe {
         let res = BNRegisterArchitecture(name.as_ptr(), &mut custom_arch as *mut _);
 
@@ -2478,6 +2613,82 @@ where
 
         (*raw).arch.assume_init_mut()
     }
+}
+
+pub fn register_architecture_with_function_context<A, F>(name: &str, func: F) -> &'static A
+where
+    A: 'static
+        + ArchitectureWithFunctionContext<Handle = CustomArchitectureHandle<A>>
+        + Send
+        + Sync
+        + Sized,
+    F: FnOnce(CustomArchitectureHandle<A>, CoreArchitecture) -> A,
+{
+    unsafe extern "C" fn cb_free_function_arch_context_typed<A>(
+        _ctxt: *mut c_void,
+        context: *mut c_void,
+    ) where
+        A: 'static
+            + ArchitectureWithFunctionContext<Handle = CustomArchitectureHandle<A>>
+            + Send
+            + Sync,
+    {
+        if context.is_null() {
+            return;
+        }
+        // The context was allocated via Box::into_raw in set_function_arch_context,
+        // so we reconstruct the Box here and let it drop.
+        let _ = unsafe { Box::from_raw(context as *mut A::FunctionArchContext) };
+    }
+
+    unsafe extern "C" fn cb_get_instruction_text_with_context_typed<A>(
+        ctxt: *mut c_void,
+        data: *const u8,
+        addr: u64,
+        len: *mut usize,
+        context: *mut c_void,
+        result: *mut *mut BNInstructionTextToken,
+        count: *mut usize,
+    ) -> bool
+    where
+        A: 'static
+            + ArchitectureWithFunctionContext<Handle = CustomArchitectureHandle<A>>
+            + Send
+            + Sync,
+    {
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+        let data = unsafe { std::slice::from_raw_parts(data, *len) };
+        let result = unsafe { &mut *result };
+        let typed_context: Option<&A::FunctionArchContext> = if context.is_null() {
+            None
+        } else {
+            Some(unsafe { &*(context as *const A::FunctionArchContext) })
+        };
+
+        let Some((res_size, res_tokens)) =
+            custom_arch.instruction_text_with_typed_context(data, addr, typed_context)
+        else {
+            return false;
+        };
+
+        let res_tokens: Box<[BNInstructionTextToken]> = res_tokens
+            .into_iter()
+            .map(InstructionTextToken::into_raw)
+            .collect();
+        unsafe {
+            let res_tokens = Box::leak(res_tokens);
+            *result = res_tokens.as_mut_ptr();
+            *count = res_tokens.len();
+            *len = res_size;
+        }
+        true
+    }
+
+    register_architecture_impl(name, func, |custom_arch| {
+        custom_arch.freeFunctionArchContext = Some(cb_free_function_arch_context_typed::<A>);
+        custom_arch.getInstructionTextWithContext =
+            Some(cb_get_instruction_text_with_context_typed::<A>);
+    })
 }
 
 #[derive(Debug)]

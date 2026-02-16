@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 156
+#define BN_CURRENT_CORE_ABI_VERSION 157
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 155
+#define BN_MINIMUM_CORE_ABI_VERSION 157
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -2049,6 +2049,8 @@ extern "C"
 
 		size_t inlinedUnresolvedIndirectBranchCount;
 		BNArchitectureAndAddress* inlinedUnresolvedIndirectBranches;
+
+		void* functionArchContext;
 	} BNBasicBlockAnalysisContext;
 
 	typedef struct BNFunctionLifterContext {
@@ -2075,6 +2077,8 @@ extern "C"
 		size_t inlinedCallsCount;
 		uint64_t* inlinedCalls;
 
+		void* functionArchContext;
+
 		// OUT
 		bool* containsInlinedFunctions;
 	} BNFunctionLifterContext;
@@ -2094,11 +2098,14 @@ extern "C"
 		    void* ctxt, const uint8_t* data, uint64_t addr, size_t maxLen, BNInstructionInfo* result);
 		bool (*getInstructionText)(void* ctxt, const uint8_t* data, uint64_t addr, size_t* len,
 		    BNInstructionTextToken** result, size_t* count);
+		bool (*getInstructionTextWithContext)(void* ctxt, const uint8_t* data, uint64_t addr, size_t* len,
+			void* context, BNInstructionTextToken** result, size_t* count);
 		void (*freeInstructionText)(BNInstructionTextToken* tokens, size_t count);
 		bool (*getInstructionLowLevelIL)(
 		    void* ctxt, const uint8_t* data, uint64_t addr, size_t* len, BNLowLevelILFunction* il);
 		void (*analyzeBasicBlocks)(void* ctxt, BNFunction* function, BNBasicBlockAnalysisContext* context);
 		bool (*liftFunction)(void *ctext, BNLowLevelILFunction* function, BNFunctionLifterContext* context);
+		void (*freeFunctionArchContext)(void *ctxt, void* context);
 		char* (*getRegisterName)(void* ctxt, uint32_t reg);
 		char* (*getFlagName)(void* ctxt, uint32_t flag);
 		char* (*getFlagWriteTypeName)(void* ctxt, uint32_t flags);
@@ -4934,6 +4941,8 @@ extern "C"
 	    BNArchitecture* arch, const uint8_t* data, uint64_t addr, size_t maxLen, BNInstructionInfo* result);
 	BINARYNINJACOREAPI bool BNGetInstructionText(BNArchitecture* arch, const uint8_t* data, uint64_t addr, size_t* len,
 	    BNInstructionTextToken** result, size_t* count);
+	BINARYNINJACOREAPI bool BNGetInstructionTextWithContext(BNArchitecture* arch, const uint8_t* data, uint64_t addr, size_t* len,
+		void* context, BNInstructionTextToken** result, size_t* count);
 	BINARYNINJACOREAPI bool BNGetInstructionLowLevelIL(
 	    BNArchitecture* arch, const uint8_t* data, uint64_t addr, size_t* len, BNLowLevelILFunction* il);
 	BINARYNINJACOREAPI void BNFreeInstructionText(BNInstructionTextToken* tokens, size_t count);
@@ -4945,6 +4954,7 @@ extern "C"
 	BINARYNINJACOREAPI bool BNArchitectureDefaultLiftFunction(BNLowLevelILFunction* function, BNFunctionLifterContext* context);
 	BINARYNINJACOREAPI bool BNArchitectureLiftFunction(BNArchitecture* arch, BNLowLevelILFunction* function,
 		BNFunctionLifterContext* context);
+	BINARYNINJACOREAPI void BNArchitectureFreeFunctionArchContext(BNArchitecture* arch, void* context);
 	BINARYNINJACOREAPI void BNFreeInstructionTextLines(BNInstructionTextLine* lines, size_t count);
 	BINARYNINJACOREAPI char* BNGetArchitectureRegisterName(BNArchitecture* arch, uint32_t reg);
 	BINARYNINJACOREAPI char* BNGetArchitectureFlagName(BNArchitecture* arch, uint32_t flag);
@@ -5594,7 +5604,6 @@ extern "C"
 	// BNAnalyzeBasicBlockContext operations
 	BINARYNINJACOREAPI BNBasicBlock* BNAnalyzeBasicBlocksContextCreateBasicBlock(BNBasicBlockAnalysisContext* abb, BNArchitecture* arch, uint64_t addr);
 	BINARYNINJACOREAPI void BNAnalyzeBasicBlocksContextAddBasicBlockToFunction(BNBasicBlockAnalysisContext* abb, BNBasicBlock* block);
-	BINARYNINJACOREAPI void BNAnalyzeBasicBlocksContextFinalize(BNBasicBlockAnalysisContext* abb);
 
 	BINARYNINJACOREAPI void BNAnalyzeBasicBlocksContextAddTempReference(BNBasicBlockAnalysisContext* abb, BNFunction* target);
 

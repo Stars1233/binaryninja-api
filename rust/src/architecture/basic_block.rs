@@ -1,4 +1,4 @@
-use crate::architecture::{CoreArchitecture, IndirectBranchInfo};
+use crate::architecture::{ArchitectureWithFunctionContext, CoreArchitecture, IndirectBranchInfo};
 use crate::basic_block::BasicBlock;
 use crate::function::{Function, Location, NativeBlock};
 use crate::rc::Ref;
@@ -180,6 +180,34 @@ impl BasicBlockAnalysisContext {
         self.inlined_unresolved_indirect_branches.insert(loc.into());
     }
 
+    pub fn set_function_arch_context<A: ArchitectureWithFunctionContext>(
+        &mut self,
+        _arch: &A,
+        context: Box<A::FunctionArchContext>,
+    ) -> bool {
+        unsafe {
+            if !(*self.handle).functionArchContext.is_null() {
+                return false;
+            }
+            (*self.handle).functionArchContext = Box::into_raw(context) as *mut std::ffi::c_void;
+        }
+        true
+    }
+
+    pub fn get_function_arch_context<A: ArchitectureWithFunctionContext>(
+        &self,
+        _arch: &A,
+    ) -> Option<&A::FunctionArchContext> {
+        unsafe {
+            let ptr = (*self.handle).functionArchContext;
+            if ptr.is_null() {
+                None
+            } else {
+                Some(&*(ptr as *const A::FunctionArchContext))
+            }
+        }
+    }
+
     /// Creates a new [`BasicBlock`] at the specified address for the given [`CoreArchitecture`].
     ///
     /// After creating, you can add using [`BasicBlockAnalysisContext::add_basic_block`].
@@ -328,8 +356,6 @@ impl BasicBlockAnalysisContext {
         if self.contextual_returns_dirty {
             self.update_contextual_returns();
         }
-
-        unsafe { BNAnalyzeBasicBlocksContextFinalize(self.handle) };
     }
 }
 

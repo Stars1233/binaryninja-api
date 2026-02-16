@@ -307,6 +307,15 @@ std::map<ArchAndAddr, ArchAndAddr>& BasicBlockAnalysisContext::GetInlinedUnresol
 }
 
 
+bool BasicBlockAnalysisContext::SetFunctionArchContextRaw(void* p)
+{
+	if (m_context->functionArchContext)
+		return false;
+	m_context->functionArchContext = p;
+	return true;
+}
+
+
 void BasicBlockAnalysisContext::AddTempOutgoingReference(Function* targetFunc)
 {
 	BNAnalyzeBasicBlocksContextAddTempReference(m_context, targetFunc->m_object);
@@ -461,8 +470,6 @@ void BasicBlockAnalysisContext::Finalize()
 			delete[] values;
 		}
 	}
-
-	BNAnalyzeBasicBlocksContextFinalize(m_context);
 }
 
 
@@ -518,6 +525,7 @@ FunctionLifterContext::FunctionLifterContext(LowLevelILFunction* func, BNFunctio
 		m_inlinedCalls.insert(context->inlinedCalls[i]);
 	}
 
+	m_functionArchContext = context->functionArchContext;
 	m_containsInlinedFunctions = context->containsInlinedFunctions;
 }
 
@@ -730,6 +738,26 @@ bool Architecture::GetInstructionTextCallback(
 }
 
 
+bool Architecture::GetInstructionTextWithContextCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t* len,
+	void* context, BNInstructionTextToken** result, size_t* count)
+{
+	CallbackRef<Architecture> arch(ctxt);
+
+	vector<InstructionTextToken> tokens;
+	bool ok = arch->GetInstructionTextWithContext(data, addr, *len, context, tokens);
+	if (!ok)
+	{
+		*result = nullptr;
+		*count = 0;
+		return false;
+	}
+
+	*count = tokens.size();
+	*result = InstructionTextToken::CreateInstructionTextTokenList(tokens);
+	return true;
+}
+
+
 void Architecture::FreeInstructionTextCallback(BNInstructionTextToken* tokens, size_t count)
 {
 	for (size_t i = 0; i < count; i++)
@@ -769,6 +797,13 @@ bool Architecture::LiftFunctionCallback(void* ctxt, BNLowLevelILFunction* functi
 	Ref func(new LowLevelILFunction(BNNewLowLevelILFunctionReference(function)));
 	FunctionLifterContext flc(func, context);
 	return arch->LiftFunction(func, flc);
+}
+
+
+void Architecture::FreeFunctionArchContextCallback(void* ctxt, void* context)
+{
+	CallbackRef<Architecture> arch(ctxt);
+	arch->FreeFunctionArchContext(context);
 }
 
 
@@ -1260,10 +1295,12 @@ void Architecture::Register(Architecture* arch)
 	callbacks.getAssociatedArchitectureByAddress = GetAssociatedArchitectureByAddressCallback;
 	callbacks.getInstructionInfo = GetInstructionInfoCallback;
 	callbacks.getInstructionText = GetInstructionTextCallback;
+	callbacks.getInstructionTextWithContext = GetInstructionTextWithContextCallback;
 	callbacks.freeInstructionText = FreeInstructionTextCallback;
 	callbacks.getInstructionLowLevelIL = GetInstructionLowLevelILCallback;
 	callbacks.analyzeBasicBlocks = AnalyzeBasicBlocksCallback;
 	callbacks.liftFunction = LiftFunctionCallback;
+	callbacks.freeFunctionArchContext = FreeFunctionArchContextCallback;
 	callbacks.getRegisterName = GetRegisterNameCallback;
 	callbacks.getFlagName = GetFlagNameCallback;
 	callbacks.getFlagWriteTypeName = GetFlagWriteTypeNameCallback;
@@ -1402,6 +1439,16 @@ bool Architecture::LiftFunction(LowLevelILFunction* function, FunctionLifterCont
 {
 	return DefaultLiftFunction(function, context);
 }
+
+
+bool Architecture::GetInstructionTextWithContext(
+	const uint8_t* data, uint64_t addr, size_t& len, void* context, std::vector<InstructionTextToken>& result)
+{
+	return GetInstructionText(data, addr, len, result);
+}
+
+
+void Architecture::FreeFunctionArchContext(void* context) {}
 
 
 string Architecture::GetRegisterName(uint32_t reg)
@@ -1959,6 +2006,19 @@ bool CoreArchitecture::GetInstructionText(
 }
 
 
+bool CoreArchitecture::GetInstructionTextWithContext(
+	const uint8_t* data, uint64_t addr, size_t& len, void* context, std::vector<InstructionTextToken>& result)
+{
+	BNInstructionTextToken* tokens = nullptr;
+	size_t count = 0;
+	if (!BNGetInstructionTextWithContext(m_object, data, addr, &len, context, &tokens, &count))
+		return false;
+
+	result = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(tokens, count);
+	return true;
+}
+
+
 bool CoreArchitecture::GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il)
 {
 	return BNGetInstructionLowLevelIL(m_object, data, addr, &len, il.GetObject());
@@ -1974,6 +2034,12 @@ void CoreArchitecture::AnalyzeBasicBlocks(Function* function, BasicBlockAnalysis
 bool CoreArchitecture::LiftFunction(LowLevelILFunction* function, FunctionLifterContext& context)
 {
 	return BNArchitectureLiftFunction(m_object, function->GetObject(), context.m_context);
+}
+
+
+void CoreArchitecture::FreeFunctionArchContext(void* context)
+{
+	BNArchitectureFreeFunctionArchContext(m_object, context);
 }
 
 
@@ -2484,6 +2550,13 @@ bool ArchitectureExtension::GetInstructionText(
     const uint8_t* data, uint64_t addr, size_t& len, vector<InstructionTextToken>& result)
 {
 	return m_base->GetInstructionText(data, addr, len, result);
+}
+
+
+bool ArchitectureExtension::GetInstructionTextWithContext(
+	const uint8_t* data, uint64_t addr, size_t& len, void* context, vector<InstructionTextToken>& result)
+{
+	return m_base->GetInstructionTextWithContext(data, addr, len, context, result);
 }
 
 

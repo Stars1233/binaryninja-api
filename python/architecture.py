@@ -799,6 +799,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		self._cb.freeNameAndTypeList = self._cb.freeNameAndTypeList.__class__(self._free_name_and_type_list)
 		self._cb.getIntrinsicOutputs = self._cb.getIntrinsicOutputs.__class__(self._get_intrinsic_outputs)
 		self._cb.freeTypeList = self._cb.freeTypeList.__class__(self._free_type_list)
+		self._cb.canAssemble = self._cb.canAssemble.__class__(self._can_assemble)
 		self._cb.assemble = self._cb.assemble.__class__(self._assemble)
 		self._cb.isNeverBranchPatchAvailable = self._cb.isNeverBranchPatchAvailable.__class__(
 		    self._is_never_branch_patch_available
@@ -1764,6 +1765,13 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		except (ValueError, KeyError):
 			log_error_for_exception("Unhandled Python exception in Architecture._free_type_list")
 
+	def _can_assemble(self, ctxt):
+		try:
+			return self.can_assemble
+		except:
+			log_error_for_exception("Unhandled Python exception in Architecture._can_assemble")
+			return False
+
 	def _assemble(self, ctxt, code, addr, result, errors):
 		"""
 		This function calls the `assemble` command for the actual architecture plugin.
@@ -1771,7 +1779,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		it uses the default function provided in CoreArchitecture.
 		"""
 		try:
-			data = self.assemble(code, addr)
+			data = self.assemble(core.pyNativeStr(code), addr)
 			if data is None:
 				return False
 			buf = ctypes.create_string_buffer(len(data))

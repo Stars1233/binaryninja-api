@@ -16,6 +16,7 @@ public:
 		Cancel,
 		AutoOpen,
 		BrowseContainer,
+		SelectArchitecture,
 	};
 
 	explicit ContainerOpenRequest(const std::string& path, bool forceContainerBrowser = false);

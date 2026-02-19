@@ -1262,6 +1262,20 @@ pub trait ArchitectureExt: Architecture {
         }
     }
 
+    fn calling_convention_by_name(&self, name: &str) -> Option<Ref<CoreCallingConvention>> {
+        let name = name.to_cstr();
+        unsafe {
+            let result = NonNull::new(BNGetArchitectureCallingConventionByName(
+                self.as_ref().handle,
+                name.as_ptr(),
+            ))?;
+            Some(CoreCallingConvention::ref_from_raw(
+                result.as_ptr(),
+                self.as_ref().handle(),
+            ))
+        }
+    }
+
     fn calling_conventions(&self) -> Array<CoreCallingConvention> {
         unsafe {
             let mut count = 0;

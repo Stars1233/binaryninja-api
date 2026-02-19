@@ -2765,6 +2765,115 @@ class AppleArm64SystemCallConvention : public CallingConvention
 	virtual bool IsEligibleForHeuristics() override { return false; }
 };
 
+
+// Swift calling convention for ARM64.
+//
+// The Swift ABI repurposes three callee-saved registers for implicit parameters:
+//   x20 - self (swiftself): context/self parameter, passed as the last integer argument
+//   x21 - error (swifterror): caller initializes to zero, callee sets to error pointer on throw
+//   x22 - async context (swiftasync): implicit async context for async functions
+//
+// Each combination of these three properties requires a distinct calling convention,
+// since it changes which registers are arguments, callee-saved, or implicitly defined.
+// The naming scheme is "swift" with optional suffixes: "-self", "-throws", "-async".
+class SwiftArm64CallingConvention : public CallingConvention
+{
+	bool m_hasSelf;
+	bool m_throws;
+	bool m_isAsync;
+
+public:
+	SwiftArm64CallingConvention(Architecture* arch, const string& name, bool hasSelf, bool throws, bool isAsync)
+	    : CallingConvention(arch, name), m_hasSelf(hasSelf), m_throws(throws), m_isAsync(isAsync)
+	{
+	}
+
+	virtual vector<uint32_t> GetIntegerArgumentRegisters() override
+	{
+		// Self goes first because our function types list self as the first
+		// parameter. Parameters are assigned to registers sequentially, so
+		// this ensures self -> x20 and remaining args -> x0-x7.
+		// Async context and error go last as implicit trailing registers.
+		vector<uint32_t> regs;
+		if (m_hasSelf)
+			regs.push_back(REG_X20);
+		regs.insert(regs.end(), {REG_X0, REG_X1, REG_X2, REG_X3, REG_X4, REG_X5, REG_X6, REG_X7});
+		if (m_isAsync)
+			regs.push_back(REG_X22);
+		if (m_throws)
+			regs.push_back(REG_X21);
+		return regs;
+	}
+
+	virtual vector<uint32_t> GetFloatArgumentRegisters() override
+	{
+		return vector<uint32_t> {REG_V0, REG_V1, REG_V2, REG_V3, REG_V4, REG_V5, REG_V6, REG_V7};
+	}
+
+	virtual vector<uint32_t> GetCallerSavedRegisters() override
+	{
+		vector<uint32_t> regs {REG_X0, REG_X1, REG_X2, REG_X3, REG_X4, REG_X5, REG_X6, REG_X7, REG_X8,
+		    REG_X9, REG_X10, REG_X11, REG_X12, REG_X13, REG_X14, REG_X15, REG_X16, REG_X17, REG_X18,
+		    REG_X30, REG_V0, REG_V1, REG_V2, REG_V3, REG_V4, REG_V5, REG_V6, REG_V7, REG_V16, REG_V17,
+		    REG_V18, REG_V19, REG_V20, REG_V21, REG_V22, REG_V23, REG_V24, REG_V25, REG_V26, REG_V27,
+		    REG_V28, REG_V29, REG_V30, REG_V31};
+		// When used as special registers, they are no longer callee-saved.
+		if (m_hasSelf)
+			regs.push_back(REG_X20);
+		if (m_throws)
+			regs.push_back(REG_X21);
+		if (m_isAsync)
+			regs.push_back(REG_X22);
+		return regs;
+	}
+
+	virtual vector<uint32_t> GetCalleeSavedRegisters() override
+	{
+		vector<uint32_t> regs {REG_X19, REG_X23, REG_X24, REG_X25, REG_X26, REG_X27, REG_X28, REG_X29};
+		// Only include x20/x21/x22 as callee-saved when they are NOT repurposed.
+		if (!m_hasSelf)
+			regs.push_back(REG_X20);
+		if (!m_throws)
+			regs.push_back(REG_X21);
+		if (!m_isAsync)
+			regs.push_back(REG_X22);
+		return regs;
+	}
+
+	virtual vector<uint32_t> GetImplicitlyDefinedRegisters() override
+	{
+		vector<uint32_t> regs;
+		// Throwing functions implicitly define x21 (the error register) on return.
+		if (m_throws)
+			regs.push_back(REG_X21);
+		return regs;
+	}
+
+	virtual uint32_t GetIntegerReturnValueRegister() override { return REG_X0; }
+
+	virtual uint32_t GetFloatReturnValueRegister() override { return REG_V0; }
+
+	virtual vector<uint32_t> GetRequiredArgumentRegisters() override
+	{
+		vector<uint32_t> regs;
+		if (m_hasSelf)
+			regs.push_back(REG_X20);
+		if (m_throws)
+			regs.push_back(REG_X21);
+		if (m_isAsync)
+			regs.push_back(REG_X22);
+		return regs;
+	}
+
+	virtual bool AreArgumentRegistersUsedForVarArgs() override { return false; }
+
+	virtual bool IsEligibleForHeuristics() override
+	{
+		return m_hasSelf || m_throws || m_isAsync;
+	}
+};
+
+
 #define PAGE(x)        (uint32_t)((x) >> 12)
 #define PAGE_OFF(x)    (uint32_t)((x)&0xfff)
 #define PAGE_NO_OFF(x) (uint32_t)((x)&0xFFFFF000)
@@ -3549,6 +3658,20 @@ extern "C"
 
 		conv = new AppleArm64CallingConvention(arm64);
 		arm64->RegisterCallingConvention(conv);
+
+		// Register Swift calling conventions (all combinations of self/throws/async).
+		for (int swiftFlags = 0; swiftFlags < 8; swiftFlags++)
+		{
+			bool hasSelf = (swiftFlags & 1) != 0;
+			bool throws  = (swiftFlags & 2) != 0;
+			bool isAsync = (swiftFlags & 4) != 0;
+			string name = "swift";
+			if (hasSelf) name += "-self";
+			if (throws)  name += "-throws";
+			if (isAsync) name += "-async";
+			conv = new SwiftArm64CallingConvention(arm64, name, hasSelf, throws, isAsync);
+			arm64->RegisterCallingConvention(conv);
+		}
 
 		for (uint32_t i = REG_X0; i <= REG_X28; i++)
 		{

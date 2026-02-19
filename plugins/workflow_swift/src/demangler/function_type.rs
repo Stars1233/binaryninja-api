@@ -10,6 +10,43 @@ use swift_demangler::{
 
 use super::type_reconstruction::{make_named_type_ref, TypeRefExt};
 
+/// Architecture-specific register assignments for Swift implicit parameters.
+struct PlatformAbi {
+    arch: CoreArchitecture,
+    error_reg: &'static str,
+    async_context_reg: &'static str,
+}
+
+impl PlatformAbi {
+    fn for_arch(arch: &CoreArchitecture) -> Option<Self> {
+        match arch.name().as_ref() {
+            "aarch64" => Some(Self {
+                arch: *arch,
+                error_reg: "x21",
+                async_context_reg: "x22",
+            }),
+            _ => None,
+        }
+    }
+
+    fn error_location(&self) -> Option<Variable> {
+        self.register_variable(self.error_reg)
+    }
+
+    fn async_context_location(&self) -> Option<Variable> {
+        self.register_variable(self.async_context_reg)
+    }
+
+    fn register_variable(&self, name: &str) -> Option<Variable> {
+        let reg = self.arch.register_by_name(name)?;
+        Some(Variable::new(
+            VariableSourceType::RegisterVariableSourceType,
+            0,
+            reg.id().0 as i64,
+        ))
+    }
+}
+
 /// Swift calling convention builder.
 ///
 /// Tracks which implicit parameters (self, error, async context) are present,
@@ -17,6 +54,7 @@ use super::type_reconstruction::{make_named_type_ref, TypeRefExt};
 /// architecture-specific calling convention when building the final function type.
 struct CallingConvention {
     arch: CoreArchitecture,
+    abi: Option<PlatformAbi>,
     flags: u8,
     leading_params: Vec<FunctionParameter>,
     trailing_params: Vec<FunctionParameter>,
@@ -30,6 +68,7 @@ impl CallingConvention {
     fn for_arch(arch: &CoreArchitecture) -> Self {
         Self {
             arch: *arch,
+            abi: PlatformAbi::for_arch(arch),
             flags: 0,
             leading_params: Vec::new(),
             trailing_params: Vec::new(),
@@ -94,6 +133,8 @@ impl CallingConvention {
     /// Prepends `self` before `params` and appends error/async context after,
     /// then looks up the appropriate calling convention by name on the architecture.
     fn build_type(self, ret_type: &Type, params: Vec<FunctionParameter>) -> Ref<Type> {
+        let cc_name = self.cc_name();
+
         let mut all_params = self.leading_params;
         all_params.extend(params);
         all_params.extend(self.trailing_params);
@@ -103,7 +144,7 @@ impl CallingConvention {
             all_params.push(FunctionParameter {
                 ty: error_ty.into(),
                 name: "error".to_string(),
-                location: None,
+                location: self.abi.as_ref().and_then(|a| a.error_location()),
             });
         }
 
@@ -112,11 +153,29 @@ impl CallingConvention {
             all_params.push(FunctionParameter {
                 ty: ptr_ty.into(),
                 name: "asyncContext".to_string(),
-                location: None,
+                location: self.abi.as_ref().and_then(|a| a.async_context_location()),
             });
         }
 
-        Type::function(ret_type, all_params, false)
+        if let Some(cc) = self.arch.calling_convention_by_name(&cc_name) {
+            Type::function_with_opts(ret_type, &all_params, false, cc, Conf::new(0, 0))
+        } else {
+            Type::function(ret_type, all_params, false)
+        }
+    }
+
+    fn cc_name(&self) -> String {
+        let mut name = String::from("swift");
+        if self.flags & Self::SELF != 0 {
+            name.push_str("-self");
+        }
+        if self.flags & Self::THROWS != 0 {
+            name.push_str("-throws");
+        }
+        if self.flags & Self::ASYNC != 0 {
+            name.push_str("-async");
+        }
+        name
     }
 }
 

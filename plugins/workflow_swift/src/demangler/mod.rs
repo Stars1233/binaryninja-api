@@ -1,8 +1,21 @@
+mod function_type;
+mod name;
+mod type_reconstruction;
+
 use binaryninja::architecture::CoreArchitecture;
 use binaryninja::binary_view::BinaryView;
 use binaryninja::demangle::CustomDemangler;
 use binaryninja::rc::Ref;
+use binaryninja::settings::{QueryOptions, Settings};
 use binaryninja::types::{QualifiedName, Type};
+
+fn should_extract_types(view: Option<&BinaryView>) -> bool {
+    let mut opts = match view {
+        Some(v) => QueryOptions::new_with_view(v),
+        None => QueryOptions::new(),
+    };
+    Settings::new().get_bool_with_opts(crate::SETTING_EXTRACT_TYPES, &mut opts)
+}
 
 pub struct SwiftDemangler;
 
@@ -19,16 +32,25 @@ impl CustomDemangler for SwiftDemangler {
 
     fn demangle(
         &self,
-        _arch: &CoreArchitecture,
+        arch: &CoreArchitecture,
         name: &str,
-        _view: Option<Ref<BinaryView>>,
+        view: Option<Ref<BinaryView>>,
     ) -> Option<(QualifiedName, Option<Ref<Type>>)> {
         let ctx = swift_demangler::Context::new();
         let symbol = swift_demangler::Symbol::parse(&ctx, name)?;
-        // Use the canonical demangled form from the parsed node tree.
-        // This matches what `xcrun swift-demangle` produces.
-        // TODO: Use the structured Symbol API to also reconstruct BN Types.
-        let demangled = symbol.display();
-        Some((QualifiedName::from(demangled), None))
+
+        if should_extract_types(view.as_deref()) {
+            let ty = function_type::build_function_type(&symbol, arch);
+            let qname = if ty.is_some() {
+                name::build_short_name(&symbol)
+            } else {
+                None
+            }
+            .unwrap_or_else(|| QualifiedName::from(symbol.display()));
+            Some((qname, ty))
+        } else {
+            let qname = QualifiedName::from(symbol.display());
+            Some((qname, None))
+        }
     }
 }

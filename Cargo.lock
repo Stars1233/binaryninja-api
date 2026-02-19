@@ -2599,6 +2599,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "swift-demangler"
+version = "0.1.0"
+source = "git+https://github.com/Vector35/swift-demangler.git#b0b98bfa446284632eafe23eddcc93e5098534e2"
+dependencies = [
+ "cmake",
+]
+
+[[package]]
 name = "syn"
 version = "2.0.104"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3460,6 +3468,7 @@ version = "0.1.0"
 dependencies = [
  "binaryninja",
  "binaryninjacore-sys",
+ "swift-demangler",
  "thiserror 2.0.18",
  "tracing",
 ]
@@ -3470,6 +3479,7 @@ version = "0.1.0"
 dependencies = [
  "binaryninja",
  "binaryninjacore-sys",
+ "swift-demangler",
  "thiserror 2.0.18",
  "tracing",
 ]

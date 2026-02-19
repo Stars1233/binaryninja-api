@@ -16,3 +16,4 @@ binaryninja = { workspace = true }
 binaryninjacore-sys.workspace = true
 tracing = "0.1"
 thiserror = "2.0"
+swift-demangler = { git = "https://github.com/Vector35/swift-demangler.git" }

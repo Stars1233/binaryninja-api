@@ -450,7 +450,7 @@ class CallingConvention:
 	def _get_incoming_flag_value(self, ctxt, flag, func, result):
 		try:
 			func_obj = function.Function(handle=core.BNNewFunctionReference(func))
-			flag_name = self.arch.get_reg_name(flag)
+			flag_name = self.arch.get_flag_name(flag)
 			api_obj = self.perform_get_incoming_flag_value(flag_name, func_obj)._to_core_struct()
 		except:
 			log_error_for_exception("Unhandled Python exception in CallingConvention._get_incoming_flag_value")

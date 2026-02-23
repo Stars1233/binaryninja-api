@@ -606,7 +606,7 @@ std::optional<VirtualFunctionTableInfo> MicrosoftRTTIProcessor::ProcessVFT(uint6
 MicrosoftRTTIProcessor::MicrosoftRTTIProcessor(const Ref<BinaryView> &view, bool useMangled, bool checkRData, bool vftSweep, bool allowAnonymous)
 {
     m_view = view;
-    m_logger = new Logger("Microsoft RTTI");
+    m_logger = view->CreateLogger("Microsoft RTTI");
     allowMangledClassNames = useMangled;
     allowAnonymousClassNames = allowAnonymous;
     checkWritableRData = checkRData;

@@ -669,7 +669,7 @@ std::optional<VirtualFunctionTableInfo> ItaniumRTTIProcessor::ProcessVFT(uint64_
 ItaniumRTTIProcessor::ItaniumRTTIProcessor(const Ref<BinaryView> &view, bool useMangled, bool checkRData, bool vftSweep)
 {
     m_view = view;
-    m_logger = new Logger("Itanium RTTI");
+    m_logger = view->CreateLogger("Itanium RTTI");
     allowMangledClassNames = useMangled;
     checkWritableRData = checkRData;
     m_classInfo = {};

@@ -8,26 +8,6 @@ pub mod dump;
 pub mod validate;
 // TODO: Load?
 
-pub struct InputFileField;
-
-impl InputFileField {
-    pub fn field() -> FormInputField {
-        FormInputField::OpenFileName {
-            prompt: "File Path".to_string(),
-            // TODO: This is called extension but is really a filter.
-            extension: None,
-            default: None,
-            value: None,
-        }
-    }
-
-    pub fn from_form(form: &Form) -> Option<PathBuf> {
-        let field = form.get_field_with_name("File Path")?;
-        let field_value = field.try_value_string()?;
-        Some(PathBuf::from(field_value))
-    }
-}
-
 pub struct OutputDirectoryField;
 
 impl OutputDirectoryField {

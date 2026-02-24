@@ -1,6 +1,7 @@
 #pragma once
 
 #include <regex>
+#include <shared_mutex>
 
 #include "SharedCache.h"
 #include "refcountobject.h"

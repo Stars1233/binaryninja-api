@@ -39,14 +39,6 @@ void DeleteController(const FileMetadata& file)
 			LogWarnF("Deleting SharedCacheController for view {:#x}, but there are still {} references", id,
 				controller->m_refs.load());
 
-		// Go through the file accessor cache and remove the entries we reference.
-		auto& fileAccessorCache = FileAccessorCache::Global();
-		for (const auto& entry : controller->GetCache().GetEntries())
-		{
-			auto accessorId = GetCacheAccessorID(entry.GetFilePath());
-			fileAccessorCache.RemoveAccessor(accessorId);
-		}
-
 		controllers.erase(it);
 		LogDebugF("Deleted SharedCacheController for view {:?}", file.GetFilename().c_str());
 	}

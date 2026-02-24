@@ -1,5 +1,6 @@
 #pragma once
 
+#include <shared_mutex>
 #include <vector>
 #include <Dyld.h>
 
@@ -127,10 +128,12 @@ class CacheEntry
 	// Mapping of image path to image info, used within ProcessImagesAndRegions to add them to the cache.
 	// Also used to retrieve the image dependencies.
 	std::vector<std::pair<std::string, dyld_cache_image_info>> m_images {};
+	std::shared_ptr<MappedFileRegion> m_file;
 
 public:
 	CacheEntry(std::string filePath, std::string fileName, CacheEntryType type, dyld_cache_header header,
-		std::vector<dyld_cache_mapping_info>&& mappings, std::vector<std::pair<std::string, dyld_cache_image_info>>&& images);
+		std::vector<dyld_cache_mapping_info> mappings, std::vector<std::pair<std::string, dyld_cache_image_info>> images,
+		std::shared_ptr<MappedFileRegion> file);
 
 	CacheEntry() = default;
 	CacheEntry(const CacheEntry&) = default;
@@ -141,7 +144,7 @@ public:
 	// Construct a cache entry from the file on disk.
 	static CacheEntry FromFile(const std::string& filePath, const std::string& fileName, CacheEntryType type);
 
-	WeakFileAccessor GetAccessor() const;
+	const std::shared_ptr<MappedFileRegion>& GetFile() const { return m_file; }
 
 	// Get the headers virtual address.
 	// This is useful if you need to read relative to the start of the entry file.

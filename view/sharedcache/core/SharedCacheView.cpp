@@ -3,8 +3,6 @@
 #include <filesystem>
 
 #include "SharedCacheController.h"
-#include "FileAccessorCache.h"
-#include "MappedFileAccessor.h"
 #include "SharedCacheBuilder.h"
 
 using namespace BinaryNinja;
@@ -17,12 +15,6 @@ SharedCacheViewType::SharedCacheViewType() : BinaryViewType(VIEW_NAME, VIEW_NAME
 // We register all our one-shot stuff here, such as the object destructor.
 void SharedCacheViewType::Register()
 {
-	auto fdLimit = AdjustFileDescriptorLimit();
-	LogDebugF("Shared Cache processing initialized with a max file descriptor limit of {}", fdLimit);
-
-	// Adjust the global accessor cache to the fdlimit.
-	FileAccessorCache::Global().SetCacheSize(fdLimit);
-	
 	RegisterSharedCacheControllerDestructor();
 
 	static SharedCacheViewType type;
@@ -873,10 +865,6 @@ bool SharedCacheView::InitController()
 		auto endTime = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<double> elapsed = endTime - startTime;
 		m_logger->LogInfoF("Processing {} entries took {:.3f} seconds", totalEntries, elapsed.count());
-
-		// If we can't store all of our files for this cache in the accessor cache we might run into issues, warn the user.
-		if (totalEntries > FileAccessorCache::Global().GetCacheSize())
-			m_logger->LogWarn("Cache contains more entries than the allowed number of opened file handles, this may impact reliability.");
 
 		// Verify that we are not missing any entries that were stored in the metadata.
 		// If we are that means we should alert the user that a previously associated cache entry is missing.

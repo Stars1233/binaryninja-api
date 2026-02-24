@@ -621,7 +621,9 @@ std::vector<CacheSymbol> SharedCacheMachOHeader::ReadExportSymbolTrie(VirtualMem
 		return {};
 	std::vector<CacheSymbol> symbols = {};
 	try {
-		auto [begin, end] = vm.ReadSpan(GetLinkEditFileBase() + exportTrie.dataoff, exportTrie.datasize);
+		auto trieSpan = vm.ReadSpan(GetLinkEditFileBase() + exportTrie.dataoff, exportTrie.datasize);
+		const uint8_t *begin = trieSpan.data();
+		const uint8_t *end = begin + trieSpan.size();
 		const uint8_t *cursor = begin;
 
 		struct Node

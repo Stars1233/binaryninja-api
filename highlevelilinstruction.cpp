@@ -288,31 +288,26 @@ bool HighLevelILIntegerList::ListIterator::operator<(const ListIterator& a) cons
 HighLevelILIntegerList::ListIterator& HighLevelILIntegerList::ListIterator::operator++()
 {
 	count--;
-	if (count == 0)
-		return *this;
-
-	operand++;
-	if (operand >= 4)
-	{
-		operand = 0;
-		instr = function->GetRawExpr((size_t)instr.operands[4]);
-	}
+	cur++;
 	return *this;
 }
 
 
 uint64_t HighLevelILIntegerList::ListIterator::operator*()
 {
-	return instr.operands[operand];
+	return *cur;
 }
 
 
 HighLevelILIntegerList::HighLevelILIntegerList(
-    HighLevelILFunction* func, const BNHighLevelILInstruction& instr, size_t count)
+    HighLevelILFunction* func, size_t offset, size_t count)
 {
 	m_start.function = func;
-	m_start.instr = instr;
-	m_start.operand = 0;
+#ifdef BINARYNINJACORE_LIBRARY
+	m_start.cur = func->GetOperandPointer(offset);
+#else
+	m_start.cur = BNHighLevelILGetOperandPointer(func->GetObject(), offset);
+#endif
 	m_start.count = count;
 }
 
@@ -327,7 +322,7 @@ HighLevelILIntegerList::const_iterator HighLevelILIntegerList::end() const
 {
 	const_iterator result;
 	result.function = m_start.function;
-	result.operand = 0;
+	result.cur = m_start.cur + m_start.count;
 	result.count = 0;
 	return result;
 }
@@ -343,10 +338,7 @@ uint64_t HighLevelILIntegerList::operator[](size_t i) const
 {
 	if (i >= size())
 		throw HighLevelILInstructionAccessException();
-	auto iter = begin();
-	for (size_t j = 0; j < i; j++)
-		++iter;
-	return *iter;
+	return m_start.cur[i];
 }
 
 
@@ -367,8 +359,8 @@ size_t HighLevelILIndexList::ListIterator::operator*()
 
 
 HighLevelILIndexList::HighLevelILIndexList(
-    HighLevelILFunction* func, const BNHighLevelILInstruction& instr, size_t count) :
-    m_list(func, instr, count)
+    HighLevelILFunction* func, size_t offset, size_t count) :
+    m_list(func, offset, count)
 {}
 
 
@@ -427,9 +419,9 @@ const HighLevelILInstruction HighLevelILInstructionList::ListIterator::operator*
 }
 
 
-HighLevelILInstructionList::HighLevelILInstructionList(HighLevelILFunction* func, const BNHighLevelILInstruction& instr,
+HighLevelILInstructionList::HighLevelILInstructionList(HighLevelILFunction* func, size_t offset,
     size_t count, bool asFullAst, size_t instructionIndex) :
-    m_list(func, instr, count),
+    m_list(func, offset, count),
     m_ast(asFullAst), m_instructionIndex(instructionIndex)
 {}
 
@@ -492,8 +484,8 @@ const SSAVariable HighLevelILSSAVariableList::ListIterator::operator*()
 
 
 HighLevelILSSAVariableList::HighLevelILSSAVariableList(
-    HighLevelILFunction* func, const BNHighLevelILInstruction& instr, size_t count) :
-    m_list(func, instr, count & (~1))
+    HighLevelILFunction* func, size_t offset, size_t count) :
+    m_list(func, offset, count & (~1))
 {}
 
 
@@ -800,19 +792,19 @@ SSAVariable HighLevelILInstructionBase::GetRawOperandAsSSAVariable(size_t operan
 HighLevelILInstructionList HighLevelILInstructionBase::GetRawOperandAsExprList(size_t operand) const
 {
 	return HighLevelILInstructionList(
-	    function, function->GetRawExpr(operands[operand + 1]), operands[operand], ast, instructionIndex);
+	    function, (size_t)operands[operand + 1], (size_t)operands[operand], ast, instructionIndex);
 }
 
 
 HighLevelILSSAVariableList HighLevelILInstructionBase::GetRawOperandAsSSAVariableList(size_t operand) const
 {
-	return HighLevelILSSAVariableList(function, function->GetRawExpr(operands[operand + 1]), operands[operand]);
+	return HighLevelILSSAVariableList(function, (size_t)operands[operand + 1], (size_t)operands[operand]);
 }
 
 
 HighLevelILIndexList HighLevelILInstructionBase::GetRawOperandAsIndexList(size_t operand) const
 {
-	return HighLevelILIndexList(function, function->GetRawExpr(operands[operand + 1]), operands[operand]);
+	return HighLevelILIndexList(function, (size_t)operands[operand + 1], (size_t)operands[operand]);
 }
 
 

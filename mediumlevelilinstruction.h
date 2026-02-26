@@ -247,8 +247,8 @@ namespace BinaryNinja
 #else
 			Ref<MediumLevelILFunction> function;
 #endif
-			BNMediumLevelILInstruction instr;
-			size_t operand, count;
+			const uint64_t* cur;
+			size_t count;
 
 			bool operator==(const ListIterator& a) const;
 			bool operator!=(const ListIterator& a) const;
@@ -263,7 +263,7 @@ namespace BinaryNinja
 	  public:
 		typedef ListIterator const_iterator;
 
-		MediumLevelILIntegerList(MediumLevelILFunction* func, const BNMediumLevelILInstruction& instr, size_t count);
+		MediumLevelILIntegerList(MediumLevelILFunction* func, size_t offset, size_t count);
 
 		const_iterator begin() const;
 		const_iterator end() const;
@@ -303,7 +303,7 @@ namespace BinaryNinja
 	  public:
 		typedef ListIterator const_iterator;
 
-		MediumLevelILIndexList(MediumLevelILFunction* func, const BNMediumLevelILInstruction& instr, size_t count);
+		MediumLevelILIndexList(MediumLevelILFunction* func, size_t offset, size_t count);
 
 		const_iterator begin() const;
 		const_iterator end() const;
@@ -344,7 +344,7 @@ namespace BinaryNinja
 	  public:
 		typedef ListIterator const_iterator;
 
-		MediumLevelILIndexMap(MediumLevelILFunction* func, const BNMediumLevelILInstruction& instr, size_t count);
+		MediumLevelILIndexMap(MediumLevelILFunction* func, size_t offset, size_t count);
 
 		const_iterator begin() const;
 		const_iterator end() const;
@@ -384,7 +384,7 @@ namespace BinaryNinja
 	  public:
 		typedef ListIterator const_iterator;
 
-		MediumLevelILVariableList(MediumLevelILFunction* func, const BNMediumLevelILInstruction& instr, size_t count);
+		MediumLevelILVariableList(MediumLevelILFunction* func, size_t offset, size_t count);
 
 		const_iterator begin() const;
 		const_iterator end() const;
@@ -426,7 +426,7 @@ namespace BinaryNinja
 		typedef ListIterator const_iterator;
 
 		MediumLevelILSSAVariableList(
-		    MediumLevelILFunction* func, const BNMediumLevelILInstruction& instr, size_t count);
+		    MediumLevelILFunction* func, size_t offset, size_t count);
 
 		const_iterator begin() const;
 		const_iterator end() const;
@@ -468,7 +468,7 @@ namespace BinaryNinja
 	  public:
 		typedef ListIterator const_iterator;
 
-		MediumLevelILInstructionList(MediumLevelILFunction* func, const BNMediumLevelILInstruction& instr, size_t count,
+		MediumLevelILInstructionList(MediumLevelILFunction* func, size_t offset, size_t count,
 		    size_t instructionIndex);
 
 		const_iterator begin() const;

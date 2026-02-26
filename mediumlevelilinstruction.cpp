@@ -320,31 +320,26 @@ bool MediumLevelILIntegerList::ListIterator::operator<(const ListIterator& a) co
 MediumLevelILIntegerList::ListIterator& MediumLevelILIntegerList::ListIterator::operator++()
 {
 	count--;
-	if (count == 0)
-		return *this;
-
-	operand++;
-	if (operand >= 4)
-	{
-		operand = 0;
-		instr = function->GetRawExpr((size_t)instr.operands[4]);
-	}
+	cur++;
 	return *this;
 }
 
 
 uint64_t MediumLevelILIntegerList::ListIterator::operator*()
 {
-	return instr.operands[operand];
+	return *cur;
 }
 
 
 MediumLevelILIntegerList::MediumLevelILIntegerList(
-    MediumLevelILFunction* func, const BNMediumLevelILInstruction& instr, size_t count)
+    MediumLevelILFunction* func, size_t offset, size_t count)
 {
 	m_start.function = func;
-	m_start.instr = instr;
-	m_start.operand = 0;
+#ifdef BINARYNINJACORE_LIBRARY
+	m_start.cur = func->GetOperandPointer(offset);
+#else
+	m_start.cur = BNMediumLevelILGetOperandPointer(func->GetObject(), offset);
+#endif
 	m_start.count = count;
 }
 
@@ -359,7 +354,7 @@ MediumLevelILIntegerList::const_iterator MediumLevelILIntegerList::end() const
 {
 	const_iterator result;
 	result.function = m_start.function;
-	result.operand = 0;
+	result.cur = m_start.cur + m_start.count;
 	result.count = 0;
 	return result;
 }
@@ -375,10 +370,7 @@ uint64_t MediumLevelILIntegerList::operator[](size_t i) const
 {
 	if (i >= size())
 		throw MediumLevelILInstructionAccessException();
-	auto iter = begin();
-	for (size_t j = 0; j < i; j++)
-		++iter;
-	return *iter;
+	return m_start.cur[i];
 }
 
 
@@ -399,8 +391,8 @@ size_t MediumLevelILIndexList::ListIterator::operator*()
 
 
 MediumLevelILIndexList::MediumLevelILIndexList(
-    MediumLevelILFunction* func, const BNMediumLevelILInstruction& instr, size_t count) :
-    m_list(func, instr, count)
+    MediumLevelILFunction* func, size_t offset, size_t count) :
+    m_list(func, offset, count)
 {}
 
 
@@ -458,8 +450,8 @@ const pair<uint64_t, size_t> MediumLevelILIndexMap::ListIterator::operator*()
 
 
 MediumLevelILIndexMap::MediumLevelILIndexMap(
-    MediumLevelILFunction* func, const BNMediumLevelILInstruction& instr, size_t count) :
-    m_list(func, instr, count & (~1))
+    MediumLevelILFunction* func, size_t offset, size_t count) :
+    m_list(func, offset, count & (~1))
 {}
 
 
@@ -512,8 +504,8 @@ const Variable MediumLevelILVariableList::ListIterator::operator*()
 
 
 MediumLevelILVariableList::MediumLevelILVariableList(
-    MediumLevelILFunction* func, const BNMediumLevelILInstruction& instr, size_t count) :
-    m_list(func, instr, count)
+    MediumLevelILFunction* func, size_t offset, size_t count) :
+    m_list(func, offset, count)
 {}
 
 
@@ -571,8 +563,8 @@ const SSAVariable MediumLevelILSSAVariableList::ListIterator::operator*()
 
 
 MediumLevelILSSAVariableList::MediumLevelILSSAVariableList(
-    MediumLevelILFunction* func, const BNMediumLevelILInstruction& instr, size_t count) :
-    m_list(func, instr, count & (~1))
+    MediumLevelILFunction* func, size_t offset, size_t count) :
+    m_list(func, offset, count & (~1))
 {}
 
 
@@ -627,8 +619,8 @@ const MediumLevelILInstruction MediumLevelILInstructionList::ListIterator::opera
 
 
 MediumLevelILInstructionList::MediumLevelILInstructionList(
-    MediumLevelILFunction* func, const BNMediumLevelILInstruction& instr, size_t count, size_t instrIndex) :
-    m_list(func, instr, count),
+    MediumLevelILFunction* func, size_t offset, size_t count, size_t instrIndex) :
+    m_list(func, offset, count),
     m_instructionIndex(instrIndex)
 {}
 
@@ -960,32 +952,32 @@ SSAVariable MediumLevelILInstructionBase::GetRawOperandAsPartialSSAVariableSourc
 
 MediumLevelILIndexList MediumLevelILInstructionBase::GetRawOperandAsIndexList(size_t operand) const
 {
-	return MediumLevelILIndexList(function, function->GetRawExpr(operands[operand + 1]), operands[operand]);
+	return MediumLevelILIndexList(function, (size_t)operands[operand + 1], (size_t)operands[operand]);
 }
 
 
 MediumLevelILIndexMap MediumLevelILInstructionBase::GetRawOperandAsIndexMap(size_t operand) const
 {
-	return MediumLevelILIndexMap(function, function->GetRawExpr(operands[operand + 1]), operands[operand]);
+	return MediumLevelILIndexMap(function, (size_t)operands[operand + 1], (size_t)operands[operand]);
 }
 
 
 MediumLevelILVariableList MediumLevelILInstructionBase::GetRawOperandAsVariableList(size_t operand) const
 {
-	return MediumLevelILVariableList(function, function->GetRawExpr(operands[operand + 1]), operands[operand]);
+	return MediumLevelILVariableList(function, (size_t)operands[operand + 1], (size_t)operands[operand]);
 }
 
 
 MediumLevelILSSAVariableList MediumLevelILInstructionBase::GetRawOperandAsSSAVariableList(size_t operand) const
 {
-	return MediumLevelILSSAVariableList(function, function->GetRawExpr(operands[operand + 1]), operands[operand]);
+	return MediumLevelILSSAVariableList(function, (size_t)operands[operand + 1], (size_t)operands[operand]);
 }
 
 
 MediumLevelILInstructionList MediumLevelILInstructionBase::GetRawOperandAsExprList(size_t operand) const
 {
 	return MediumLevelILInstructionList(
-	    function, function->GetRawExpr(operands[operand + 1]), operands[operand], instructionIndex);
+	    function, (size_t)operands[operand + 1], (size_t)operands[operand], instructionIndex);
 }
 
 

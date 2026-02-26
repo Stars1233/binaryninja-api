@@ -382,12 +382,11 @@ namespace BinaryNinja
 
 #ifdef BINARYNINJACORE_LIBRARY
 			LowLevelILFunction* function;
-			const BNLowLevelILInstruction* instr;
 #else
 			Ref<LowLevelILFunction> function;
-			BNLowLevelILInstruction instr;
 #endif
-			size_t operand, count;
+			const uint64_t* cur;
+			size_t count;
 
 			bool operator==(const ListIterator& a) const;
 			bool operator!=(const ListIterator& a) const;
@@ -402,7 +401,7 @@ namespace BinaryNinja
 	  public:
 		typedef ListIterator const_iterator;
 
-		LowLevelILIntegerList(LowLevelILFunction* func, const BNLowLevelILInstruction& instr, size_t count);
+		LowLevelILIntegerList(LowLevelILFunction* func, size_t offset, size_t count);
 
 		const_iterator begin() const;
 		const_iterator end() const;
@@ -442,7 +441,7 @@ namespace BinaryNinja
 	  public:
 		typedef ListIterator const_iterator;
 
-		LowLevelILIndexList(LowLevelILFunction* func, const BNLowLevelILInstruction& instr, size_t count);
+		LowLevelILIndexList(LowLevelILFunction* func, size_t offset, size_t count);
 
 		const_iterator begin() const;
 		const_iterator end() const;
@@ -483,7 +482,7 @@ namespace BinaryNinja
 	  public:
 		typedef ListIterator const_iterator;
 
-		LowLevelILIndexMap(LowLevelILFunction* func, const BNLowLevelILInstruction& instr, size_t count);
+		LowLevelILIndexMap(LowLevelILFunction* func, size_t offset, size_t count);
 
 		const_iterator begin() const;
 		const_iterator end() const;
@@ -526,7 +525,7 @@ namespace BinaryNinja
 		typedef ListIterator const_iterator;
 
 		LowLevelILInstructionList(
-		    LowLevelILFunction* func, const BNLowLevelILInstruction& instr, size_t count, size_t instrIndex);
+		    LowLevelILFunction* func, size_t offset, size_t count, size_t instrIndex);
 
 		const_iterator begin() const;
 		const_iterator end() const;
@@ -566,7 +565,7 @@ namespace BinaryNinja
 	  public:
 		typedef ListIterator const_iterator;
 
-		LowLevelILRegisterOrFlagList(LowLevelILFunction* func, const BNLowLevelILInstruction& instr, size_t count);
+		LowLevelILRegisterOrFlagList(LowLevelILFunction* func, size_t offset, size_t count);
 
 		const_iterator begin() const;
 		const_iterator end() const;
@@ -607,7 +606,7 @@ namespace BinaryNinja
 	  public:
 		typedef ListIterator const_iterator;
 
-		LowLevelILSSARegisterList(LowLevelILFunction* func, const BNLowLevelILInstruction& instr, size_t count);
+		LowLevelILSSARegisterList(LowLevelILFunction* func, size_t offset, size_t count);
 
 		const_iterator begin() const;
 		const_iterator end() const;
@@ -648,7 +647,7 @@ namespace BinaryNinja
 	  public:
 		typedef ListIterator const_iterator;
 
-		LowLevelILSSARegisterStackList(LowLevelILFunction* func, const BNLowLevelILInstruction& instr, size_t count);
+		LowLevelILSSARegisterStackList(LowLevelILFunction* func, size_t offset, size_t count);
 
 		const_iterator begin() const;
 		const_iterator end() const;
@@ -689,7 +688,7 @@ namespace BinaryNinja
 	  public:
 		typedef ListIterator const_iterator;
 
-		LowLevelILSSAFlagList(LowLevelILFunction* func, const BNLowLevelILInstruction& instr, size_t count);
+		LowLevelILSSAFlagList(LowLevelILFunction* func, size_t offset, size_t count);
 
 		const_iterator begin() const;
 		const_iterator end() const;
@@ -730,7 +729,7 @@ namespace BinaryNinja
 	  public:
 		typedef ListIterator const_iterator;
 
-		LowLevelILSSARegisterOrFlagList(LowLevelILFunction* func, const BNLowLevelILInstruction& instr, size_t count);
+		LowLevelILSSARegisterOrFlagList(LowLevelILFunction* func, size_t offset, size_t count);
 
 		const_iterator begin() const;
 		const_iterator end() const;

@@ -597,43 +597,26 @@ bool LowLevelILIntegerList::ListIterator::operator<(const ListIterator& a) const
 LowLevelILIntegerList::ListIterator& LowLevelILIntegerList::ListIterator::operator++()
 {
 	count--;
-	if (count == 0)
-		return *this;
-
-	operand++;
-	if (operand >= 3)
-	{
-		operand = 0;
-#ifdef BINARYNINJACORE_LIBRARY
-		instr = &function->GetRawExpr((size_t)instr->operands[3]);
-#else
-		instr = function->GetRawExpr((size_t)instr.operands[3]);
-#endif
-	}
+	cur++;
 	return *this;
 }
 
 
 uint64_t LowLevelILIntegerList::ListIterator::operator*()
 {
-#ifdef BINARYNINJACORE_LIBRARY
-	return instr->operands[operand];
-#else
-	return instr.operands[operand];
-#endif
+	return *cur;
 }
 
 
 LowLevelILIntegerList::LowLevelILIntegerList(
-    LowLevelILFunction* func, const BNLowLevelILInstruction& instr, size_t count)
+    LowLevelILFunction* func, size_t offset, size_t count)
 {
 	m_start.function = func;
 #ifdef BINARYNINJACORE_LIBRARY
-	m_start.instr = &instr;
+	m_start.cur = func->GetOperandPointer(offset);
 #else
-	m_start.instr = instr;
+	m_start.cur = BNLowLevelILGetOperandPointer(func->GetObject(), offset);
 #endif
-	m_start.operand = 0;
 	m_start.count = count;
 }
 
@@ -648,7 +631,7 @@ LowLevelILIntegerList::const_iterator LowLevelILIntegerList::end() const
 {
 	const_iterator result;
 	result.function = m_start.function;
-	result.operand = 0;
+	result.cur = m_start.cur + m_start.count;
 	result.count = 0;
 	return result;
 }
@@ -664,10 +647,7 @@ uint64_t LowLevelILIntegerList::operator[](size_t i) const
 {
 	if (i >= size())
 		throw LowLevelILInstructionAccessException();
-	auto iter = begin();
-	for (size_t j = 0; j < i; j++)
-		++iter;
-	return *iter;
+	return m_start.cur[i];
 }
 
 
@@ -687,8 +667,8 @@ size_t LowLevelILIndexList::ListIterator::operator*()
 }
 
 
-LowLevelILIndexList::LowLevelILIndexList(LowLevelILFunction* func, const BNLowLevelILInstruction& instr, size_t count) :
-    m_list(func, instr, count)
+LowLevelILIndexList::LowLevelILIndexList(LowLevelILFunction* func, size_t offset, size_t count) :
+    m_list(func, offset, count)
 {}
 
 
@@ -745,8 +725,8 @@ const pair<uint64_t, size_t> LowLevelILIndexMap::ListIterator::operator*()
 }
 
 
-LowLevelILIndexMap::LowLevelILIndexMap(LowLevelILFunction* func, const BNLowLevelILInstruction& instr, size_t count) :
-    m_list(func, instr, count & (~1))
+LowLevelILIndexMap::LowLevelILIndexMap(LowLevelILFunction* func, size_t offset, size_t count) :
+    m_list(func, offset, count & (~1))
 {}
 
 
@@ -800,8 +780,8 @@ const LowLevelILInstruction LowLevelILInstructionList::ListIterator::operator*()
 
 
 LowLevelILInstructionList::LowLevelILInstructionList(
-    LowLevelILFunction* func, const BNLowLevelILInstruction& instr, size_t count, size_t instrIndex) :
-    m_list(func, instr, count),
+    LowLevelILFunction* func, size_t offset, size_t count, size_t instrIndex) :
+    m_list(func, offset, count),
     m_instructionIndex(instrIndex)
 {}
 
@@ -858,8 +838,8 @@ const RegisterOrFlag LowLevelILRegisterOrFlagList::ListIterator::operator*()
 
 
 LowLevelILRegisterOrFlagList::LowLevelILRegisterOrFlagList(
-    LowLevelILFunction* func, const BNLowLevelILInstruction& instr, size_t count) :
-    m_list(func, instr, count)
+    LowLevelILFunction* func, size_t offset, size_t count) :
+    m_list(func, offset, count)
 {}
 
 
@@ -917,8 +897,8 @@ const SSARegister LowLevelILSSARegisterList::ListIterator::operator*()
 
 
 LowLevelILSSARegisterList::LowLevelILSSARegisterList(
-    LowLevelILFunction* func, const BNLowLevelILInstruction& instr, size_t count) :
-    m_list(func, instr, count & (~1))
+    LowLevelILFunction* func, size_t offset, size_t count) :
+    m_list(func, offset, count & (~1))
 {}
 
 
@@ -976,8 +956,8 @@ const SSARegisterStack LowLevelILSSARegisterStackList::ListIterator::operator*()
 
 
 LowLevelILSSARegisterStackList::LowLevelILSSARegisterStackList(
-    LowLevelILFunction* func, const BNLowLevelILInstruction& instr, size_t count) :
-    m_list(func, instr, count & (~1))
+    LowLevelILFunction* func, size_t offset, size_t count) :
+    m_list(func, offset, count & (~1))
 {}
 
 
@@ -1035,8 +1015,8 @@ const SSAFlag LowLevelILSSAFlagList::ListIterator::operator*()
 
 
 LowLevelILSSAFlagList::LowLevelILSSAFlagList(
-    LowLevelILFunction* func, const BNLowLevelILInstruction& instr, size_t count) :
-    m_list(func, instr, count & (~1))
+    LowLevelILFunction* func, size_t offset, size_t count) :
+    m_list(func, offset, count & (~1))
 {}
 
 
@@ -1094,8 +1074,8 @@ const SSARegisterOrFlag LowLevelILSSARegisterOrFlagList::ListIterator::operator*
 
 
 LowLevelILSSARegisterOrFlagList::LowLevelILSSARegisterOrFlagList(
-    LowLevelILFunction* func, const BNLowLevelILInstruction& instr, size_t count) :
-    m_list(func, instr, count & (~1))
+    LowLevelILFunction* func, size_t offset, size_t count) :
+    m_list(func, offset, count & (~1))
 {}
 
 
@@ -1520,56 +1500,56 @@ SSAFlag LowLevelILInstructionBase::GetRawOperandAsSSAFlag(size_t operand) const
 
 LowLevelILIndexList LowLevelILInstructionBase::GetRawOperandAsIndexList(size_t operand) const
 {
-	return LowLevelILIndexList(function, function->GetRawExpr(operands[operand + 1]), operands[operand]);
+	return LowLevelILIndexList(function, (size_t)operands[operand + 1], (size_t)operands[operand]);
 }
 
 
 LowLevelILIndexMap LowLevelILInstructionBase::GetRawOperandAsIndexMap(size_t operand) const
 {
-	return LowLevelILIndexMap(function, function->GetRawExpr(operands[operand + 1]), operands[operand]);
+	return LowLevelILIndexMap(function, (size_t)operands[operand + 1], (size_t)operands[operand]);
 }
 
 
 LowLevelILInstructionList LowLevelILInstructionBase::GetRawOperandAsExprList(size_t operand) const
 {
 	return LowLevelILInstructionList(
-	    function, function->GetRawExpr(operands[operand + 1]), operands[operand], instructionIndex);
+	    function, (size_t)operands[operand + 1], (size_t)operands[operand], instructionIndex);
 }
 
 
 LowLevelILRegisterOrFlagList LowLevelILInstructionBase::GetRawOperandAsRegisterOrFlagList(size_t operand) const
 {
-	return LowLevelILRegisterOrFlagList(function, function->GetRawExpr(operands[operand + 1]), operands[operand]);
+	return LowLevelILRegisterOrFlagList(function, (size_t)operands[operand + 1], (size_t)operands[operand]);
 }
 
 
 LowLevelILSSARegisterList LowLevelILInstructionBase::GetRawOperandAsSSARegisterList(size_t operand) const
 {
-	return LowLevelILSSARegisterList(function, function->GetRawExpr(operands[operand + 1]), operands[operand]);
+	return LowLevelILSSARegisterList(function, (size_t)operands[operand + 1], (size_t)operands[operand]);
 }
 
 
 LowLevelILSSARegisterStackList LowLevelILInstructionBase::GetRawOperandAsSSARegisterStackList(size_t operand) const
 {
-	return LowLevelILSSARegisterStackList(function, function->GetRawExpr(operands[operand + 1]), operands[operand]);
+	return LowLevelILSSARegisterStackList(function, (size_t)operands[operand + 1], (size_t)operands[operand]);
 }
 
 
 LowLevelILSSAFlagList LowLevelILInstructionBase::GetRawOperandAsSSAFlagList(size_t operand) const
 {
-	return LowLevelILSSAFlagList(function, function->GetRawExpr(operands[operand + 1]), operands[operand]);
+	return LowLevelILSSAFlagList(function, (size_t)operands[operand + 1], (size_t)operands[operand]);
 }
 
 
 LowLevelILSSARegisterOrFlagList LowLevelILInstructionBase::GetRawOperandAsSSARegisterOrFlagList(size_t operand) const
 {
-	return LowLevelILSSARegisterOrFlagList(function, function->GetRawExpr(operands[operand + 1]), operands[operand]);
+	return LowLevelILSSARegisterOrFlagList(function, (size_t)operands[operand + 1], (size_t)operands[operand]);
 }
 
 
 map<uint32_t, int32_t> LowLevelILInstructionBase::GetRawOperandAsRegisterStackAdjustments(size_t operand) const
 {
-	LowLevelILIntegerList list(function, function->GetRawExpr(operands[operand + 1]), operands[operand]);
+	LowLevelILIntegerList list(function, (size_t)operands[operand + 1], (size_t)operands[operand]);
 	map<uint32_t, int32_t> result;
 	for (auto i = list.begin(); i != list.end();)
 	{

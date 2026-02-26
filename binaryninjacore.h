@@ -6445,6 +6445,8 @@ extern "C"
 	BINARYNINJACOREAPI uint64_t* BNLowLevelILGetOperandList(
 	    BNLowLevelILFunction* func, size_t expr, size_t operand, size_t* count);
 	BINARYNINJACOREAPI void BNLowLevelILFreeOperandList(uint64_t* operands);
+	BINARYNINJACOREAPI const uint64_t* BNLowLevelILGetOperandPointer(
+	    BNLowLevelILFunction* func, size_t offset);
 
 	BINARYNINJACOREAPI size_t BNCacheLowLevelILPossibleValueSet(BNLowLevelILFunction* func, BNPossibleValueSet* pvs);
 	BINARYNINJACOREAPI BNPossibleValueSet BNGetCachedLowLevelILPossibleValueSet(BNLowLevelILFunction* func, size_t idx);
@@ -6602,6 +6604,8 @@ extern "C"
 	BINARYNINJACOREAPI uint64_t* BNMediumLevelILGetOperandList(
 	    BNMediumLevelILFunction* func, size_t expr, size_t operand, size_t* count);
 	BINARYNINJACOREAPI void BNMediumLevelILFreeOperandList(uint64_t* operands);
+	BINARYNINJACOREAPI const uint64_t* BNMediumLevelILGetOperandPointer(
+	    BNMediumLevelILFunction* func, size_t offset);
 
 	BINARYNINJACOREAPI size_t BNCacheMediumLevelILPossibleValueSet(BNMediumLevelILFunction* func, BNPossibleValueSet* pvs);
 	BINARYNINJACOREAPI BNPossibleValueSet BNGetCachedMediumLevelILPossibleValueSet(BNMediumLevelILFunction* func, size_t idx);
@@ -6763,6 +6767,8 @@ extern "C"
 	BINARYNINJACOREAPI uint64_t* BNHighLevelILGetOperandList(
 	    BNHighLevelILFunction* func, size_t expr, size_t operand, size_t* count);
 	BINARYNINJACOREAPI void BNHighLevelILFreeOperandList(uint64_t* operands);
+	BINARYNINJACOREAPI const uint64_t* BNHighLevelILGetOperandPointer(
+	    BNHighLevelILFunction* func, size_t offset);
 
 	BINARYNINJACOREAPI size_t BNCacheHighLevelILPossibleValueSet(BNHighLevelILFunction* func, BNPossibleValueSet* pvs);
 	BINARYNINJACOREAPI BNPossibleValueSet BNGetCachedHighLevelILPossibleValueSet(BNHighLevelILFunction* func, size_t idx);

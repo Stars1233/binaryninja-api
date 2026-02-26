@@ -196,8 +196,8 @@ namespace BinaryNinja
 #else
 			Ref<HighLevelILFunction> function;
 #endif
-			BNHighLevelILInstruction instr;
-			size_t operand, count;
+			const uint64_t* cur;
+			size_t count;
 
 			bool operator==(const ListIterator& a) const;
 			bool operator!=(const ListIterator& a) const;
@@ -212,7 +212,7 @@ namespace BinaryNinja
 	  public:
 		typedef ListIterator const_iterator;
 
-		HighLevelILIntegerList(HighLevelILFunction* func, const BNHighLevelILInstruction& instr, size_t count);
+		HighLevelILIntegerList(HighLevelILFunction* func, size_t offset, size_t count);
 
 		const_iterator begin() const;
 		const_iterator end() const;
@@ -252,7 +252,7 @@ namespace BinaryNinja
 	  public:
 		typedef ListIterator const_iterator;
 
-		HighLevelILIndexList(HighLevelILFunction* func, const BNHighLevelILInstruction& instr, size_t count);
+		HighLevelILIndexList(HighLevelILFunction* func, size_t offset, size_t count);
 
 		const_iterator begin() const;
 		const_iterator end() const;
@@ -296,7 +296,7 @@ namespace BinaryNinja
 	  public:
 		typedef ListIterator const_iterator;
 
-		HighLevelILInstructionList(HighLevelILFunction* func, const BNHighLevelILInstruction& instr, size_t count,
+		HighLevelILInstructionList(HighLevelILFunction* func, size_t offset, size_t count,
 		    bool asFullAst, size_t instructionIndex);
 
 		const_iterator begin() const;
@@ -338,7 +338,7 @@ namespace BinaryNinja
 	  public:
 		typedef ListIterator const_iterator;
 
-		HighLevelILSSAVariableList(HighLevelILFunction* func, const BNHighLevelILInstruction& instr, size_t count);
+		HighLevelILSSAVariableList(HighLevelILFunction* func, size_t offset, size_t count);
 
 		const_iterator begin() const;
 		const_iterator end() const;

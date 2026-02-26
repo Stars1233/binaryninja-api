@@ -186,7 +186,9 @@ class BINARYNINJAUIAPI SettingsEditor : public QWidget
 	bool m_settingModified = false;
 
 	int m_minHeight;
-	int m_maxAdjustedWidth;
+	int m_baseHeightForWidth;
+	int m_lastDescWidth = 0;
+	bool m_geometryDirty = false;
 
 	std::pair<bool, std::vector<std::pair<std::string, Json::ValueType>>> isObjectSetting(const Json::Value& value);
 	QTableWidgetItem* getTableItemForValue(const Json::Value& value);
@@ -228,7 +230,6 @@ class BINARYNINJAUIAPI SettingsEditor : public QWidget
 
   public Q_SLOTS:
 	void updateScope(BinaryViewRef, BNSettingsScope);
-	void updateSize();
 	void notifyGeometryChanged();
 	void updateViewMode(bool enabled);
 
@@ -237,6 +238,7 @@ class BINARYNINJAUIAPI SettingsEditor : public QWidget
 
   protected:
 	bool eventFilter(QObject* obj, QEvent* event) override;
+	void resizeEvent(QResizeEvent* event) override;
 	void mousePressEvent(QMouseEvent* event) override;
 	void paintEvent(QPaintEvent* event) override;
 };
@@ -263,6 +265,9 @@ class BINARYNINJAUIAPI SettingsDelegate : public QStyledItemDelegate
 	QTimer* m_updateModelTimer;
 	QTimer* m_resizeTimer;
 	QSize m_lastViewportSize;
+	QModelIndex m_scrollAnchorIdx;
+	int m_scrollAnchorOffset = 0;
+	bool m_resizing = false;
 
 	QTreeView* m_treeView;
 	std::function<void(const QModelIndex& index)> m_hoverAction = nullptr;
@@ -290,7 +295,6 @@ class BINARYNINJAUIAPI SettingsDelegate : public QStyledItemDelegate
   Q_SIGNALS:
 	void refreshAllSettings() const;
 	void scopeChanged(BinaryViewRef, BNSettingsScope);
-	void sizeChanged();
 	void viewModeChanged(bool enabled) const;
 	void notifyNeedsRestart() const;
 	void notifySettingChanged(QString settingId) const;
@@ -321,6 +325,7 @@ class BINARYNINJAUIAPI SettingsTreeView : public QTreeView
 	~SettingsTreeView();
 
 	void updateTheme();
+	void scheduleRelayout() { scheduleDelayedItemsLayout(); }
 
   protected:
 	virtual void resizeEvent(QResizeEvent* event) override;

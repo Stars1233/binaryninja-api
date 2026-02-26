@@ -388,22 +388,11 @@ pub(crate) fn handle_function<R: ReaderType>(
             })?;
             let child_type = child_debug_type.get_type();
 
-            // If this is a typedef, make sure we reference it instead of resolving to the underlying type
-            if let Some(ntr) = child_type.get_named_type_reference() {
-                let typedef_type = Type::named_type_from_type(ntr.name(), &child_type);
-
-                parameters.push(FunctionParameter::new(
-                    typedef_type,
-                    name.unwrap_or_default(),
-                    None,
-                ));
-            } else {
-                parameters.push(FunctionParameter::new(
-                    child_type,
-                    name.unwrap_or_default(),
-                    None,
-                ));
-            }
+            parameters.push(FunctionParameter::new(
+                child_type,
+                name.unwrap_or_default(),
+                None,
+            ));
         } else if child.entry().tag() == constants::DW_TAG_unspecified_parameters {
             variable_arguments = true;
         }

@@ -2787,8 +2787,8 @@ class Arm64MachoRelocationHandler : public RelocationHandler
 		// printf("reloc->GetAddress(): 0x%llX\n", reloc->GetAddress());
 
 		if (info.nativeType == BINARYNINJA_MANUAL_RELOCATION)
-		{  // Magic number defined in MachOView.cpp for tagged pointers
-			*(uint64_t*)dest = info.target;
+		{  // Magic number defined in MachOView.cpp for chained fixups
+			*(uint64_t*)dest = info.target + info.addend;
 		}
 		else if (info.nativeType == ARM64_RELOC_PAGE21)
 		{

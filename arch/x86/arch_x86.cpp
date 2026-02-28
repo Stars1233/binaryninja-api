@@ -4117,10 +4117,10 @@ public:
 		case (uint64_t)-1: // Magic number defined in MachOView.cpp
 			// We need to write a jump absolute `jmp target`
 			dest[0] = '\xe9';
-			((uint32_t*)&dest[1])[0] = target - (uint32_t)reloc->GetAddress() - 5;
+			((uint32_t*)&dest[1])[0] = target + (uint32_t)info.addend - (uint32_t)reloc->GetAddress() - 5;
 			break;
 		case (uint64_t)-2: // Magic number defined in MachOView.cpp
-			dest32[0] = target;
+			dest32[0] = target + (uint32_t)info.addend;
 			break;
 		case GENERIC_RELOC_VANILLA:
 			switch (info.size)
@@ -4307,7 +4307,7 @@ public:
 			dest64[0] = dest64[0] + info.next->target - target;
 			break;
 		case (uint64_t) -2:
-			dest64[0] = reloc->GetTarget();
+			dest64[0] = info.target + info.addend;
 			break;
 		}
 		return true;

@@ -2684,8 +2684,8 @@ public:
 	{
 		auto info = reloc->GetInfo();
 		if (info.nativeType == BINARYNINJA_MANUAL_RELOCATION)
-		{  // Magic number defined in MachOView.cpp for tagged pointers
-			*(uint32_t*)dest = (uint32_t)info.target;
+		{  // Magic number defined in MachOView.cpp for chained fixups
+			*(uint32_t*)dest = (uint32_t)(info.target + info.addend);
 		}
 
 		return true;

@@ -67,6 +67,7 @@ class BINARYNINJAUIAPI MemoryRegionDialog : public QDialog
 	BinaryViewRef m_data;
 	SegmentRef m_segment;
 	std::optional<std::string> m_filePath;
+	bool m_nameManuallyEdited = false;
 
 	void SelectFile();
 	void Submit();

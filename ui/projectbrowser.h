@@ -429,7 +429,7 @@ class BINARYNINJAUIAPI ProjectBrowser: public QWidget, public UIContextNotificat
 private slots:
 	void treeItemDoubleClicked(const QModelIndex& index);
 	void fileDoubleClicked(ProjectFileRef file);
-	void openProjectFile(ProjectFileRef file, bool openWithOptions = false);
+	void openProjectFile(ProjectFileRef file, bool openWithOptions = false, bool forceContainerBrowser = false);
 	void treeItemSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
 	void itemChanged(QStandardItem* item);
 	void handleItemsDropped(Qt::DropAction action, const QList<QString> fileIds, const QList<QString> folderIds, const QList<QUrl> newUrls, ProjectFolderRef newParentFolder);
@@ -445,7 +445,7 @@ protected:
 	void PromptImportFolder(ProjectFolderRef parent = nullptr);
 	void MakeNewFolder(ProjectFolderRef parent = nullptr);
 	void PromptDeleteSelected();
-	void PromptOpenSelected(bool withOptions = false);
+	void PromptOpenSelected(bool withOptions = false, bool forceContainerBrowser = false);
 	void PromptExportSelected();
 	void PromptAnalyzeSelected();
 	void PromptEditProjectDetails();

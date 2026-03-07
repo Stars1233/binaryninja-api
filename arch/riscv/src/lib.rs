@@ -637,6 +637,20 @@ struct RiscVArch<D: RiscVDisassembler> {
     _dis: PhantomData<D>,
 }
 
+impl<D: RiscVDisassembler> RiscVArch<D> {
+    fn decode_zero(data: &[u8]) -> Option<usize> {
+        if <D::CompressedExtension as riscv_dis::StandardExtension>::supported()
+            && data.len() >= 2
+            && data[0] == 0
+            && data[1] == 0
+        {
+            Some(2)
+        } else {
+            None
+        }
+    }
+}
+
 impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
     type Handle = CustomArchitectureHandle<Self>;
 
@@ -687,6 +701,14 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
     }
 
     fn instruction_info(&self, data: &[u8], addr: u64) -> Option<InstructionInfo> {
+        // Special handling for 0000, which is often used by compilers
+        // after jumps/calls in noreturn functions to trap execution
+        if let Some(inst_len) = Self::decode_zero(data) {
+            let mut res = InstructionInfo::new(inst_len, 0);
+            res.add_branch(BranchKind::Unresolved);
+            return Some(res);
+        }
+
         let (inst_len, op) = match D::decode(addr, data) {
             Ok(Instr::Rv16(op)) => (2, op),
             Ok(Instr::Rv32(op)) => (4, op),
@@ -751,6 +773,15 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
     ) -> Option<(usize, Vec<InstructionTextToken>)> {
         use riscv_dis::Operand;
         use InstructionTextTokenKind::*;
+
+        // Special handling for 0000, which is often used by compilers
+        // after jumps/calls in noreturn functions to trap execution
+        if let Some(inst_len) = Self::decode_zero(data) {
+            return Some((
+                inst_len,
+                vec![InstructionTextToken::new("trap", Instruction)],
+            ));
+        }
 
         let inst = match D::decode(addr, data) {
             Ok(i) => i,
@@ -1065,6 +1096,13 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
         addr: u64,
         il: &LowLevelILMutableFunction,
     ) -> Option<(usize, bool)> {
+        // Special handling for 0000, which is often used by compilers
+        // after jumps/calls in noreturn functions to trap execution
+        if let Some(inst_len) = Self::decode_zero(data) {
+            il.trap(0).append();
+            return Some((inst_len, true));
+        }
+
         let max_width = self.default_integer_size();
 
         let (inst_len, op) = match D::decode(addr, data) {

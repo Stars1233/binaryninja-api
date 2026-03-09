@@ -9911,6 +9911,20 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		t = threading.Thread(target=lambda: core.BNSearch(self.handle, json.dumps(query), None, progress_callback_obj, None, match_callback_obj))
 		return self.QueueGenerator(t, results)
 
+	@staticmethod
+	def detect_search_mode(pattern: str, raw: bool = False) -> str:
+		"""
+		Detects the search mode that would be used by :py:meth:`search` for the given pattern.
+
+		:param str pattern: The search pattern to analyze.
+		:param bool raw: Whether to interpret the pattern as a raw string (default: False).
+		:return: The detected search mode: ``"FlexHex"``, ``"Regex"``, or ``"Raw String"``.
+		:rtype: str
+		"""
+		query = json.dumps({"pattern": pattern, "raw": raw})
+		result = core.BNDetectSearchMode(query)
+		return result
+
 	def reanalyze(self) -> None:
 		"""
 		``reanalyze`` causes all functions to be reanalyzed. This function does not wait for the analysis to finish.

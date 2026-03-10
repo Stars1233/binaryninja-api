@@ -159,6 +159,7 @@ static string GetOperator(char elm1, char elm2)
 	case hash('a','N'): return "&=";  // &=
 	case hash('o','R'): return "|=";  // |=
 	case hash('e','O'): return "^=";  // ^=
+	case hash('s','s'): return "<=>"; // <=>
 	case hash('d','l'): return "delete";   // delete
 	case hash('d','a'): return "delete[]"; // delete[]
 	case hash('n','w'): return "new";      // new
@@ -503,8 +504,10 @@ const DemangledTypeNode& DemangleGNU3::DemangleTemplateSubstitution()
 	}
 	else if (isdigit(elm))
 	{
-		m_reader.Consume();
-		number = elm - '0' + 1;
+		size_t n = 0;
+		while (isdigit(m_reader.Peek()))
+			n = n * 10 + (m_reader.Read() - '0');
+		number = n + 1;
 	}
 	else if (isupper(elm))
 	{
@@ -660,8 +663,43 @@ DemangledTypeNode DemangleGNU3::DemangleType()
 	}
 	case 'C': //TODO:complex
 	case 'G': //TODO:imaginary
-	case 'U': //TODO:vendor extended type
 		throw DemangleException();
+	case 'U':
+	{
+		// Vendor-extended type: U <source-name> [<template-args>] <type>
+		// Commonly used for Objective-C block pointers:
+		//   U13block_pointer <function-type>  ->  "void (params...) block_pointer"
+		string extName = DemangleSourceName();
+		if (m_reader.Peek() == 'I')
+		{
+			m_reader.Consume();
+			vector<string> targs;
+			DemangleTemplateArgs(targs);
+			if (!targs.empty())
+				extName += GetTemplateString(targs);
+		}
+		DemangledTypeNode inner = DemangleType();
+		type = CreateUnknownType(inner.GetString() + " " + extName);
+		substitute = true;
+		break;
+	}
+	case 'u':
+	{
+		// Vendor extended type: u <source-name> [<template-args>]
+		// e.g. u14__remove_cvref, u20__remove_reference_t
+		string extName = DemangleSourceName();
+		if (m_reader.Peek() == 'I')
+		{
+			m_reader.Consume();
+			vector<string> targs;
+			DemangleTemplateArgs(targs);
+			if (!targs.empty())
+				extName += GetTemplateString(targs);
+		}
+		type = CreateUnknownType(extName);
+		substitute = true;
+		break;
+	}
 	case 'v': type = DemangledTypeNode::VoidType(); break;
 	case 'w': type = DemangledTypeNode::IntegerType(4, false, "wchar_t"); break; //TODO: verify
 	case 'b': type = DemangledTypeNode::BoolType(); break;
@@ -715,7 +753,7 @@ DemangledTypeNode DemangleGNU3::DemangleType()
 		case 'p': type = DemangleType(); break;
 		case 't':
 		case 'T':
-			type = CreateUnknownType(DemangleExpression());
+			type = CreateUnknownType("decltype(" + DemangleExpression() + ")");
 			if (m_reader.Read() != 'E')
 				throw DemangleException();
 			break;
@@ -1121,6 +1159,7 @@ DemangledTypeNode DemangleGNU3::DemangleUnqualifiedName()
 	case hash('a','N'): // &=
 	case hash('o','R'): // |=
 	case hash('e','O'): // ^=
+	case hash('s','s'): // <=>
 		outType = CreateUnknownType("operator" + GetOperator(elm1, elm2));
 		outType.SetNameType(GetNameType(elm1, elm2));
 		break;
@@ -1161,6 +1200,19 @@ DemangledTypeNode DemangleGNU3::DemangleUnqualifiedName()
 		outType = CreateUnknownType(m_lastName);
 		outType.SetNameType(ConstructorNameType);
 		break;
+	case hash('C','I'): // Inheriting constructor: CI1 <type> or CI2 <type>
+	{
+		char kind = m_reader.Read(); // '1' or '2'
+		if (kind != '1' && kind != '2')
+			throw DemangleException();
+		// Save m_lastName: parsing the inherited-class type will overwrite it
+		string savedLastName = m_lastName;
+		DemangleType();
+		m_lastName = savedLastName;
+		outType = CreateUnknownType(m_lastName);
+		outType.SetNameType(ConstructorNameType);
+		break;
+	}
 	case hash('D','0'): //Destructor
 	case hash('D','1'):
 	case hash('D','2'):
@@ -1237,12 +1289,25 @@ DemangledTypeNode DemangleGNU3::DemangleUnqualifiedName()
 			string name = DemangleSourceName();
 			if (name.size() > 11 && name.substr(0, 11) == "_GLOBAL__N_")
 				name = "(anonymous namespace)";
+			m_lastName = name;
 			outType = CreateUnknownType(name);
 		}
 		else
 		{
 			throw DemangleException();
 		}
+	}
+	// Consume ABI tags: B <source-name>  =>  [abi:tagname]
+	// Applies to source names, operator names, and unnamed types.
+	while (m_reader.Peek() == 'B')
+	{
+		m_reader.Consume();
+		string tag = "[abi:" + DemangleSourceName() + "]";
+		auto qn = outType.GetTypeName();
+		if (!qn.empty())
+			qn.back() += tag;
+		outType.SetTypeName(std::move(qn));
+		m_lastName = qn.empty() ? tag : qn.back();
 	}
 	dedent();
 	return outType;
@@ -1511,7 +1576,10 @@ string DemangleGNU3::DemangleExpression()
 		DemangledTypeNode type = DemangleType();
 		out = type.GetString();
 		if (m_reader.Peek() == '_')
+		{
+			m_reader.Consume(); // consume '_' delimiter before expression list
 			out += " (" + DemangleExpressionList() + ")";
+		}
 		else
 			out += " (" + DemangleExpression() + ")";
 		return out;
@@ -1541,10 +1609,12 @@ string DemangleGNU3::DemangleExpression()
 
 		if (elm2 == 'L')
 		{
+			// fL <L-1 num> p <CV> [<prm-2 num>] _
+			// When listNumber is out of range (e.g. fL used inside a decltype return
+			// type before function params are known), the fallback paths below produce
+			// a placeholder string "fp" / "fpN".
 			listNumber = DemangleNumber() + 1;
-			if (listNumber < 0 ||
-			    (uint64_t)listNumber >= (uint64_t)m_functionSubstitute.size() ||
-			    m_reader.Read() != 'p')
+			if (listNumber < 0 || m_reader.Read() != 'p')
 				throw DemangleException();
 		}
 		DemangleCVQualifiers(cnst, vltl, rstrct);
@@ -1752,7 +1822,6 @@ DemangledTypeNode DemangleGNU3::DemangleNestedName()
 	DemangledTypeNode newType;
 	bool base = false;
 	bool isTemplate = false;
-	bool hasB = false;
 	//[<CV-qualifiers>]
 	DemangleCVQualifiers(cnst, vltl, rstrct);
 
@@ -1771,16 +1840,15 @@ DemangledTypeNode DemangleGNU3::DemangleNestedName()
 
 	while (m_reader.Peek() != 'E')
 	{
-		if (m_reader.Peek() == 'B')
-		{
-			hasB = true;
-			break;
-		}
 		isTemplate = false;
 		substitute = true;
 		size_t startSize = m_templateSubstitute.size();
 		switch (m_reader.Read())
 		{
+		case 'M': // <data-member-prefix>: closure/lambda inside a data member initializer
+			// 'M' follows the member name and marks that subsequent components are
+			// scoped inside that data member. Just consume it; the name is already captured.
+			continue;
 		case 'S': //<substitution>
 			newType = DemangleSubstitution();
 			substitute = false;
@@ -1820,6 +1888,23 @@ DemangledTypeNode DemangleGNU3::DemangleNestedName()
 			type.SetNTR(type.GetNTRClass(), newName);
 			type.SetHasTemplateArguments(false);
 		}
+		// Consume any ABI tags (B <source-name>) following this name component.
+		// These appear as suffixes on <unqualified-name> in the Itanium ABI:
+		//   <abi-tags> ::= <abi-tag> [<abi-tags>]
+		//   <abi-tag>  ::= B <source-name>
+		// We append them as "[abi:tag]" to the last name segment for display.
+		// Save/restore m_lastName so that a following C1/D1 ctor/dtor name
+		// still resolves to the class name, not the ABI tag string.
+		while (m_reader.Peek() == 'B')
+		{
+			m_reader.Consume();
+			string savedLastName = m_lastName;
+			string abiTag = DemangleSourceName();
+			m_lastName = savedLastName;
+			auto& segs = type.GetMutableTypeName();
+			if (!segs.empty())
+				segs.back() += "[abi:" + abiTag + "]";
+		}
 		if (substitute && m_reader.Peek() != 'E')
 		{
 			//Those template arguments were not the primary arguments so clear them from the sub listType
@@ -1831,8 +1916,7 @@ DemangledTypeNode DemangleGNU3::DemangleNestedName()
 		}
 		MyLogDebug("%s:: '%s'\n", __FUNCTION__, m_reader.GetRaw().c_str());
 	}
-	if (!hasB)
-		m_reader.Consume();
+	m_reader.Consume();
 
 	if (cnst || vltl || rstrct)
 	{
@@ -2022,38 +2106,223 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(QualifiedName& varName)
 		case 'A': //TODO hidden alias
 			LogWarn("Unsupported demangle type: hidden alias\n");
 			throw DemangleException();
-		case 'R': //TODO reference temporaries
-			LogWarn("Unsupported demangle type: reference temporary\n");
-			throw DemangleException();
-		case 'T': //TODO transaction clones
-			LogWarn("Unsupported demangle type: transaction clone\n");
-			throw DemangleException();
+		case 'R': // GR <object name> [<seq-id>] _  # reference temporary
+		{
+			// <object name> is a <name> production (nested, local, or unscoped).
+			// For local names (Z prefix), DemangleLocalName consumes the trailing '_'
+			// as a zero-discriminator, so we only consume '_' if it's still present.
+			DemangledTypeNode nameNode = DemangleName();
+			// Consume optional base-36 seq-id (digits + uppercase A-Z) before '_'.
+			string seqId;
+			while (m_reader.Length() > 0 && m_reader.Peek() != '_')
+				seqId += m_reader.Read();
+			if (m_reader.Length() > 0)
+				m_reader.Consume(); // consume '_'
+			string result = "reference_temporary_for_" + nameNode.GetString();
+			if (!seqId.empty())
+				result += "[" + seqId + "]";
+			varName.push_back(result);
+			return DemangledTypeNode::NamedType(UnknownNamedTypeClass, varName);
+		}
+		case 'T': // transaction clone: GTt<encoding> (safe) or GTn<encoding> (non-safe)
+		{
+			// consume the 't' (transaction-safe) or 'n' (non-transaction-safe) qualifier
+			char kind = m_reader.Read();
+			if (kind != 't' && kind != 'n')
+				throw DemangleException();
+			oldTopLevel = m_topLevel;
+			m_topLevel = false;
+			DemangledTypeNode t = DemangleSymbol(name);
+			m_topLevel = oldTopLevel;
+			return DemangledTypeNode::NamedType(UnknownNamedTypeClass,
+				_STD_VECTOR<_STD_STRING>{name.GetString() + " [transaction clone]" + t.GetStringAfterName()});
+		}
 		case 'V':
 		{
-			DemangledTypeNode t = DemangleSymbol(name);
-			varName.push_back("guard_variable_for_" + t.GetTypeAndName(name));
-			type = DemangledTypeNode::IntegerType(1, false);
-			if (m_reader.Length() == 0)
-				return type;
-			//function parameters
-			string paramList;
-			paramList += "(";
-			bool first = true;
-			do
+			// Disambiguate: Intel Vector Function ABI (_ZGV<isa>...) vs guard variable (_ZGV<symbol>).
+			// Intel Vector ABI isa codes: b c d e x y Y z Z
+			// Guard variable encoding starts with: N (nested), L (local), S (substitution), digit, etc.
+			char peekChar = m_reader.Peek();
+			bool isVectorABI = (peekChar == 'b' || peekChar == 'c' || peekChar == 'd' || peekChar == 'e' ||
+			                    peekChar == 'x' || peekChar == 'y' || peekChar == 'Y');
+			// 'z'/'Z' are ambiguous: also used as Z-local-name prefix in guard variables
+			// (e.g. _ZGVZN1A1BEvE1A = guard variable for A::B()::A).
+			// Disambiguate by verifying the full Vector ABI parameter pattern:
+			// <isa><mask(M|N)><vlen(digits)><vparams><'_'>  where vparams are only
+			// from {v, l, u, R, L, s, 0-9} and are immediately followed by '_'.
+			// A guard variable's inner symbol would have source-name chars (e.g. 'm', 'a', etc.)
+			// that don't appear in valid vparameter sequences.
+			if (!isVectorABI && (peekChar == 'z' || peekChar == 'Z'))
 			{
-				if (m_reader.Peek() == 'v')
+				_STD_STRING ahead = m_reader.PeekString(std::min((size_t)32, m_reader.Length()));
+				if (ahead.size() >= 3 && (ahead[1] == 'M' || ahead[1] == 'N'))
+				{
+					size_t pos = 2;
+					while (pos < ahead.size() && isdigit((unsigned char)ahead[pos]))
+						pos++;
+					if (pos > 2) // had at least one vlen digit
+					{
+						// Scan through vparameter chars; valid ones are v/l/u/R/L and
+						// optional stride digits/'s'. Anything else means guard variable.
+						bool allVparam = true;
+						while (pos < ahead.size() && ahead[pos] != '_')
+						{
+							char c = ahead[pos];
+							if (c == 'v' || c == 'l' || c == 'u' || c == 'R' ||
+							    c == 'L' || c == 's' || isdigit((unsigned char)c))
+								pos++;
+							else
+							{
+								allVparam = false;
+								break;
+							}
+						}
+						isVectorABI = allVparam && pos < ahead.size() && ahead[pos] == '_';
+					}
+				}
+			}
+			if (!isVectorABI)
+			{
+				// Guard variable (original behavior)
+				DemangledTypeNode t = DemangleSymbol(name);
+				varName.push_back("guard_variable_for_" + t.GetTypeAndName(name));
+				type = DemangledTypeNode::IntegerType(1, false);
+				if (m_reader.Length() == 0)
+					return type;
+				//function parameters
+				string paramList;
+				paramList += "(";
+				bool first = true;
+				do
+				{
+					if (m_reader.Peek() == 'v')
+					{
+						m_reader.Consume();
+						break;
+					}
+					if (!first)
+						paramList += ", ";
+					paramList += DemangleTypeString();
+				}while (m_reader.Peek() != 'E');
+				m_reader.Consume();
+				varName.back() += paramList + ")";
+				varName.push_back(DemangleSourceName());
+
+				return type;
+			}
+
+			// Intel Vector Function ABI:
+			// GV <isa> <mask> <vlen> <vparameters> '_' <routine_name>
+
+			// Parse ISA
+			char isa = m_reader.Read();
+			const char* isaName;
+			switch (isa)
+			{
+			case 'b': isaName = "SSE2"; break;
+			case 'c': isaName = "SSE4.2"; break;
+			case 'd': isaName = "AVX"; break;
+			case 'e': isaName = "AVX512"; break;
+			case 'x': isaName = "SSE2"; break;
+			case 'y': isaName = "AVX"; break;
+			case 'Y': isaName = "AVX2"; break;
+			case 'z': isaName = "MIC"; break;
+			case 'Z': isaName = "AVX512"; break;
+			default:  isaName = "unknown"; break;
+			}
+
+			// Parse mask: 'M' (mask) or 'N' (nomask)
+			char maskChar = m_reader.Read();
+			if (maskChar != 'M' && maskChar != 'N')
+				throw DemangleException();
+			const char* maskName = (maskChar == 'M') ? "mask" : "nomask";
+
+			// Parse vlen: non-negative decimal integer
+			if (!isdigit(m_reader.Peek()))
+				throw DemangleException();
+			string vlenStr;
+			while (isdigit(m_reader.Peek()))
+				vlenStr += m_reader.Read();
+
+			// Parse vparameters until '_' separator
+			// <vparameter> <opt-align>
+			// <vparameter> ::= ('l'|'R'|'U'|'L') <stride>  |  'u'  |  'v'
+			// <stride>     ::= empty | 's' <decimal> | <number>
+			// <opt-align>  ::= empty | 'a' <decimal>
+			string paramsStr;
+			bool firstParam = true;
+			while (m_reader.Length() > 0 && m_reader.Peek() != '_')
+			{
+				if (!firstParam)
+					paramsStr += ',';
+				firstParam = false;
+
+				char pc = m_reader.Read();
+				bool hasStride = false;
+				switch (pc)
+				{
+				case 'l': paramsStr += "linear"; hasStride = true; break;
+				case 'R': paramsStr += "linear(ref)"; hasStride = true; break;
+				case 'U': paramsStr += "linear(uval)"; hasStride = true; break;
+				case 'L': paramsStr += "linear(val)"; hasStride = true; break;
+				case 'u': paramsStr += "uniform"; break;
+				case 'v': paramsStr += "vector"; break;
+				default:  throw DemangleException();
+				}
+
+				if (hasStride)
+				{
+					if (m_reader.Peek() == 's')
+					{
+						// linear_step passed as another argument at given 0-based position
+						m_reader.Consume();
+						string argPos;
+						while (isdigit(m_reader.Peek()))
+							argPos += m_reader.Read();
+						paramsStr += "(step=arg" + argPos + ")";
+					}
+					else if (isdigit(m_reader.Peek()) || m_reader.Peek() == 'n')
+					{
+						// Literal stride; 'n' prefix means negative
+						string stride = DemangleNumberAsString();
+						paramsStr += "(step=" + stride + ")";
+					}
+					// else: empty stride means step of 1
+				}
+
+				// Optional alignment: 'a' <non-negative-decimal>
+				if (m_reader.Peek() == 'a')
 				{
 					m_reader.Consume();
-					break;
+					while (isdigit(m_reader.Peek()))
+						m_reader.Read();
 				}
-				if (!first)
-					paramList += ", ";
-				paramList += DemangleTypeString();
-			}while (m_reader.Peek() != 'E');
-			m_reader.Consume();
-			varName.back() += paramList + ")";
-			varName.push_back(DemangleSourceName());
-			return type;
+			}
+
+			// Consume the '_' separator between parameters and routine name
+			if (m_reader.Length() == 0 || m_reader.Read() != '_')
+				throw DemangleException();
+
+			// Remainder is the scalar routine name (may be a plain C name or a _Z mangled name)
+			string routineName = m_reader.ReadString(m_reader.Length());
+
+			// Build the human-readable annotation
+			string annotation = " [SIMD:";
+			annotation += isaName;
+			annotation += ',';
+			annotation += maskName;
+			annotation += ",N=";
+			annotation += vlenStr;
+			if (!paramsStr.empty())
+			{
+				annotation += ",(";
+				annotation += paramsStr;
+				annotation += ')';
+			}
+			annotation += ']';
+
+			return DemangledTypeNode::NamedType(UnknownNamedTypeClass,
+				_STD_VECTOR<_STD_STRING>{routineName + annotation});
 		}
 		default:
 			throw DemangleException();
@@ -2075,9 +2344,38 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(QualifiedName& varName)
 		m_reader.Consume();
 		switch (m_reader.Read())
 		{
-		case 'c':
-			LogWarn("Unsupported: 'virtual function covariant override thunk'\n");
-			throw DemangleException();
+		case 'c': // covariant return thunk: Tc <call-offset> <call-offset> <encoding>
+		{
+			// consume a call-offset: h <number> _  or  v <number> _ <number> _
+			auto consumeCallOffset = [&]() {
+				char kind = m_reader.Read();
+				if (kind == 'h')
+				{
+					DemangleNumberAsString();
+					if (m_reader.Read() != '_')
+						throw DemangleException();
+				}
+				else if (kind == 'v')
+				{
+					DemangleNumberAsString();
+					if (m_reader.Read() != '_')
+						throw DemangleException();
+					DemangleNumberAsString();
+					if (m_reader.Read() != '_')
+						throw DemangleException();
+				}
+				else
+					throw DemangleException();
+			};
+			consumeCallOffset(); // this-pointer adjustment
+			consumeCallOffset(); // return-value adjustment
+			oldTopLevel = m_topLevel;
+			m_topLevel = false;
+			DemangledTypeNode t = DemangleSymbol(name);
+			m_topLevel = oldTopLevel;
+			return DemangledTypeNode::NamedType(UnknownNamedTypeClass,
+				_STD_VECTOR<_STD_STRING>{"covariant_return_thunk_to_" + name.GetString() + t.GetStringAfterName()});
+		}
 		case 'C':
 		{
 			DemangledTypeNode t = DemangleType();
@@ -2106,11 +2404,17 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(QualifiedName& varName)
 			return DemangledTypeNode::NamedType(UnknownNamedTypeClass,
 				_STD_VECTOR<_STD_STRING>{"non-virtual_thunk_to_" + name.GetString() + t.GetStringAfterName()});
 		}
-		case 'H':
-			LogWarn("Unsupported: 'TLS init function'\n");
-			throw DemangleException();
+		case 'H': // TLS init function
+		{
+			oldTopLevel = m_topLevel;
+			m_topLevel = false;
+			DemangledTypeNode t = DemangleSymbol(name);
+			m_topLevel = oldTopLevel;
+			return DemangledTypeNode::NamedType(UnknownNamedTypeClass,
+				_STD_VECTOR<_STD_STRING>{"tls_init_function_for_" + t.GetTypeAndName(name)});
+		}
 		case 'I':
-			return DemangledTypeNode::NamedType(StructNamedTypeClass,
+			return DemangledTypeNode::NamedType(UnknownNamedTypeClass,
 				_STD_VECTOR<_STD_STRING>{"typeinfo_for_" + DemangleTypeString()});
 		case 'J':
 			LogWarn("Unsupported: 'java class'\n");
@@ -2128,7 +2432,7 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(QualifiedName& varName)
 			return DemangledTypeNode::NamedType(StructNamedTypeClass,
 				_STD_VECTOR<_STD_STRING>{"VTT_for_" + t.GetString()});
 		}
-		case 'v':  //TODO: Convert to whatever the actual type is!
+		case 'v': // virtual thunk
 		{
 			DemangleNumberAsString();
 			if (m_reader.Read() != '_')
@@ -2146,9 +2450,15 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(QualifiedName& varName)
 		case 'V': //Vtable
 			return DemangledTypeNode::NamedType(StructNamedTypeClass,
 				_STD_VECTOR<_STD_STRING>{"vtable_for_" + DemangleTypeString()});
-		case 'W':
-			MyLogDebug("Unsupported: 'TLS wrapper function'\n");
-			throw DemangleException();
+		case 'W': // TLS wrapper function
+		{
+			oldTopLevel = m_topLevel;
+			m_topLevel = false;
+			DemangledTypeNode t = DemangleSymbol(name);
+			m_topLevel = oldTopLevel;
+			return DemangledTypeNode::NamedType(UnknownNamedTypeClass,
+				_STD_VECTOR<_STD_STRING>{"tls_wrapper_function_for_" + t.GetTypeAndName(name)});
+		}
 		default:
 			throw DemangleException();
 		}
@@ -2177,18 +2487,20 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(QualifiedName& varName)
 		m_reader.Consume();
 		// TODO: If we get here we have a return type. What can we do with this info?
 	}
-	if (m_reader.Peek() == 'B')
+	// Consume any ABI tags on the function/data name (e.g. B5cxx11).
+	// For nested names these are already consumed inside DemangleNestedName();
+	// this handles the global-scope case.
+	while (m_reader.Peek() == 'B')
 	{
 		m_reader.Consume();
-		DemangledTypeNode t = DemangleUnqualifiedName();
-
-		if (t.GetString() == "cxx11")
-		{
-			static const QualifiedName stdCxx11StringName(vector<string>{"std", "cxx11", "string"});
-			returnType = CreateUnknownType(stdCxx11StringName);
-		}
+		string savedLastName = m_lastName;
+		string abiTag = DemangleSourceName();
+		m_lastName = savedLastName;
+		auto& segs = type.GetMutableTypeName();
+		if (!segs.empty())
+			segs.back() += "[abi:" + abiTag + "]";
 	}
-	else if (m_isOperatorOverload ||
+	if (m_isOperatorOverload ||
 		type.GetNameType() == ConstructorNameType ||
 		type.GetNameType() == DestructorNameType)
 	{
@@ -2328,6 +2640,66 @@ bool DemangleGNU3Static::DemangleGlobalHeader(string& name, string& header)
 
 bool DemangleGNU3Static::DemangleStringGNU3(Architecture* arch, const string& name, Ref<Type>& outType, QualifiedName& outVarName)
 {
+	// Handle _block_invoke[.N] and _block_invoke_N suffixes (Clang/Apple block invocations).
+	// E.g. ____ZN4dyld5_mainEPK12macho_headermiPPKcS5_S5_Pm_block_invoke.110
+	//   -> "invocation_function_for_block_in_dyld::_main(...)"
+	static const string blockInvokeSuffix = "_block_invoke";
+	size_t blockPos = name.rfind(blockInvokeSuffix);
+	if (blockPos != string::npos)
+	{
+		// Verify the suffix is _block_invoke optionally followed by [._]<digits> only
+		string tail = name.substr(blockPos + blockInvokeSuffix.size());
+		bool validSuffix = tail.empty();
+		if (!validSuffix && (tail[0] == '.' || tail[0] == '_'))
+		{
+			size_t i = 1;
+			while (i < tail.size() && isdigit((unsigned char)tail[i]))
+				i++;
+			validSuffix = (i == tail.size() && i > 1);
+		}
+		if (validSuffix)
+		{
+			// Extract the base symbol: everything before _block_invoke
+			string base = name.substr(0, blockPos);
+			// Normalize leading underscores: find 'Z' after underscores, keep one '_' before it
+			size_t zPos = base.find_first_not_of('_');
+			if (zPos != string::npos && base[zPos] == 'Z')
+			{
+				string normalized = "_" + base.substr(zPos);
+				Ref<Type> baseType;
+				QualifiedName baseName;
+				if (DemangleStringGNU3(arch, normalized, baseType, baseName))
+				{
+					outVarName.clear();
+					outVarName.push_back("invocation_function_for_block_in_" + baseName.GetString());
+					outType = baseType;
+					return true;
+				}
+			}
+		}
+	}
+
+	// Handle macOS thread-local variable initializer suffix: $tlv$init
+	// E.g. __ZL9recursive$tlv$init -> demangle "__ZL9recursive" then annotate.
+	static const string tlvInitSuffix = "$tlv$init";
+	if (name.size() > tlvInitSuffix.size() &&
+	    name.compare(name.size() - tlvInitSuffix.size(), tlvInitSuffix.size(), tlvInitSuffix) == 0)
+	{
+		string base = name.substr(0, name.size() - tlvInitSuffix.size());
+		Ref<Type> baseType;
+		QualifiedName baseName;
+		if (DemangleStringGNU3(arch, base, baseType, baseName))
+		{
+			outVarName = baseName;
+			if (outVarName.size() > 0)
+				outVarName[outVarName.size() - 1] += "$tlv$init";
+			else
+				outVarName.push_back("$tlv$init");
+			outType = baseType;
+			return true;
+		}
+	}
+
 	string encoding = name;
 	string header;
 	bool foundHeader = DemangleGlobalHeader(encoding, header);

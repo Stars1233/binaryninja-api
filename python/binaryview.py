@@ -2532,25 +2532,135 @@ class AdvancedILFunctionList:
 			yield self._func_queue.popleft().function
 
 
+@dataclass(frozen=True)
+class MemoryRegionInfo:
+	"""Snapshot of a memory region's properties at the time of query.
+
+	This is a frozen value type. Modifying the memory map will not update existing
+	MemoryRegionInfo instances. To mutate a region, use the corresponding MemoryMap methods
+	(e.g., ``memory_map.set_memory_region_flags(region.name, new_flags)``).
+	"""
+	name: str
+	display_name: str
+	start: int
+	length: int
+	flags: SegmentFlag
+	enabled: bool
+	rebaseable: bool
+	fill: int
+	has_target: bool
+	absolute_address_mode: bool
+	local: bool
+
+	@staticmethod
+	def _from_core_struct(r) -> 'MemoryRegionInfo':
+		"""Construct a MemoryRegionInfo from a core FFI struct."""
+		return MemoryRegionInfo(
+			name=core.pyNativeStr(r.name),
+			display_name=core.pyNativeStr(r.displayName),
+			start=r.start, length=r.length,
+			flags=SegmentFlag(r.flags), enabled=r.enabled,
+			rebaseable=r.rebaseable, fill=r.fill,
+			has_target=r.hasTarget,
+			absolute_address_mode=r.absoluteAddressMode,
+			local=r.local,
+		)
+
+	@property
+	def end(self) -> int:
+		return self.start + self.length
+
+	def __repr__(self):
+		r = "r" if self.flags & SegmentFlag.SegmentReadable else "-"
+		w = "w" if self.flags & SegmentFlag.SegmentWritable else "-"
+		x = "x" if self.flags & SegmentFlag.SegmentExecutable else "-"
+		status = ""
+		if not self.enabled:
+			status = " | DISABLED"
+		return f"<MemoryRegion: '{self.name}' {self.start:#x}-{self.end:#x} {r}{w}{x}{status}>"
+
+
+@dataclass(frozen=True)
+class ResolvedRange:
+	"""A computed, non-overlapping interval in the resolved address space.
+
+	Overlapping raw regions are split into disjoint intervals. Each
+	ResolvedRange holds the regions that cover it, ordered by precedence,
+	with the active region first. The ``active_region`` property returns
+	the highest-precedence region.
+	"""
+	start: int
+	length: int
+	regions: List[MemoryRegionInfo]
+
+	@property
+	def end(self) -> int:
+		return self.start + self.length
+
+	@property
+	def active_region(self) -> Optional[MemoryRegionInfo]:
+		"""The highest-priority region at this range, or None if empty."""
+		return self.regions[0] if self.regions else None
+
+	@property
+	def name(self) -> Optional[str]:
+		"""Name of the active region, or None if empty."""
+		r = self.active_region
+		return r.name if r else None
+
+	@property
+	def flags(self) -> SegmentFlag:
+		"""Flags of the active (highest-priority) region."""
+		r = self.active_region
+		return r.flags if r else SegmentFlag(0)
+
+	def __repr__(self):
+		r = "r" if self.flags & SegmentFlag.SegmentReadable else "-"
+		w = "w" if self.flags & SegmentFlag.SegmentWritable else "-"
+		x = "x" if self.flags & SegmentFlag.SegmentExecutable else "-"
+		return f"<ResolvedRange: {self.start:#x}-{self.end:#x} {r}{w}{x}, {len(self.regions)} region(s)>"
+
+	def __contains__(self, addr: int) -> bool:
+		return self.start <= addr < self.end
+
+
 class MemoryMap:
 	r"""
-		The MemoryMap object provides access to the system-level memory map describing how a BinaryView is loaded
-		into memory. Each BinaryView exposes its portion of the MemoryMap through the Segments defined within that view.
+		Live proxy to the memory map of a BinaryView.
 
-		**Architecture Note:** This Python MemoryMap object is a proxy that accesses the BinaryView's current
-		MemoryMap state through the FFI boundary. The proxy provides a simple mutable interface: when you call
-		modification operations (``add_memory_region``, ``remove_memory_region``, etc.), the proxy automatically
-		accesses the updated MemoryMap. Internally, the core uses immutable copy-on-write data structures, but
-		the proxy abstracts this away.
+		A MemoryMap describes how a BinaryView is loaded into memory. It contains
+		*regions*, which are raw and possibly overlapping memory definitions, and
+		exposes *resolved ranges*, which are a computed disjoint view of the address
+		space produced by splitting overlapping regions.
 
-		When you access ``view.memory_map``, you always see the current state. For lock-free access during analysis,
-		AnalysisContext provides memory layout query methods (``is_valid_offset()``, ``is_offset_readable()``,
-		``get_start()``, ``get_length()``, etc.) that operate on an immutable snapshot of the MemoryMap cached when
-		the analysis was initiated.
+		Each BinaryView contributes its portion of the overall system memory layout
+		through the segments and regions defined within that view. When regions
+		overlap, the most recently added region takes precedence by default. Mutation
+		is always performed by region name.
 
-		A MemoryMap can contain multiple, arbitrarily overlapping memory regions. When modified, address space
-		segmentation is automatically managed. If multiple regions overlap, the most recently added region takes
-		precedence by default.
+		**Container semantics:** Iteration (``__iter__``), length (``__len__``), and
+		indexing (``__getitem__``) operate on *resolved ranges*, the computed
+		non-overlapping view of the address space. Configured regions are accessed
+		explicitly via ``regions``, ``get_region``, and name-based membership
+		(``__contains__``).
+
+		**Snapshot semantics:** ``MemoryRegionInfo`` and ``ResolvedRange`` objects
+		are frozen snapshot value types captured at query time. They are not updated
+		by later mutations to the memory map. The proxy itself (``view.memory_map``)
+		always reflects the current state.
+
+		**Architecture note:** This Python ``MemoryMap`` object is a proxy that
+		accesses the BinaryView's current memory map state through the FFI boundary.
+		Internally, the core uses immutable copy-on-write data structures to manage
+		memory map updates, but the proxy presents a simple mutable interface.
+
+		**Analysis note:** For lock-free access during analysis, ``AnalysisContext``
+		provides memory layout query methods such as ``is_valid_offset()``,
+		``is_offset_readable()``, ``get_start()``, and ``get_length()``. These
+		operate on an immutable snapshot of the MemoryMap captured when analysis
+		begins.
+
+		.. note:: Repeated property access, for example ``regions`` or ``ranges``, returns fresh snapshots of the current memory map state.
 
 		All MemoryMap APIs support undo and redo operations. During BinaryView::Init, these APIs should be used conditionally:
 
@@ -2571,66 +2681,66 @@ class MemoryMap:
 		>>> segments.append(start=rom_base, length=0x1000, flags=SegmentFlag.SegmentReadable)
 		>>> view = load(bytes.fromhex('5054ebfe'), options={'loader.imageBase': base, 'loader.platform': 'x86', 'loader.segments': json.dumps(segments)})
 		>>> view.memory_map
-			<region: 0x10000 - 0x10004>
+			<range: 0x10000 - 0x10004>
 				size: 0x4
-				objects:
+				regions:
 					'origin<Mapped>@0x0' | Mapped<Absolute> | <r-x>
 
-			<region: 0xc0000000 - 0xc0001000>
+			<range: 0xc0000000 - 0xc0001000>
 				size: 0x1000
-				objects:
+				regions:
 					'origin<Mapped>@0xbfff0000' | Unmapped | <r--> | FILL<0x0>
 
-			<region: 0xc0001000 - 0xc0001014>
+			<range: 0xc0001000 - 0xc0001014>
 				size: 0x14
-				objects:
+				regions:
 					'origin<Mapped>@0xbfff1000' | Unmapped | <---> | FILL<0x0>
 		>>> view.memory_map.add_memory_region("rom", rom_base, b'\x90' * 4096, SegmentFlag.SegmentReadable | SegmentFlag.SegmentExecutable)
 		True
 		>>> view.memory_map
-			<region: 0x10000 - 0x10004>
+			<range: 0x10000 - 0x10004>
 				size: 0x4
-				objects:
+				regions:
 					'origin<Mapped>@0x0' | Mapped<Absolute> | <r-x>
 
-			<region: 0xc0000000 - 0xc0001000>
+			<range: 0xc0000000 - 0xc0001000>
 				size: 0x1000
-				objects:
+				regions:
 					'rom' | Mapped<Relative> | <r-x>
 					'origin<Mapped>@0xbfff0000' | Unmapped | <r--> | FILL<0x0>
 
-			<region: 0xc0001000 - 0xc0001014>
+			<range: 0xc0001000 - 0xc0001014>
 				size: 0x14
-				objects:
+				regions:
 					'origin<Mapped>@0xbfff1000' | Unmapped | <---> | FILL<0x0>
 		>>> view.read(rom_base, 16)
 		b'\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90'
 		>>> view.memory_map.add_memory_region("pad", rom_base, b'\xa5' * 8)
 		True
-		>>> view.read(rom_base, 16)
+		>>> view.read(rom_base, 16) # "pad" wins for first 8 bytes
 		b'\xa5\xa5\xa5\xa5\xa5\xa5\xa5\xa5\x90\x90\x90\x90\x90\x90\x90\x90'
-		>>> view.memory_map
-			<region: 0x10000 - 0x10004>
+		>>> view.memory_map # resolved ranges show the split
+			<range: 0x10000 - 0x10004>
 				size: 0x4
-				objects:
+				regions:
 					'origin<Mapped>@0x0' | Mapped<Absolute> | <r-x>
 
-			<region: 0xc0000000 - 0xc0000008>
+			<range: 0xc0000000 - 0xc0000008>
 				size: 0x8
-				objects:
+				regions:
 					'pad' | Mapped<Relative> | <--->
 					'rom' | Mapped<Relative> | <r-x>
 					'origin<Mapped>@0xbfff0000' | Unmapped | <r--> | FILL<0x0>
 
-			<region: 0xc0000008 - 0xc0001000>
+			<range: 0xc0000008 - 0xc0001000>
 				size: 0xff8
-				objects:
+				regions:
 					'rom' | Mapped<Relative> | <r-x>
 					'origin<Mapped>@0xbfff0000' | Unmapped | <r--> | FILL<0x0>
 
-			<region: 0xc0001000 - 0xc0001014>
+			<range: 0xc0001000 - 0xc0001014>
 				size: 0x14
-				objects:
+				regions:
 					'origin<Mapped>@0xbfff1000' | Unmapped | <---> | FILL<0x0>
 	"""
 
@@ -2642,22 +2752,92 @@ class MemoryMap:
 		return self.format_description(description)
 
 	def __len__(self):
-		mm_json = self.description()
-		if 'MemoryMap' in mm_json:
-			return len(mm_json['MemoryMap'])
-		else:
-			return 0
+		return len(self.ranges)
+
+	def __iter__(self):
+		return iter(self.ranges)
+
+	def __getitem__(self, index):
+		return self.ranges[index]
+
+	def get_region(self, name: str) -> Optional[MemoryRegionInfo]:
+		"""Look up a memory region by name, returning None if not found."""
+		result = core.BNMemoryRegionInfo()
+		if not core.BNGetMemoryRegionInfo(self.handle, name, result):
+			return None
+		try:
+			return MemoryRegionInfo._from_core_struct(result)
+		finally:
+			core.BNFreeMemoryRegionInfo(result)
+
+	def __contains__(self, name: str) -> bool:
+		"""Name-based membership over configured regions.
+
+		Note: Unlike iteration and indexing (which operate on resolved ranges),
+		membership tests by region name. Non-string values return False.
+		"""
+		if not isinstance(name, str):
+			return False
+		return self.get_region(name) is not None
 
 	def __init__(self, handle: 'BinaryView'):
 		self.handle = handle
 
+	@property
+	def regions(self) -> List[MemoryRegionInfo]:
+		"""List of all memory regions (including disabled ones) as snapshot value types.
+
+		Returns immutable snapshot objects that are not updated after later memory map mutations.
+		"""
+		count = ctypes.c_ulonglong(0)
+		regions = core.BNGetMemoryRegions(self.handle, count)
+		if not regions:
+			return []
+		result = []
+		try:
+			for i in range(count.value):
+				result.append(MemoryRegionInfo._from_core_struct(regions[i]))
+			return result
+		finally:
+			core.BNFreeMemoryRegions(regions, count.value)
+
+	@property
+	def ranges(self) -> List[ResolvedRange]:
+		"""List of resolved, non-overlapping address ranges sorted by start address.
+
+		Each range contains an ordered list of memory regions at that interval,
+		with the first being the active (highest-priority) region. This is the
+		computed address-space view, analogous to segments.
+
+		Returns immutable snapshot objects that are not updated after later memory map mutations.
+		"""
+		count = ctypes.c_ulonglong(0)
+		raw_ranges = core.BNGetResolvedMemoryRanges(self.handle, count)
+		if not raw_ranges:
+			return []
+		result = []
+		try:
+			for i in range(count.value):
+				regions = []
+				for j in range(raw_ranges[i].regionCount):
+					regions.append(MemoryRegionInfo._from_core_struct(raw_ranges[i].regions[j]))
+				result.append(ResolvedRange(
+					start=raw_ranges[i].start,
+					length=raw_ranges[i].length,
+					regions=regions,
+				))
+			return result
+		finally:
+			core.BNFreeResolvedMemoryRanges(raw_ranges, count.value)
+
 	def format_description(self, description: dict) -> str:
+		"""Format a memory map description dict as a human-readable string. Keep public for compatibility."""
 		formatted_description = ""
 		for entry in description['MemoryMap']:
-			formatted_description += f"<region: {hex(entry['address'])} - {hex(entry['address'] + entry['length'])}>\n"
+			formatted_description += f"<range: {hex(entry['address'])} - {hex(entry['address'] + entry['length'])}>\n"
 			formatted_description += f"\tsize: {hex(entry['length'])}\n"
-			formatted_description += "\tobjects:\n"
-			for obj in entry['objects']:
+			formatted_description += "\tregions:\n"
+			for obj in entry['regions']:
 				if obj['target']:
 					mapped_state = f"Mapped<{'Absolute' if obj['absolute_address_mode'] else 'Relative'}>"
 				else:
@@ -2677,12 +2857,13 @@ class MemoryMap:
 		return formatted_description
 
 	def description(self, base: bool = False) -> dict:
+		"""Return the memory map description as a dict. If *base* is True, return the unresolved base map."""
 		if base:
 			return json.loads(core.BNGetBaseMemoryMapDescription(self.handle))
 		return json.loads(core.BNGetMemoryMapDescription(self.handle))
 
 	@property
-	def base(self):
+	def base_description(self) -> str:
 		"""Formatted string of the base memory map, consisting of unresolved auto and user segments (read-only)."""
 		return self.format_description(self.description(base=True))
 
@@ -2702,7 +2883,7 @@ class MemoryMap:
 		core.BNSetLogicalMemoryMapEnabled(self.handle, enabled)
 
 	@property
-	def is_activated(self):
+	def is_activated(self) -> bool:
 		"""
 		Whether the memory map is activated for the associated view.
 
@@ -2784,46 +2965,87 @@ class MemoryMap:
 			raise NotImplementedError(f"Unsupported memory region source type: {type(source)}")
 
 	def remove_memory_region(self, name: str) -> bool:
+		"""Remove a memory region by name. Returns True on success."""
 		return core.BNRemoveMemoryRegion(self.handle, name)
 
 	def get_active_memory_region_at(self, addr: int) -> str:
+		"""Return the name of the active region at *addr*, or an empty string if no region covers the address."""
 		return core.BNGetActiveMemoryRegionAt(self.handle, addr)
 
-	def get_memory_region_flags(self, name: str) -> set:
-		flags = core.BNGetMemoryRegionFlags(self.handle, name)
-		return {flag for flag in SegmentFlag if flags & flag}
+	def get_active_region_at(self, addr: int) -> Optional[MemoryRegionInfo]:
+		"""Return the active region snapshot covering *addr*, or None if no region covers the address."""
+		result = core.BNMemoryRegionInfo()
+		if not core.BNGetActiveMemoryRegionInfoAt(self.handle, addr, result):
+			return None
+		try:
+			return MemoryRegionInfo._from_core_struct(result)
+		finally:
+			core.BNFreeMemoryRegionInfo(result)
 
-	def set_memory_region_flags(self, name: str, flags: SegmentFlag) -> bool:
+	def get_resolved_range_at(self, addr: int) -> Optional['ResolvedRange']:
+		"""Return the resolved range snapshot covering *addr*, or None if no range covers the address."""
+		result = core.BNResolvedMemoryRange()
+		if not core.BNGetResolvedMemoryRangeAt(self.handle, addr, result):
+			return None
+		try:
+			regions = []
+			for j in range(result.regionCount):
+				regions.append(MemoryRegionInfo._from_core_struct(result.regions[j]))
+			return ResolvedRange(start=result.start, length=result.length, regions=regions)
+		finally:
+			core.BNFreeResolvedMemoryRange(result)
+
+	def get_memory_region_flags(self, name: str) -> SegmentFlag:
+		"""Return the flags for the named region."""
+		return SegmentFlag(core.BNGetMemoryRegionFlags(self.handle, name))
+
+	def set_memory_region_flags(self, name: str, flags: Union[SegmentFlag, set]) -> bool:
+		"""Set flags for the named region. Accepts SegmentFlag or a set of flags."""
+		if isinstance(flags, set):
+			combined = 0
+			for flag in flags:
+				combined |= flag
+			flags = combined
 		return core.BNSetMemoryRegionFlags(self.handle, name, flags)
 
 	def is_memory_region_enabled(self, name: str) -> bool:
+		"""Return whether the named region is enabled."""
 		return core.BNIsMemoryRegionEnabled(self.handle, name)
 
 	def set_memory_region_enabled(self, name: str, enabled: bool = True) -> bool:
+		"""Set the enabled state for the named region."""
 		return core.BNSetMemoryRegionEnabled(self.handle, name, enabled)
 
 	def is_memory_region_rebaseable(self, name: str) -> bool:
+		"""Return whether the named region is rebaseable."""
 		return core.BNIsMemoryRegionRebaseable(self.handle, name)
 
 	def set_memory_region_rebaseable(self, name: str, rebaseable: bool = True) -> bool:
+		"""Set the rebaseable state for the named region."""
 		return core.BNSetMemoryRegionRebaseable(self.handle, name, rebaseable)
 
 	def get_memory_region_fill(self, name: str) -> int:
+		"""Return the fill byte for the named region."""
 		return core.BNGetMemoryRegionFill(self.handle, name)
 
 	def set_memory_region_fill(self, name: str, fill: int) -> bool:
+		"""Set the fill byte for the named region."""
 		return core.BNSetMemoryRegionFill(self.handle, name, fill)
 
 	def get_memory_region_display_name(self, name: str) -> str:
+		"""Return the display name for the named region."""
 		return core.BNGetMemoryRegionDisplayName(self.handle, name)
 
 	def set_memory_region_display_name(self, name: str, display_name: str) -> bool:
+		"""Set the display name for the named region."""
 		return core.BNSetMemoryRegionDisplayName(self.handle, name, display_name)
 
 	def is_memory_region_local(self, name: str) -> bool:
+		"""Return whether the named region is local."""
 		return core.BNIsMemoryRegionLocal(self.handle, name)
 
-	def reset(self):
+	def reset(self) -> None:
+		"""Reset the memory map to its initial state. Supports undo."""
 		core.BNResetMemoryMap(self.handle)
 
 class BinaryView:

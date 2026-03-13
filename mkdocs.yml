@@ -137,6 +137,7 @@ nav:
             - BNIL Guide&#58; LLIL: 'dev/bnil-llil.md'
             - BNIL Guide&#58; MLIL: 'dev/bnil-mlil.md'
             - BNIL Guide&#58; HLIL: 'dev/bnil-hlil.md'
+            - Architecture & Platform Guide: 'dev/archplatform.md'
             - Flag Guide: 'dev/flags.md'
             - Modifying ILs: 'dev/bnil-modifying.md'
         - Types:

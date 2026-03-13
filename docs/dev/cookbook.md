@@ -9,8 +9,6 @@ One of the best ways to learn a complicated API is to simply find the right exam
 
  That said, most of those examples tend to be more complex and so the following recipes are meant to be simple but useful building-blocks with which to learn useful techniques. Many of them also make use of the built-in Python console's [magic variables](../guide/index.md#magic-console-variables):
 
-# Recipes
-
 ## Loading Files & Databases
 
 When scripting from the Binary Ninja UI, the `bv` magic variable is already defined and available in the Python console or scripts loaded via `File -> Run Script...`. You can directly use `bv` to access the currently open binary.

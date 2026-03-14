@@ -1622,7 +1622,9 @@ namespace BinaryNinja
 	{};
 	template <>
 	struct MediumLevelILInstructionAccessor<MLIL_UNIMPL> : public MediumLevelILInstructionBase
-	{};
+	{
+		bool IsUnknown() const { return GetRawOperandAsInteger(0) != 0; }
+	};
 
 	template <>
 	struct MediumLevelILInstructionAccessor<MLIL_CONST> : public MediumLevelILConstantInstruction
@@ -1842,7 +1844,9 @@ namespace BinaryNinja
 	{};
 	template <>
 	struct MediumLevelILInstructionAccessor<MLIL_UNIMPL_MEM> : public MediumLevelILOneOperandInstruction
-	{};
+	{
+		bool IsUnknown() const { return GetRawOperandAsInteger(1) != 0; }
+	};
 	template <>
 	struct MediumLevelILInstructionAccessor<MLIL_FSQRT> : public MediumLevelILOneOperandInstruction
 	{};

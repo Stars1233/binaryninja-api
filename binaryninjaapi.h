@@ -15464,12 +15464,20 @@ namespace BinaryNinja {
 		*/
 		ExprId Undefined(const ILSourceLocation& loc = ILSourceLocation());
 
-		/*! Returns the unimplemented expression. This should be used for instructions which aren't implemented
+		/*! Returns the unimplemented expression. This should be used for instructions which aren't implemented.
 
 			\param loc Optional IL Location this expression was added from.
 			\return The unimplemented expression
 		*/
 		ExprId Unimplemented(const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Returns an unknown expression for values that are genuinely unknowable at analysis time
+			(e.g. runtime-dependent flags). Renders as "unknown" and suppresses unimplemented warnings.
+
+			\param loc Optional IL Location this expression was added from.
+			\return The unknown expression
+		*/
+		ExprId Unknown(const ILSourceLocation& loc = ILSourceLocation());
 
 		/*! A memory reference to expression \c addr of size \c size with unimplemented operation.
 
@@ -15479,6 +15487,16 @@ namespace BinaryNinja {
 			\return The unimplemented memory reference expression.
 		*/
 		ExprId UnimplementedMemoryRef(size_t size, ExprId addr, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! A memory reference to expression \c addr of size \c size for a genuinely unknowable value.
+			Renders as "unknown" and suppresses unimplemented warnings.
+
+			\param size Size in bytes of the memory reference
+			\param addr Expression to reference memory
+			\param loc Optional IL Location this expression was added from.
+			\return The unknown memory reference expression.
+		*/
+		ExprId UnknownMemoryRef(size_t size, ExprId addr, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId RegisterPhi(const SSARegister& dest, const std::vector<SSARegister>& sources,
 		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId RegisterStackPhi(const SSARegisterStack& dest, const std::vector<SSARegisterStack>& sources,
@@ -16150,7 +16168,9 @@ namespace BinaryNinja {
 		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Undefined(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Unimplemented(const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Unknown(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId UnimplementedMemoryRef(size_t size, ExprId target, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId UnknownMemoryRef(size_t size, ExprId target, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId VarPhi(const SSAVariable& dest, const std::vector<SSAVariable>& sources,
 		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId MemoryPhi(size_t destMemVersion, const std::vector<size_t>& sourceMemVersions,
@@ -16528,7 +16548,9 @@ namespace BinaryNinja {
 		    size_t srcMemVersion, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Undefined(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Unimplemented(const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Unknown(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId UnimplementedMemoryRef(size_t size, ExprId target, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId UnknownMemoryRef(size_t size, ExprId target, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatAdd(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatSub(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatMult(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());

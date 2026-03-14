@@ -1292,7 +1292,9 @@ namespace BinaryNinja
 	{};
 	template <>
 	struct HighLevelILInstructionAccessor<HLIL_UNIMPL> : public HighLevelILInstructionBase
-	{};
+	{
+		bool IsUnknown() const { return GetRawOperandAsInteger(0) != 0; }
+	};
 	template <>
 	struct HighLevelILInstructionAccessor<HLIL_UNREACHABLE> : public HighLevelILInstructionBase
 	{};
@@ -1521,7 +1523,9 @@ namespace BinaryNinja
 	{};
 	template <>
 	struct HighLevelILInstructionAccessor<HLIL_UNIMPL_MEM> : public HighLevelILOneOperandInstruction
-	{};
+	{
+		bool IsUnknown() const { return GetRawOperandAsInteger(1) != 0; }
+	};
 	template <>
 	struct HighLevelILInstructionAccessor<HLIL_FSQRT> : public HighLevelILOneOperandInstruction
 	{};

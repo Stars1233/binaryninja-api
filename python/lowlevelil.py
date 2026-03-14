@@ -5906,7 +5906,18 @@ class LowLevelILFunction:
 		:return: the unimplemented expression.
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(LowLevelILOperation.LLIL_UNIMPL, source_location=loc)
+		return self.expr(LowLevelILOperation.LLIL_UNIMPL, False, source_location=loc)
+
+	def unknown(self, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		``unknown`` returns an unknown expression for values that are genuinely unknowable at analysis time
+		(e.g. runtime-dependent flags). Renders as ``unknown`` and suppresses unimplemented warnings.
+
+		:param ILSourceLocation loc: location of returned expression
+		:return: the unknown expression.
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(LowLevelILOperation.LLIL_UNIMPL, True, source_location=loc)
 
 	def unimplemented_memory_ref(self, size: int, addr: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
 		"""
@@ -5918,7 +5929,20 @@ class LowLevelILFunction:
 		:return: the unimplemented memory reference expression.
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(LowLevelILOperation.LLIL_UNIMPL_MEM, addr, size=size, source_location=loc)
+		return self.expr(LowLevelILOperation.LLIL_UNIMPL_MEM, addr, False, size=size, source_location=loc)
+
+	def unknown_memory_ref(self, size: int, addr: ExpressionIndex, loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		``unknown_memory_ref`` a memory reference to expression ``addr`` of size ``size`` for a genuinely unknowable
+		value. Renders as ``unknown`` and suppresses unimplemented warnings.
+
+		:param int size: size in bytes of the memory reference
+		:param ExpressionIndex addr: expression to reference memory
+		:param ILSourceLocation loc: location of returned expression
+		:return: the unknown memory reference expression.
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(LowLevelILOperation.LLIL_UNIMPL_MEM, addr, True, size=size, source_location=loc)
 
 	def float_add(
 	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: Optional['architecture.FlagWriteType'] = None,

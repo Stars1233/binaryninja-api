@@ -2318,8 +2318,11 @@ ExprId LowLevelILInstruction::CopyTo(
 	case LLIL_SYSCALL:
 	case LLIL_BP:
 	case LLIL_UNDEF:
-	case LLIL_UNIMPL:
 		return dest->AddExprWithLocation(operation, loc, size, flags);
+	case LLIL_UNIMPL:
+		return dest->AddExprWithLocation(operation, loc, size, flags, GetRawOperandAsInteger(0));
+	case LLIL_UNIMPL_MEM:
+		return dest->AddExprWithLocation(operation, loc, size, flags, subExprHandler(AsOneOperand().GetSourceExpr()), GetRawOperandAsInteger(1));
 	case LLIL_PUSH:
 	case LLIL_NEG:
 	case LLIL_NOT:
@@ -2334,7 +2337,6 @@ ExprId LowLevelILInstruction::CopyTo(
 	case LLIL_ZX:
 	case LLIL_LOW_PART:
 	case LLIL_BOOL_TO_INT:
-	case LLIL_UNIMPL_MEM:
 	case LLIL_FSQRT:
 	case LLIL_FNEG:
 	case LLIL_FABS:
@@ -3704,13 +3706,25 @@ ExprId LowLevelILFunction::Undefined(const ILSourceLocation& loc)
 
 ExprId LowLevelILFunction::Unimplemented(const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_UNIMPL, loc, 0, 0);
+	return AddExprWithLocation(LLIL_UNIMPL, loc, 0, 0, 0);
+}
+
+
+ExprId LowLevelILFunction::Unknown(const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_UNIMPL, loc, 0, 0, 1);
 }
 
 
 ExprId LowLevelILFunction::UnimplementedMemoryRef(size_t size, ExprId addr, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_UNIMPL_MEM, loc, size, 0, addr);
+	return AddExprWithLocation(LLIL_UNIMPL_MEM, loc, size, 0, addr, 0);
+}
+
+
+ExprId LowLevelILFunction::UnknownMemoryRef(size_t size, ExprId addr, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_UNIMPL_MEM, loc, size, 0, addr, 1);
 }
 
 

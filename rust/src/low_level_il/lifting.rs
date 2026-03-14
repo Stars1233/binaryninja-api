@@ -1107,6 +1107,15 @@ impl LowLevelILMutableFunction {
     }
 
     no_arg_lifter!(unimplemented, LLIL_UNIMPL, ValueExpr);
+
+    pub fn unknown(&self) -> LowLevelILExpression<'_, Mutable, NonSSA, ValueExpr> {
+        use binaryninjacore_sys::BNLowLevelILAddExpr;
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_UNIMPL;
+
+        let expr_idx = unsafe { BNLowLevelILAddExpr(self.handle, LLIL_UNIMPL, 0, 0, 1, 0, 0, 0) };
+
+        LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
+    }
     no_arg_lifter!(undefined, LLIL_UNDEF, ValueExpr);
     no_arg_lifter!(nop, LLIL_NOP, VoidExpr);
 
@@ -1479,6 +1488,27 @@ impl LowLevelILMutableFunction {
     sized_no_arg_lifter!(pop, LLIL_POP, ValueExpr);
 
     size_changing_unary_op_lifter!(unimplemented_mem, LLIL_UNIMPL_MEM, ValueExpr);
+
+    pub fn unknown_mem<'a, E>(&'a self, size: usize, expr: E) -> ExpressionBuilder<'a, ValueExpr>
+    where
+        E: LiftableLowLevelILWithSize<'a>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_UNIMPL_MEM;
+
+        let expr = E::lift(self, expr);
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_UNIMPL_MEM,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: expr.index.0 as u64,
+            op2: 1,
+            op3: 0,
+            op4: 0,
+            _ty: PhantomData,
+        }
+    }
 
     sized_unary_op_lifter!(neg, LLIL_NEG, ValueExpr);
     sized_unary_op_lifter!(not, LLIL_NOT, ValueExpr);

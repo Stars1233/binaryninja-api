@@ -11424,7 +11424,7 @@ namespace BinaryNinja {
 			\param result Reference to a StructureMember to copy the result to
 			\return Whether a member was found
 		*/
-		bool GetMemberByName(const std::string& name, StructureMember& result) const;
+		[[nodiscard]] bool GetMemberByName(const std::string& name, StructureMember& result) const;
 
 		/*! Get a structure member at a certain offset
 
@@ -11432,7 +11432,7 @@ namespace BinaryNinja {
 			\param result Reference to a StructureMember to copy the result to
 			\return Whether a member was found
 		*/
-		bool GetMemberAtOffset(int64_t offset, StructureMember& result) const;
+		[[nodiscard]] bool GetMemberAtOffset(int64_t offset, StructureMember& result) const;
 
 		/*! Get a structure member and its index at a certain offset
 
@@ -11441,7 +11441,7 @@ namespace BinaryNinja {
 			\param idx Reference to a size_t to copy the index to
 			\return Whether a member was found
 		*/
-		bool GetMemberAtOffset(int64_t offset, StructureMember& result, size_t& idx) const;
+		[[nodiscard]] bool GetMemberAtOffset(int64_t offset, StructureMember& result, size_t& idx) const;
 
 		/*! Get the structure width in bytes
 
@@ -11554,10 +11554,10 @@ namespace BinaryNinja {
 		    \param result Reference to a StructureMember object the field will be passed to
 		    \return Whether a StructureMember was successfully retrieved
 		*/
-		bool GetMemberByName(const std::string& name, StructureMember& result) const;
+		[[nodiscard]] bool GetMemberByName(const std::string& name, StructureMember& result) const;
 		// TODO: GetMember at offset also needs to pass a bit position.
-		bool GetMemberAtOffset(int64_t offset, StructureMember& result) const;
-		bool GetMemberAtOffset(int64_t offset, StructureMember& result, size_t& idx) const;
+		[[nodiscard]] bool GetMemberAtOffset(int64_t offset, StructureMember& result) const;
+		[[nodiscard]] bool GetMemberAtOffset(int64_t offset, StructureMember& result, size_t& idx) const;
 		uint64_t GetWidth() const;
 		StructureBuilder& SetWidth(size_t width);
 		int64_t GetPointerOffset() const;

@@ -155,7 +155,16 @@ nav:
         - Contributing Documentation: 'dev/documentation.md'
     - About:
         - 'about/index.md'
-        - License: 'about/license.md'
+        - License:
+            - 'about/license.md'
+            - Non-commercial (Named): 'about/license/noncommercial-named.md'
+            - Commercial (Named): 'about/license/commercial-named.md'
+            - Non-commercial (Computer): 'about/license/noncommercial-computer.md'
+            - Commercial (Computer): 'about/license/commercial-computer.md'
+            - Free: 'about/license/free.md'
+            - Ultimate: 'about/license/ultimate.md'
+            - Ultimate Floating: 'about/license/ultimate-floating.md'
+            - Enterprise Server: 'about/license/enterprise-server.md'
         - Open Source: 'about/open-source.md'
         - Privacy: 'about/privacy.md'
         - Icons: 'about/icons.md'

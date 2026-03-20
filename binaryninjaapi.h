@@ -944,7 +944,9 @@ namespace BinaryNinja {
 	template<typename... T>
 	void LogTraceF(fmt::format_string<T...> format, T&&... args)
 	{
+#ifdef BN_ENABLE_LOG_TRACE
 		LogTraceFV(format, fmt::make_format_args(args...));
+#endif
 	}
 
 	/*! LogDebug only writes text to the error console if the console is set to log level: DebugLog
@@ -1058,7 +1060,9 @@ namespace BinaryNinja {
 	template <typename... T>
 	void LogTraceForExceptionF(const std::exception& e, fmt::format_string<T...> format, T&&... args)
 	{
+#ifdef BN_ENABLE_LOG_TRACE
 		LogTraceForExceptionFV(e, format, fmt::make_format_args(args...));
+#endif
 	}
 
 	/*! LogDebugForExceptionF only writes text to the error console if the console is set to log level: DebugLog
@@ -1175,7 +1179,9 @@ namespace BinaryNinja {
 	template <typename... T>
 	void LogTraceWithStackTraceF(fmt::format_string<T...> format, T&&... args)
 	{
+#ifdef BN_ENABLE_LOG_TRACE
 		LogTraceWithStackTraceFV(format, fmt::make_format_args(args...));
+#endif
 	}
 
 	/*! LogDebugWithStackTraceF only writes text to the error console if the console is set to log level: DebugLog
@@ -1581,7 +1587,9 @@ namespace BinaryNinja {
 			template<typename... T>
 			void LogTraceF(fmt::format_string<T...> format, T&&... args)
 			{
+#ifdef BN_ENABLE_LOG_TRACE
 				LogTraceFV(format, fmt::make_format_args(args...));
+#endif
 			}
 
 			/*! LogDebug only writes text to the error console if the console is set to log level: DebugLog
@@ -1682,7 +1690,9 @@ namespace BinaryNinja {
 			template <typename... T>
 			void LogTraceForExceptionF(const std::exception& e, fmt::format_string<T...> format, T&&... args)
 			{
+#ifdef BN_ENABLE_LOG_TRACE
 				LogTraceForExceptionFV(e, format, fmt::make_format_args(args...));
+#endif
 			}
 
 			/*! LogDebugForExceptionF only writes text to the error console if the console is set to log level:
@@ -1785,7 +1795,9 @@ namespace BinaryNinja {
 			template <typename... T>
 			void LogTraceWithStackTraceF(fmt::format_string<T...> format, T&&... args)
 			{
+#ifdef BN_ENABLE_LOG_TRACE
 				LogTraceWithStackTraceFV(format, fmt::make_format_args(args...));
+#endif
 			}
 
 			/*! LogDebugWithStackTraceF only writes text to the error console if the console is set to log level:

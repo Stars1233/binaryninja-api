@@ -408,8 +408,10 @@ void BinaryNinja::LogFV(BNLogLevel level, fmt::string_view format, fmt::format_a
 
 void BinaryNinja::LogTraceFV(fmt::string_view format, fmt::format_args args)
 {
+#ifdef BN_ENABLE_LOG_TRACE
 	std::string value = fmt::vformat(format, args);
 	LogTrace("%s", value.c_str());
+#endif
 }
 
 
@@ -423,8 +425,10 @@ void BinaryNinja::LogForExceptionFV(
 
 void BinaryNinja::LogTraceForExceptionFV(const std::exception& e, fmt::string_view format, fmt::format_args args)
 {
+#ifdef BN_ENABLE_LOG_TRACE
 	std::string value = fmt::vformat(format, args);
 	LogTraceForException(e, "%s", value.c_str());
+#endif
 }
 
 
@@ -437,8 +441,10 @@ void BinaryNinja::LogWithStackTraceFV(BNLogLevel level, fmt::string_view format,
 
 void BinaryNinja::LogTraceWithStackTraceFV(fmt::string_view format, fmt::format_args args)
 {
+#ifdef BN_ENABLE_LOG_TRACE
 	std::string value = fmt::vformat(format, args);
 	LogTraceWithStackTrace("%s", value.c_str());
+#endif
 }
 
 
@@ -700,8 +706,10 @@ void Logger::LogFV(BNLogLevel level, fmt::string_view format, fmt::format_args a
 
 void Logger::LogTraceFV(fmt::string_view format, fmt::format_args args)
 {
+#ifdef BN_ENABLE_LOG_TRACE
 	std::string value = fmt::vformat(format, args);
 	LogTrace("%s", value.c_str());
+#endif
 }
 
 
@@ -715,8 +723,10 @@ void Logger::LogForExceptionFV(
 
 void Logger::LogTraceForExceptionFV(const std::exception& e, fmt::string_view format, fmt::format_args args)
 {
+#ifdef BN_ENABLE_LOG_TRACE
 	std::string value = fmt::vformat(format, args);
 	LogTraceForException(e, "%s", value.c_str());
+#endif
 }
 
 
@@ -729,8 +739,10 @@ void Logger::LogWithStackTraceFV(BNLogLevel level, fmt::string_view format, fmt:
 
 void Logger::LogTraceWithStackTraceFV(fmt::string_view format, fmt::format_args args)
 {
+#ifdef BN_ENABLE_LOG_TRACE
 	std::string value = fmt::vformat(format, args);
 	LogTraceWithStackTrace("%s", value.c_str());
+#endif
 }
 
 

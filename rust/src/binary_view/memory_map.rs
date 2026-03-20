@@ -181,9 +181,8 @@ impl MemoryMap {
     pub fn get_region(&self, name: &str) -> Option<MemoryRegionInfo> {
         let name_raw = name.to_cstr();
         let mut result: BNMemoryRegionInfo = unsafe { std::mem::zeroed() };
-        let found = unsafe {
-            BNGetMemoryRegionInfo(self.view.handle, name_raw.as_ptr(), &mut result)
-        };
+        let found =
+            unsafe { BNGetMemoryRegionInfo(self.view.handle, name_raw.as_ptr(), &mut result) };
         if !found {
             return None;
         }
@@ -196,9 +195,7 @@ impl MemoryMap {
     /// enabled region covers the address.
     pub fn get_active_region_at(&self, addr: u64) -> Option<MemoryRegionInfo> {
         let mut result: BNMemoryRegionInfo = unsafe { std::mem::zeroed() };
-        let found = unsafe {
-            BNGetActiveMemoryRegionInfoAt(self.view.handle, addr, &mut result)
-        };
+        let found = unsafe { BNGetActiveMemoryRegionInfoAt(self.view.handle, addr, &mut result) };
         if !found {
             return None;
         }
@@ -211,9 +208,7 @@ impl MemoryMap {
     /// range covers the address.
     pub fn get_resolved_range_at(&self, addr: u64) -> Option<ResolvedRange> {
         let mut result: BNResolvedMemoryRange = unsafe { std::mem::zeroed() };
-        let found = unsafe {
-            BNGetResolvedMemoryRangeAt(self.view.handle, addr, &mut result)
-        };
+        let found = unsafe { BNGetResolvedMemoryRangeAt(self.view.handle, addr, &mut result) };
         if !found {
             return None;
         }

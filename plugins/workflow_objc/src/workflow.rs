@@ -7,6 +7,7 @@ use crate::{activities, error::WorkflowRegistrationError};
 #[repr(u8)]
 pub enum Confidence {
     ObjCMsgSend = 96,
+    AllocInit = 98,
     SuperInit = 100,
 }
 
@@ -50,6 +51,19 @@ pub fn register_activities() -> Result<(), WorkflowRegistrationError> {
         run(activities::inline_stubs::process),
     );
 
+    let alloc_init_activity = Activity::new_with_action(
+        activity::Config::action(
+            "core.function.objectiveC.types.allocInit",
+            "Obj-C: Adjust return types of objc_alloc_init calls",
+            "Adjust the return type of calls to objc_alloc / objc_alloc_init when a fixed type is passed as an argument.",
+        )
+        .eligibility(
+            activity::Eligibility::auto().predicate(
+                activity::ViewType::in_(["Mach-O", "DSCView"]),
+        )),
+        run(activities::alloc_init::process),
+    );
+
     let super_init_activity = Activity::new_with_action(
         activity::Config::action(
             "core.function.objectiveC.types.superInit",
@@ -85,7 +99,8 @@ pub fn register_activities() -> Result<(), WorkflowRegistrationError> {
             &remove_memory_management_activity,
             "core.function.generateMediumLevelIL",
         )?
-        .activity_after(&super_init_activity, "core.function.generateMediumLevelIL")?
+        .activity_after(&alloc_init_activity, "core.function.generateMediumLevelIL")?
+        .activity_after(&super_init_activity, &alloc_init_activity.name())?
         .register()?;
 
     Ok(())

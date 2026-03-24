@@ -1,21 +1,16 @@
 use binaryninja::{
-    binary_view::{BinaryView, BinaryViewBase, BinaryViewExt as _},
-    confidence::Conf,
-    function::Function,
+    binary_view::{BinaryView, BinaryViewBase as _, BinaryViewExt as _},
     medium_level_il::{
-        operation::{
-            Constant, LiftedCallSsa, LiftedLoadSsa, LiftedSetVarSsa, LiftedSetVarSsaField, Var,
-            VarSsa,
-        },
-        MediumLevelILFunction, MediumLevelILLiftedInstruction, MediumLevelILLiftedInstructionKind,
+        operation::{Constant, LiftedSetVarSsa, LiftedSetVarSsaField, Var, VarSsa},
+        MediumLevelILLiftedInstruction, MediumLevelILLiftedInstructionKind,
     },
     rc::Ref,
     types::Type,
-    variable::{RegisterValueType, SSAVariable},
     workflow::AnalysisContext,
 };
-use bstr::{BStr, ByteSlice};
+use bstr::ByteSlice;
 
+use super::util;
 use crate::{
     error::ILLevel,
     metadata::{GlobalState, Selector},
@@ -32,110 +27,16 @@ const OBJC_MSG_SEND_SUPER_FUNCTIONS: &[&[u8]] = &[
     b"j__objc_msgSendSuper",
 ];
 
-fn ssa_variable_value_or_load_of_constant_pointer(
-    function: &MediumLevelILFunction,
-    var: &SSAVariable,
-) -> Option<u64> {
-    let value = function.ssa_variable_value(var);
-    match value.state {
-        RegisterValueType::ConstantPointerValue => return Some(value.value as u64),
-        RegisterValueType::UndeterminedValue => {}
-        _ => return None,
-    }
-
-    let def = function.ssa_variable_definition(var)?;
-    let MediumLevelILLiftedInstructionKind::SetVarSsa(set_var) = def.lift().kind else {
-        return None;
-    };
-
-    let MediumLevelILLiftedInstructionKind::LoadSsa(LiftedLoadSsa { src, .. }) = set_var.src.kind
-    else {
-        return None;
-    };
-
-    match src.kind {
-        MediumLevelILLiftedInstructionKind::ConstPtr(Constant { constant }) => Some(constant),
-        _ => None,
-    }
-}
-
-/// If `instr` is a constant pointer or is a variable whose value is loaded from a constant pointer,
-/// return that pointer address.
-fn match_constant_pointer_or_load_of_constant_pointer(
-    instr: &MediumLevelILLiftedInstruction,
-) -> Option<u64> {
-    match instr.kind {
-        MediumLevelILLiftedInstructionKind::ConstPtr(Constant { constant }) => Some(constant),
-        MediumLevelILLiftedInstructionKind::VarSsa(var) => {
-            ssa_variable_value_or_load_of_constant_pointer(&instr.function, &var.src)
-        }
-        _ => None,
-    }
-}
-
-#[allow(clippy::struct_field_names)]
-struct Call<'a> {
-    pub instr: &'a MediumLevelILLiftedInstruction,
-    pub call: &'a LiftedCallSsa,
-    pub target: Ref<Function>,
-}
-
-/// Returns a `Call` if `instr` is a call or tail call to a function whose name appears in `function_names`
-fn match_call_to_function_named<'a>(
-    instr: &'a MediumLevelILLiftedInstruction,
-    view: &'a BinaryView,
-    function_names: &'a [&[u8]],
-) -> Option<Call<'a>> {
-    let (MediumLevelILLiftedInstructionKind::TailcallSsa(ref call)
-    | MediumLevelILLiftedInstructionKind::CallSsa(ref call)) = instr.kind
-    else {
-        return None;
-    };
-
-    let MediumLevelILLiftedInstructionKind::ConstPtr(Constant {
-        constant: call_target,
-    }) = call.dest.kind
-    else {
-        return None;
-    };
-
-    let target_function = view.function_at(&instr.function.function().platform(), call_target)?;
-    let function_name = target_function.symbol().full_name();
-    if !function_names.contains(&function_name.to_bytes()) {
-        return None;
-    }
-
-    Some(Call {
-        instr,
-        call,
-        target: target_function,
-    })
-}
-
-fn class_name_from_symbol_name(symbol_name: &BStr) -> Option<&BStr> {
-    // The symbol name for the `objc_class_t` can have different names depending
-    // on factors such as being local or external, and whether the reference
-    // is from the shared cache or a standalone Mach-O file.
-    Some(if symbol_name.starts_with(b"cls_") {
-        &symbol_name[4..]
-    } else if symbol_name.starts_with(b"clsRef_") {
-        &symbol_name[7..]
-    } else if symbol_name.starts_with(b"_OBJC_CLASS_$_") {
-        &symbol_name[14..]
-    } else {
-        return None;
-    })
-}
-
 /// Detect the return type for a call to `objc_msgSendSuper2` where the selector is in the `init` family.
 /// Returns `None` if selector is not in the `init` family or the return type cannot be determined.
-fn return_type_for_super_init(call: &Call, view: &BinaryView) -> Option<Ref<Type>> {
+fn return_type_for_super_init(call: &util::Call, view: &BinaryView) -> Option<Ref<Type>> {
     // Expecting to see at least `objc_super` and a selector.
     if call.call.params.len() < 2 {
         return None;
     }
 
-    let selector_addr = match_constant_pointer_or_load_of_constant_pointer(&call.call.params[1])?;
+    let selector_addr =
+        util::match_constant_pointer_or_load_of_constant_pointer(&call.call.params[1])?;
     let selector = Selector::from_address(view, selector_addr).ok()?;
 
     // TODO: This will match `initialize` and `initiate` which are not init methods.
@@ -238,7 +139,7 @@ fn return_type_for_super_init(call: &Call, view: &BinaryView) -> Option<Ref<Type
 
     let super_class_symbol_name = super_class_symbol.full_name();
     let Some(class_name) =
-        class_name_from_symbol_name(super_class_symbol_name.to_bytes().as_bstr())
+        util::class_name_from_symbol_name(super_class_symbol_name.to_bytes().as_bstr())
     else {
         tracing::debug!(
             "Unable to extract class name from symbol name: {super_class_symbol_name:?}"
@@ -254,42 +155,14 @@ fn return_type_for_super_init(call: &Call, view: &BinaryView) -> Option<Ref<Type
     Some(Type::pointer(&call.target.arch(), &class_type))
 }
 
-/// Adjust the return type of the call represented by `call`.
-fn adjust_return_type_of_call(call: &Call<'_>, return_type: &Type) {
-    let function = call.instr.function.function();
-
-    // We're changing only the return type, so preserve other aspects of any existing call type adjustment.
-    let target_function_type = if let Some(existing_call_type_adjustment) =
-        function.call_type_adjustment(call.instr.address, None)
-    {
-        existing_call_type_adjustment.contents
-    } else {
-        call.target.function_type()
-    };
-
-    // There's nothing to do if the return type is already correct
-    if let Some(conf) = target_function_type.return_value() {
-        if &*conf.contents == return_type {
-            return;
-        }
-    }
-
-    let adjusted_call_type = target_function_type
-        .to_builder()
-        .set_child_type(return_type)
-        .finalize();
-
-    function.set_auto_call_type_adjustment(
-        call.instr.address,
-        Conf::new(&*adjusted_call_type, Confidence::SuperInit as u8),
-        None,
-    );
-}
-
 fn process_instruction(instr: &MediumLevelILLiftedInstruction, view: &BinaryView) -> Option<()> {
-    let call = match_call_to_function_named(instr, view, OBJC_MSG_SEND_SUPER_FUNCTIONS)?;
+    let call = util::match_call_to_function_named(instr, view, OBJC_MSG_SEND_SUPER_FUNCTIONS)?;
 
-    adjust_return_type_of_call(&call, return_type_for_super_init(&call, view)?.as_ref());
+    util::adjust_return_type_of_call(
+        &call,
+        return_type_for_super_init(&call, view)?.as_ref(),
+        Confidence::SuperInit as u8,
+    );
     Some(())
 }
 

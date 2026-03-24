@@ -63,5 +63,8 @@ namespace BinaryNinja::DSC {
 		Ref<Metadata> GetMetadata() const;
 
 		void LoadMetadata(const Metadata& metadata);
+
+		// Re-run the ObjC processor for loaded images to restore Objective-C metadata.
+		void ProcessObjCForLoadedImages(BinaryView& view);
 	};
 }  // namespace BinaryNinja::DSC

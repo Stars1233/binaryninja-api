@@ -884,11 +884,9 @@ protected:
 		const InstructionOperand& op,
 		vector<InstructionTextToken>& result)
 	{
-		const char* reg = NULL;
-		reg = GetRegisterName((enum Register)op.reg).c_str();
-		if (reg == NULL)
+		auto reg = GetRegisterName((enum Register)op.reg);
+		if (reg.empty())
 			return FAILED_TO_DISASSEMBLE_REGISTER;
-
 
 		result.emplace_back(RegisterToken, reg);
 		tokenize_shift(op, result);

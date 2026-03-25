@@ -471,7 +471,7 @@ DemangledTypeNode DemangleGNU3::DemangleFunction(bool cnst, bool vltl)
 	old_isparam = m_isParameter;
 	m_isParameter = true;
 	m_functionSubstitute.push_back({});
-	int i = 0;
+	[[maybe_unused]] int i = 0;
 	while (m_reader.Peek() != 'E')
 	{
 		DemangledTypeNode param = DemangleType();

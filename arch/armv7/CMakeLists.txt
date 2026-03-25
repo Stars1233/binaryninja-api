@@ -44,7 +44,7 @@ if(BN_INTERNAL_BUILD)
 		RUNTIME_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR})
 endif()
 
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 	target_compile_options(arch_armv7 PRIVATE
 		$<$<COMPILE_LANGUAGE:CXX>:-Wno-deprecated-enum-enum-conversion>
 	)

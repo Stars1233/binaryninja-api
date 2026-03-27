@@ -265,7 +265,7 @@ class BINARYNINJAUIAPI SettingsDelegate : public QStyledItemDelegate
 	QTimer* m_updateModelTimer;
 	QTimer* m_resizeTimer;
 	QSize m_lastViewportSize;
-	QModelIndex m_scrollAnchorIdx;
+	QPersistentModelIndex m_scrollAnchorIdx;
 	int m_scrollAnchorOffset = 0;
 	bool m_resizing = false;
 

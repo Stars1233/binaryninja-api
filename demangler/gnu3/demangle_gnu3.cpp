@@ -1093,9 +1093,13 @@ string DemangleGNU3::DemanglePrimaryExpression()
 	case 'j': out = DemangleNumberAsString() + "u"; break; // unsigned int
 		break;
 	default:
+	{
 		m_reader.UnRead(1);
-		out = "(" + DemangleTypeString() + ")" + DemangleNumberAsString();
+		const string castType = DemangleTypeString();
+		const string castVal = DemangleNumberAsString();
+		out = "(" + castType + ")" + castVal;
 		break;
+	}
 	}
 	if (m_reader.Read() != 'E')
 		throw DemangleException();
@@ -1410,7 +1414,9 @@ QualifiedName DemangleGNU3::DemangleBaseUnresolvedName()
 		if (str == "on")
 		{
 			m_reader.Consume(); m_reader.Consume(); // skip 'o','n' prefix
-			out.push_back(GetOperator(m_reader.Read(), m_reader.Read()));
+			char op1 = m_reader.Read();
+			char op2 = m_reader.Read();
+			out.push_back(GetOperator(op1, op2));
 			if (m_reader.Peek() == 'I')
 			{
 				m_reader.Consume();
@@ -1583,7 +1589,12 @@ string DemangleGNU3::DemangleExpression()
 	case hash('s','c'):
 	case hash('c','c'):
 	case hash('r','c'):
-		return GetOperator(elm1, elm2) + "<" + DemangleTypeString() + ">(" + DemangleExpression() + ")";
+	{
+		const string op = GetOperator(elm1, elm2);
+		const string castType = DemangleTypeString();
+		const string castExpr = DemangleExpression();
+		return op + "<" + castType + ">(" + castExpr + ")";
+	}
 	case hash('t','i'):
 	case hash('t','e'):
 	case hash('s','t'):
@@ -1667,9 +1678,12 @@ string DemangleGNU3::DemangleExpression()
 	case hash('n','a'): // new []
 		return gs + DemangleUnaryPrefixType(GetOperator(elm1, elm2));
 	case hash('q','u'): // ternary
-		return DemangleExpression() + "?" +
-		       DemangleExpression() + ":" +
-		       DemangleExpression();
+	{
+		const string cond = DemangleExpression();
+		const string then_expr = DemangleExpression();
+		const string else_expr = DemangleExpression();
+		return cond + "?" + then_expr + ":" + else_expr;
+	}
 	case hash('c','l'): // ()
 	{
 		const string callable = DemangleExpression();
@@ -1702,7 +1716,11 @@ string DemangleGNU3::DemangleExpression()
 		return out;
 	}
 	case hash('t','l'): //type {expression}
-		return DemangleTypeString() + " {" + DemangleExpressionList() + "}";
+	{
+		const string tlType = DemangleTypeString();
+		const string tlExprs = DemangleExpressionList();
+		return tlType + " {" + tlExprs + "}";
+	}
 	case hash('i', 'l'): //{expr-list}, braced-init-list in any other context
 		out = DemangleExpression();
 		if (m_reader.Read() != 'E')

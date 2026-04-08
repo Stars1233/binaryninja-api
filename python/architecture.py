@@ -3057,6 +3057,9 @@ class CoreArchitecture(Architecture):
 			elif isinstance(operand, lowlevelil.ILRegister):
 				operand_list[i].constant = False
 				operand_list[i].reg = operand.index
+			elif isinstance(operand, lowlevelil.ILFlag):
+				operand_list[i].constant = False
+				operand_list[i].reg = operand.index
 			else:
 				operand_list[i].constant = True
 				operand_list[i].value = operand

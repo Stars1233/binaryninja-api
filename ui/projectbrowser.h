@@ -6,6 +6,7 @@
 #include <qfilesystemwatcher.h>
 #include <qlabel.h>
 #include <qlineedit.h>
+#include <qmenu.h>
 #include <qmimedatabase.h>
 #include <qnamespace.h>
 #include <qplaintextedit.h>
@@ -234,6 +235,8 @@ protected:
 public:
 	ProjectTable(QWidget* parent = nullptr);
 
+	QMenu* createHeaderContextMenu();
+
 Q_SIGNALS:
 	void filterChanged(const QString& filter, FilterOptions options);
 };
@@ -267,6 +270,8 @@ protected:
 
 public:
 	ProjectTree(QWidget* parent = nullptr);
+
+	QMenu* createHeaderContextMenu();
 
 Q_SIGNALS:
 	void filterChanged(const QString& filter, FilterOptions options);

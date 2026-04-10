@@ -26,6 +26,12 @@ static MachoViewType* g_machoViewType = nullptr;
 
 namespace {
 
+// Pseudo-library names used when an import's two-level-namespace ordinal refers to a special
+// dyld lookup mode rather than a concrete LC_LOAD_DYLIB entry.
+constexpr std::string_view kPseudoLibraryMainExecutable = "<main executable>";
+constexpr std::string_view kPseudoLibraryFlatLookup = "<flat lookup>";
+constexpr std::string_view kPseudoLibraryWeakLookup = "<weak lookup>";
+
 string CommandToString(uint32_t lcCommand)
 {
 	switch(lcCommand)
@@ -2286,11 +2292,13 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 	BulkSymbolModification bulkSymbolModification(this);
 	m_symbolQueue = new SymbolQueue();
 
+	std::unordered_map<std::string, std::string> symbolLibraryMapping;
+
 	try
 	{
 		// Add functions for all function symbols
 		m_logger->LogDebug("Parsing symbol table\n");
-		ParseSymbolTable(reader, header, header.symtab, indirectSymbols, objcProcessor.get());
+		ParseSymbolTable(reader, header, header.symtab, indirectSymbols, objcProcessor.get(), symbolLibraryMapping);
 	}
 	catch (std::exception&)
 	{
@@ -2314,7 +2322,6 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 			objcProcessor->AddRelocatedPointer(relocationLocation, slidTarget);
 	}
 
-	Ref<Metadata> symbolToLibraryMapping = new Metadata(KeyValueDataType);
 	for (auto& [relocation, name, ordinal] : header.bindingRelocations)
 	{
 		if (auto symbol = ResolveBindSymbol(this, header, name, ordinal); symbol)
@@ -2328,10 +2335,27 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 			m_logger->LogErrorF("Failed to find symbol {:?} for bind at {:#x} (ordinal: {})", name, relocation.address, ordinal);
 		}
 
+		string libName;
 		if (ordinal > 0 && ordinal - 1 < header.dylibs.size())
-			symbolToLibraryMapping->SetValueForKey(name, new Metadata(header.dylibs[ordinal - 1].first));
+			libName = header.dylibs[ordinal - 1].first;
+		else if (ordinal == BindSpecialDylibMainExecutable)
+			libName = kPseudoLibraryMainExecutable;
+		else if (ordinal == BindSpecialDylibFlatLookup)
+			libName = kPseudoLibraryFlatLookup;
+		else if (ordinal == BindSpecialDylibWeakLookup)
+			libName = kPseudoLibraryWeakLookup;
+
+		if (!libName.empty())
+		{
+			if (!GetExternalLibrary(libName))
+				AddExternalLibrary(libName, {}, true);
+			symbolLibraryMapping[name] = libName;
+		}
 	}
 
+	Ref<Metadata> symbolToLibraryMapping = new Metadata(KeyValueDataType);
+	for (const auto& [name, libName] : symbolLibraryMapping)
+		symbolToLibraryMapping->SetValueForKey(name, new Metadata(libName));
 	StoreMetadata("SymbolExternalLibraryMapping", std::move(symbolToLibraryMapping), true);
 
 	auto relocationHandler = m_arch->GetRelocationHandler("Mach-O");
@@ -3220,7 +3244,8 @@ void MachoView::ParseDynamicTable(BinaryReader& reader, MachOHeader& header, BNS
 
 
 void MachoView::ParseSymbolTable(BinaryReader& reader, MachOHeader& header, const symtab_command& symtab,
-	const vector<uint32_t>& indirectSymbols, MachoObjCProcessor* objcProcessor)
+	const vector<uint32_t>& indirectSymbols, MachoObjCProcessor* objcProcessor,
+	std::unordered_map<std::string, std::string>& symbolLibraryMapping)
 {
 	if (header.ident.filetype == MH_DSYM)
 	{
@@ -3359,6 +3384,25 @@ void MachoView::ParseSymbolTable(BinaryReader& reader, MachOHeader& header, cons
 			else if ((sym.n_type & N_EXT))
 			{
 				type = ExternalSymbol;
+
+				// Record the owning library from the two-level-namespace ordinal in the high
+				// byte of n_desc. See GET_LIBRARY_ORDINAL in <mach-o/nlist.h>.
+				unsigned libraryOrdinal = (unsigned)(sym.n_desc >> 8) & 0xff;
+				string libName;
+				if (libraryOrdinal >= 1 && libraryOrdinal <= 0xfd
+					&& (size_t)(libraryOrdinal - 1) < header.dylibs.size())
+					libName = header.dylibs[libraryOrdinal - 1].first;
+				else if (libraryOrdinal == 0xfe)  // DYNAMIC_LOOKUP_ORDINAL
+					libName = kPseudoLibraryFlatLookup;
+				else if (libraryOrdinal == 0xff)  // EXECUTABLE_ORDINAL
+					libName = kPseudoLibraryMainExecutable;
+
+				if (!libName.empty())
+				{
+					if (!GetExternalLibrary(libName))
+						AddExternalLibrary(libName, {}, true);
+					symbolLibraryMapping[symbol] = libName;
+				}
 			}
 			else
 				continue;
@@ -3378,23 +3422,14 @@ void MachoView::ParseSymbolTable(BinaryReader& reader, MachOHeader& header, cons
 			auto pointerSymbolIter = pointerSymbols.find(i);
 			bool deferred = stubSymbolIter == stubSymbols.end() && pointerSymbolIter == pointerSymbols.end();
 
-			Ref<Symbol> symbolObj;
-			if(header.dysymtab.nlocalsym && i >= header.dysymtab.ilocalsym && i < header.dysymtab.ilocalsym + header.dysymtab.nlocalsym)
-			{
-				symbolObj = DefineMachoSymbol(type, symbol, sym.n_value, LocalBinding, deferred);
-			}
-			else if (header.dysymtab.nextdefsym && i >= header.dysymtab.iextdefsym && i < header.dysymtab.iextdefsym + header.dysymtab.nextdefsym)
-			{
-				symbolObj = DefineMachoSymbol(type, symbol, sym.n_value, GlobalBinding, deferred);
-			}
-			else if (header.dysymtab.nundefsym && i >= header.dysymtab.iundefsym && i < header.dysymtab.iundefsym + header.dysymtab.nundefsym)
-			{
-				symbolObj = DefineMachoSymbol(type, symbol, sym.n_value, GlobalBinding, deferred);
-			}
-			else
-			{
-				symbolObj = DefineMachoSymbol(type, symbol, sym.n_value, GlobalBinding, deferred);
-			}
+			BNSymbolBinding binding = GlobalBinding;
+			if (header.dysymtab.nlocalsym && i >= header.dysymtab.ilocalsym
+				&& i < header.dysymtab.ilocalsym + header.dysymtab.nlocalsym)
+				binding = LocalBinding;
+			else if (type == ExternalSymbol && (sym.n_desc & N_WEAK_REF))
+				binding = WeakBinding;
+
+			Ref<Symbol> symbolObj = DefineMachoSymbol(type, symbol, sym.n_value, binding, deferred);
 
 			if (!symbolObj)
 			{

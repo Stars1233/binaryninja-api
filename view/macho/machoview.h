@@ -1502,7 +1502,9 @@ namespace BinaryNinja
 		void RebaseThreadStarts(BinaryReader& virtualReader, std::vector<uint32_t>& threadStarts, uint64_t stepMultiplier);
 		Ref<Symbol> DefineMachoSymbol(
 			BNSymbolType type, const std::string& name, uint64_t addr, BNSymbolBinding binding, bool deferred);
-		void ParseSymbolTable(BinaryReader& reader, MachOHeader& header, const symtab_command& symtab, const std::vector<uint32_t>& symbolStubsList, MachoObjCProcessor*);
+		void ParseSymbolTable(BinaryReader& reader, MachOHeader& header, const symtab_command& symtab,
+			const std::vector<uint32_t>& symbolStubsList, MachoObjCProcessor*,
+			std::unordered_map<std::string, std::string>& symbolLibraryMapping);
 		bool IsValidFunctionStart(uint64_t addr);
 		void ParseFunctionStarts(Platform* platform, uint64_t textBase, function_starts_command functionStarts);
 		bool ParseRelocationEntry(const relocation_info& info, uint64_t start, BNRelocationInfo& result);

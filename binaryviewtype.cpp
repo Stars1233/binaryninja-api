@@ -68,6 +68,13 @@ bool BinaryViewType::IsForceLoadableCallback(void* ctxt)
 }
 
 
+bool BinaryViewType::HasNoInitialContentCallback(void* ctxt)
+{
+	CallbackRef<BinaryViewType> type(ctxt);
+	return type->HasNoInitialContent();
+}
+
+
 BNSettings* BinaryViewType::GetSettingsCallback(void* ctxt, BNBinaryView* data)
 {
 	CallbackRef<BinaryViewType> type(ctxt);
@@ -102,6 +109,7 @@ void BinaryViewType::Register(BinaryViewType* type)
 	callbacks.isDeprecated = IsDeprecatedCallback;
 	callbacks.isForceLoadable = IsForceLoadableCallback;
 	callbacks.getLoadSettingsForData = GetSettingsCallback;
+	callbacks.hasNoInitialContent = HasNoInitialContentCallback;
 
 	type->AddRefForRegistration();
 	type->m_object =
@@ -272,6 +280,12 @@ bool BinaryViewType::IsForceLoadable()
 }
 
 
+bool BinaryViewType::HasNoInitialContent()
+{
+	return false;
+}
+
+
 void BinaryViewType::RegisterBinaryViewFinalizationEvent(const function<void(BinaryView* view)>& callback)
 {
 	BinaryViewEvent* event = new BinaryViewEvent;
@@ -375,6 +389,12 @@ bool CoreBinaryViewType::IsDeprecated()
 bool CoreBinaryViewType::IsForceLoadable()
 {
 	return BNIsBinaryViewTypeForceLoadable(m_object);
+}
+
+
+bool CoreBinaryViewType::HasNoInitialContent()
+{
+	return BNBinaryViewTypeHasNoInitialContent(m_object);
 }
 
 

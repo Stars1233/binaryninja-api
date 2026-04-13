@@ -8623,6 +8623,7 @@ namespace BinaryNinja {
 		static bool IsDeprecatedCallback(void* ctxt);
 		static bool IsForceLoadableCallback(void *ctxt);
 		static BNSettings* GetSettingsCallback(void* ctxt, BNBinaryView* data);
+		static bool HasNoInitialContentCallback(void* ctxt);
 
 		BinaryViewType(BNBinaryViewType* type);
 
@@ -8775,6 +8776,18 @@ namespace BinaryNinja {
 		*/
 		virtual bool IsForceLoadable();
 
+		/*! Check whether instances of this BinaryViewType start with no loaded content
+
+			When true, the view has no meaningful default state: the user must make a
+			selection (e.g. load images from a shared cache) before any content exists.
+			Callers can use this to suppress restoring previously-saved view state for
+			files not being loaded from a database, since a saved layout would reference
+			content that isn't available on reopen.
+
+			\return Whether instances of this BinaryViewType start with no loaded content
+		*/
+		virtual bool HasNoInitialContent();
+
 		virtual Ref<Settings> GetLoadSettingsForData(BinaryView* data);
 		Ref<Settings> GetDefaultLoadSettingsForData(BinaryView* data);
 
@@ -8798,6 +8811,7 @@ namespace BinaryNinja {
 		virtual bool IsTypeValidForData(BinaryView* data) override;
 		virtual bool IsDeprecated() override;
 		virtual bool IsForceLoadable() override;
+		virtual bool HasNoInitialContent() override;
 		virtual Ref<Settings> GetLoadSettingsForData(BinaryView* data) override;
 	};
 

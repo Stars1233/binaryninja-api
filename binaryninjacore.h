@@ -1888,6 +1888,7 @@ extern "C"
 		bool (*isDeprecated)(void* ctxt);
 		bool (*isForceLoadable)(void* ctxt);
 		BNSettings* (*getLoadSettingsForData)(void* ctxt, BNBinaryView* data);
+		bool (*hasNoInitialContent)(void* ctxt);
 	} BNCustomBinaryViewType;
 
 	typedef struct BNTransformParameterInfo
@@ -4801,6 +4802,7 @@ extern "C"
 	BINARYNINJACOREAPI BNBinaryView* BNParseBinaryViewOfType(BNBinaryViewType* type, BNBinaryView* data);
 	BINARYNINJACOREAPI bool BNIsBinaryViewTypeValidForData(BNBinaryViewType* type, BNBinaryView* data);
 	BINARYNINJACOREAPI bool BNIsBinaryViewTypeForceLoadable(BNBinaryViewType* type);
+	BINARYNINJACOREAPI bool BNBinaryViewTypeHasNoInitialContent(BNBinaryViewType* type);
 	BINARYNINJACOREAPI BNSettings* BNGetBinaryViewDefaultLoadSettingsForData(
 	    BNBinaryViewType* type, BNBinaryView* data);
 	BINARYNINJACOREAPI BNSettings* BNGetBinaryViewLoadSettingsForData(BNBinaryViewType* type, BNBinaryView* data);

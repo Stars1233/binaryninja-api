@@ -1514,6 +1514,11 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 		"""returns if the BinaryViewType is force loadable (read-only)"""
 		return core.BNIsBinaryViewTypeForceLoadable(self.handle)
 
+	@property
+	def has_no_initial_content(self) -> bool:
+		"""returns if instances of this BinaryViewType start with no loaded content (read-only)"""
+		return core.BNBinaryViewTypeHasNoInitialContent(self.handle)
+
 	def create(self, data: 'BinaryView') -> Optional['BinaryView']:
 		view = core.BNCreateBinaryViewOfType(self.handle, data.handle)
 		if view is None:
@@ -3328,6 +3333,9 @@ class BinaryView:
 		cls._registered_cb.getLoadSettingsForData = cls._registered_cb.getLoadSettingsForData.__class__(
 		    cls._get_load_settings_for_data
 		)
+		cls._registered_cb.hasNoInitialContent = cls._registered_cb.hasNoInitialContent.__class__(
+		    cls._has_no_initial_content
+		)
 		view_handle = core.BNRegisterBinaryViewType(cls.name, cls.long_name, cls._registered_cb)
 		assert view_handle is not None, "core.BNRegisterBinaryViewType returned None"
 		cls.registered_view_type = BinaryViewType(view_handle)
@@ -3402,6 +3410,17 @@ class BinaryView:
 			return cls.is_force_loadable()  # type: ignore
 		except Exception:
 			log_error_for_exception("Unhandled Python exception in BinaryView._is_force_loadable")
+			return False
+
+	@classmethod
+	def _has_no_initial_content(cls, ctxt):
+		if not callable(getattr(cls, 'has_no_initial_content', None)):
+			return False
+
+		try:
+			return cls.has_no_initial_content()  # type: ignore
+		except:
+			log_error_for_exception("Unhandled Python exception in BinaryView._has_no_initial_content")
 			return False
 
 	@classmethod

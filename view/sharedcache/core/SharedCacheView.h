@@ -62,6 +62,8 @@ public:
 
 	bool IsDeprecated() override { return false; }
 
+	bool HasNoInitialContent() override { return true; }
+
 	BinaryNinja::Ref<BinaryNinja::Settings> GetLoadSettingsForData(BinaryNinja::BinaryView* data) override;
 };
 

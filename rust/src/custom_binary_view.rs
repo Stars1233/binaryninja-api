@@ -75,6 +75,16 @@ where
         })
     }
 
+    extern "C" fn cb_has_no_initial_content<T>(ctxt: *mut c_void) -> bool
+    where
+        T: CustomBinaryViewType,
+    {
+        ffi_wrap!("BinaryViewTypeBase::has_no_initial_content", unsafe {
+            let view_type = &*(ctxt as *mut T);
+            view_type.has_no_initial_content()
+        })
+    }
+
     extern "C" fn cb_create<T>(ctxt: *mut c_void, data: *mut BNBinaryView) -> *mut BNBinaryView
     where
         T: CustomBinaryViewType,
@@ -159,6 +169,7 @@ where
         isDeprecated: Some(cb_deprecated::<T>),
         isForceLoadable: Some(cb_force_loadable::<T>),
         getLoadSettingsForData: Some(cb_load_settings::<T>),
+        hasNoInitialContent: Some(cb_has_no_initial_content::<T>),
     };
 
     unsafe {
@@ -196,6 +207,17 @@ pub trait BinaryViewTypeBase: AsRef<BinaryViewType> {
     ///
     /// If so, it will be shown in the drop-down when a user opens a file with options.
     fn is_force_loadable(&self) -> bool {
+        false
+    }
+
+    /// Do instances of this [`BinaryViewType`] start with no loaded content?
+    ///
+    /// When true, the view has no meaningful default state: the user must make a
+    /// selection (e.g. load images from a shared cache) before any content exists.
+    /// Callers can use this to suppress restoring previously-saved view state for
+    /// files not being loaded from a database, since a saved layout would reference
+    /// content that isn't available on reopen.
+    fn has_no_initial_content(&self) -> bool {
         false
     }
 
@@ -384,6 +406,10 @@ impl BinaryViewTypeBase for BinaryViewType {
 
     fn is_force_loadable(&self) -> bool {
         unsafe { BNIsBinaryViewTypeForceLoadable(self.handle) }
+    }
+
+    fn has_no_initial_content(&self) -> bool {
+        unsafe { BNBinaryViewTypeHasNoInitialContent(self.handle) }
     }
 
     fn load_settings_for_data(&self, data: &BinaryView) -> Option<Ref<Settings>> {

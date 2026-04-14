@@ -2899,7 +2899,21 @@ class Arm64MachoRelocationHandler : public RelocationHandler
 		{  // Magic number defined in MachOView.cpp for chained fixups
 			*(uint64_t*)dest = info.target + info.addend;
 		}
-		else if (info.nativeType == ARM64_RELOC_PAGE21)
+		else if (info.nativeType == ARM64_RELOC_BRANCH26)
+		{
+			// B/BL: OP=X|00101|IMM26=XXXXXXXXXXXXXXXXXXXXXXXXXX
+			// imm26 is signed number of 4-byte instructions
+			int64_t delta = (int64_t)reloc->GetTarget() - (int64_t)reloc->GetAddress();
+			if (delta < -(1LL << 27) || delta >= (1LL << 27) || (delta & 3))
+			{
+				// Relocation can't apply bc the delta is out of range or not 4-byte aligned
+				return false;
+			}
+			// Keep the opcode, shift the delta bc the encoding is in terms of 4-byte instructions
+			insword = (insword & 0xFC000000) | ((uint32_t)(delta >> 2) & 0x03FFFFFF);
+			*(uint32_t*)dest = insword;
+		}
+		else if (info.nativeType == ARM64_RELOC_PAGE21 || info.nativeType == ARM64_RELOC_GOT_LOAD_PAGE21)
 		{
 			// 21 bits across IMMHI:IMMLO
 			// OP=1|IMMLO=XX|10000|IMMHI=XXXXXXXXXXXXXXXXXXX|RD=XXXXX
@@ -2909,7 +2923,7 @@ class Arm64MachoRelocationHandler : public RelocationHandler
 			insword = insword | ((page_delta >> 2) << 5);  // IMMHI
 			*(uint32_t*)dest = insword;
 		}
-		else if (info.nativeType == ARM64_RELOC_PAGEOFF12)
+		else if (info.nativeType == ARM64_RELOC_PAGEOFF12 || info.nativeType == ARM64_RELOC_GOT_LOAD_PAGEOFF12)
 		{
 			/* verify relocation point to qualifying instructions */
 			if ((insword & 0x3B000000) != 0x39000000 && (insword & 0x11C00000) != 0x11000000)
@@ -2985,17 +2999,19 @@ class Arm64MachoRelocationHandler : public RelocationHandler
 				result[i].hasSign = false;
 				break;
 			case ARM64_RELOC_PAGE21:
+			case ARM64_RELOC_GOT_LOAD_PAGE21:
 				// eg: the number of pages to get to <addr> in "adrp x1, <addr>"
-				// printf("GetRelocationInfo(): ARM64_RELOC_PAGE21 .address=0x%llX\n", result[i].address);
+				// GOT_LOAD: the page of the GOT slot
 				break;
 			case ARM64_RELOC_PAGEOFF12:
+			case ARM64_RELOC_GOT_LOAD_PAGEOFF12:
 				// eg: the 12-bit <immediate> in "add x8, x8, #<immediate>"
-				// printf("GetRelocationInfo(): ARM64_RELOC_PAGEOFF12 .address=0x%llX\n",
-				// result[i].address);
+				// GOT_LOAD: 12-bit offset in the GOT slot page (usually used with ARM64_RELOC_GOT_LOAD_PAGE21)
 				break;
 			case ARM64_RELOC_BRANCH26:
-			case ARM64_RELOC_GOT_LOAD_PAGE21:
-			case ARM64_RELOC_GOT_LOAD_PAGEOFF12:
+				// 26-bit immediate for branch instrs
+				result[i].pcRelative = true;
+				break;
 			case ARM64_RELOC_TLVP_LOAD_PAGE21:
 			case ARM64_RELOC_TLVP_LOAD_PAGEOFF12:
 			case ARM64_RELOC_ADDEND:

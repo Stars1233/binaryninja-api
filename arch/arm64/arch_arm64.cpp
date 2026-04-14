@@ -2925,38 +2925,27 @@ class Arm64MachoRelocationHandler : public RelocationHandler
 		}
 		else if (info.nativeType == ARM64_RELOC_PAGEOFF12 || info.nativeType == ARM64_RELOC_GOT_LOAD_PAGEOFF12)
 		{
-			/* verify relocation point to qualifying instructions */
-			if ((insword & 0x3B000000) != 0x39000000 && (insword & 0x11C00000) != 0x11000000)
+			int left_shift;
+			if ((insword & 0x3B000000) == 0x39000000)
+			{
+				// ldr/str unsigned immediate has size in top two bits
+				left_shift = (insword >> 30) & 0x3;
+			}
+			else if ((insword & 0x11C00000) == 0x11000000)
+			{
+				// add/sub immediate
+				left_shift = 0;
+			}
+			else
+			{
 				return false;
-
-			/* verify it's a positive/forward jump (the imm12 is unsigned) */
-			int64_t delta = reloc->GetTarget() - PAGE_NO_OFF(reloc->GetAddress());
-			if (delta < 0)
-				return false;
-
-			/* disassemble instruction, is last operand an immediate? is there a shift? */
-			Instruction instr;
-			if (aarch64_decompose(*(uint32_t*)dest, &instr, reloc->GetAddress()) != 0)
-				return false;
-
-			int n_operands = 0;
-			while (instr.operands[n_operands].operandClass != NONE)
-				n_operands++;
-
-			if (instr.operands[n_operands - 1].operandClass != IMM32 &&
-			    instr.operands[n_operands - 1].operandClass != IMM64)
-				return false;
-
-			int left_shift = (instr.operands[n_operands - 1].shiftValueUsed) ?
-                           instr.operands[n_operands - 1].shiftValue :
-                           0;
+			}
 
 			/* re-encode */
-			/* left shift is upon DECODING, we right shift to bias this */
-			delta = delta >> left_shift;
-			// SF=X|OP=0|S=0|100010|SH=X|IMM12=XXXXXXXXXXXX|RN=XXXXX|RD=XXXXX
-			uint16_t imm12 = (insword & 0x3FFC00) >> 10;
-			imm12 = PAGE_OFF(imm12 + delta);
+			// add/sub: SF=X|OP=0|S=0|100010|SH=X|IMM12=XXXXXXXXXXXX|RN=XXXXX|RD=XXXXX
+			// ldr/str: Size=XX|111|001|OP=XX|IMM12=XXXXXXXXXXXX|Rn=XXXXX|Rt=XXXXX
+			uint64_t page_offset = PAGE_OFF((uint64_t)reloc->GetTarget() + info.addend);
+			uint32_t imm12 = (page_offset >> left_shift) & 0xfff;
 			insword = (insword & 0xFFC003FF) | (imm12 << 10);
 			*(uint32_t*)dest = insword;
 		}
@@ -3024,6 +3013,23 @@ class Arm64MachoRelocationHandler : public RelocationHandler
 		for (auto& relocType : unsupportedRelocations)
 			logger->LogWarn("Unsupported relocation: %s (%x)", GetRelocationString(relocType), relocType);
 		return true;
+	}
+
+	virtual size_t GetOperandForExternalRelocation(const uint8_t* data, uint64_t addr, size_t length,
+	    Ref<LowLevelILFunction> il, Ref<Relocation> relocation) override
+	{
+		(void)data;
+		(void)addr;
+		(void)length;
+		(void)il;
+		auto info = relocation->GetInfo();
+		switch (info.nativeType)
+		{
+		case ARM64_RELOC_GOT_LOAD_PAGE21:
+			return BN_NOCOERCE_EXTERN_PTR;
+		default:
+			return BN_AUTOCOERCE_EXTERN_PTR;
+		}
 	}
 };
 

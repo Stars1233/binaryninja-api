@@ -114,6 +114,7 @@ struct BINARYNINJAUIAPI UIAction
 	static std::set<QString> getAllRegisteredActions();
 	static QList<QKeySequence> getDefaultKeyBinding(const QString& name);
 	static QList<QKeySequence> getKeyBinding(const QString& name);
+	static QList<QString> getAliases(const QString& name);
 	static QString getActionDisplayName(const QString& name, const UIActionContext& context);
 
 	static int rawControl();

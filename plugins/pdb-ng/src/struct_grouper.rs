@@ -29,8 +29,11 @@ struct MemberSize {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum ResolvedGroup {
+    /// An index into a list of members
     Single(usize),
+    /// Non-overlapping members with bit-offset of start
     Struct(u64, Vec<ResolvedGroup>),
+    /// Overlapping members with bit-offset of start
     Union(u64, Vec<ResolvedGroup>),
 }
 
@@ -399,36 +402,25 @@ fn apply_groups(
         match group {
             ResolvedGroup::Single(index) => {
                 let member = &members[index];
-
-                // TODO : Fix inner-offset being larger than `member.offset`
-
+                let member_bit_offset = member.offset * 8;
                 match (member.bitfield_position, member.bitfield_size) {
                     (Some(bit_pos), bit_width) => {
                         structure.insert_bitwise(
                             &member.ty,
                             &member.name,
-                            (member.offset - offset) * 8 + bit_pos,
+                            member_bit_offset - offset + bit_pos,
                             bit_width.map(|w| w as u8),
                             false,
                             member.access,
                             member.scope,
                         );
                     }
-                    (None, _) if offset > member.offset => {
-                        structure.insert(
-                            &member.ty,
-                            &member.name,
-                            0,
-                            false,
-                            member.access,
-                            member.scope,
-                        );
-                    }
                     (None, _) => {
-                        structure.insert(
+                        structure.insert_bitwise(
                             &member.ty,
                             &member.name,
-                            member.offset - offset,
+                            member_bit_offset - offset,
+                            None,
                             false,
                             member.access,
                             member.scope,
@@ -439,10 +431,11 @@ fn apply_groups(
             ResolvedGroup::Struct(inner_offset, children) => {
                 let mut inner = StructureBuilder::new();
                 apply_groups(members, &mut inner, children, inner_offset);
-                structure.insert(
+                structure.insert_bitwise(
                     &Conf::new(Type::structure(inner.finalize().as_ref()), MAX_CONFIDENCE),
                     &format!("__inner{}", i),
                     inner_offset - offset,
+                    None,
                     false,
                     MemberAccess::PublicAccess,
                     MemberScope::NoScope,
@@ -452,10 +445,11 @@ fn apply_groups(
                 let mut inner = StructureBuilder::new();
                 inner.structure_type(StructureType::UnionStructureType);
                 apply_groups(members, &mut inner, children, inner_offset);
-                structure.insert(
+                structure.insert_bitwise(
                     &Conf::new(Type::structure(inner.finalize().as_ref()), MAX_CONFIDENCE),
                     &format!("__inner{}", i),
                     inner_offset - offset,
+                    None,
                     false,
                     MemberAccess::PublicAccess,
                     MemberScope::NoScope,

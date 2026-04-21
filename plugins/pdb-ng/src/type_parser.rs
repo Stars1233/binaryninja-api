@@ -78,7 +78,7 @@ pub struct ParsedMember {
     pub ty: Conf<Ref<Type>>,
     /// Member name
     pub name: String,
-    /// Offset in structure
+    /// Offset in structure (bytes)
     pub offset: u64,
     /// Access flags
     pub access: MemberAccess,

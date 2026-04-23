@@ -1210,7 +1210,11 @@ class PythonScriptingProvider(ScriptingProvider):
 
 	def _get_python_environment(self, using_bundled_python: bool=False) -> Optional[Dict]:
 		if using_bundled_python and sys.platform == "darwin":
-			return {"PYTHONHOME": Path(binaryninja.get_install_directory()).parent / f"Resources/bundled-python3"}
+			env = os.environ.copy()
+			env.pop("PYTHONPATH", None)
+			env.pop("PYTHONSTARTUP", None)
+			env["PYTHONHOME"] = str(Path(binaryninja.get_install_directory()).parent / "Resources/bundled-python3")
+			return env
 		return None
 
 	def _install_modules(self, ctx, _modules: bytes) -> bool:

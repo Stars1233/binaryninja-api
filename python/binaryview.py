@@ -1551,6 +1551,15 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 			return None
 		return settings.Settings(handle=load_settings)
 
+	def get_default_load_settings_for_data(self, data: 'BinaryView') -> Optional['settings.Settings']:
+		view_handle = None
+		if data is not None:
+			view_handle = data.handle
+		load_settings = core.BNGetBinaryViewDefaultLoadSettingsForData(self.handle, view_handle)
+		if load_settings is None:
+			return None
+		return settings.Settings(handle=load_settings)
+
 	def register_arch(self, ident: int, endian: Endianness, arch: 'architecture.Architecture') -> None:
 		core.BNRegisterArchitectureForViewType(self.handle, ident, endian, arch.handle)
 

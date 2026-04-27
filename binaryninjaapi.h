@@ -19219,6 +19219,7 @@ namespace BinaryNinja {
 		VersionInfo GetMaximumVersionInfo() const;
 		std::string GetCreationDate();
 		bool IsViewOnly() const;
+		bool IsPaid() const;
 		bool IsBeingDeleted() const;
 		bool IsBeingUpdated() const;
 		bool IsInstalled() const;

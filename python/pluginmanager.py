@@ -222,6 +222,11 @@ class Extension:
 		return core.BNPluginGetPackageUrl(self.handle)
 
 	@property
+	def is_paid(self) -> bool:
+		"""Boolean True if this plugin requires payment, False otherwise"""
+		return core.BNPluginGetIsPaid(self.handle)
+
+	@property
 	def author_url(self) -> Optional[str]:
 		"""String URL of the plugin author's url"""
 		return core.BNPluginGetAuthorUrl(self.handle)

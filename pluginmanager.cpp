@@ -224,6 +224,12 @@ bool Extension::IsViewOnly() const
 }
 
 
+bool Extension::IsPaid() const
+{
+	return BNPluginGetIsPaid(m_object);
+}
+
+
 string Extension::GetRepository() const
 {
 	RETURN_STRING(BNPluginGetRepository(m_object));

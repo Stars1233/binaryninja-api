@@ -7987,6 +7987,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNPluginFreeVersion(BNPluginVersion v);
 	BINARYNINJACOREAPI const char* BNPluginGetCommit(BNPlugin* p);
 	BINARYNINJACOREAPI const bool BNPluginGetViewOnly(BNPlugin* p);
+	BINARYNINJACOREAPI const bool BNPluginGetIsPaid(BNPlugin* p);
 	BINARYNINJACOREAPI void BNFreePluginTypes(BNPluginType* r);
 	BINARYNINJACOREAPI BNPlugin* BNNewPluginReference(BNPlugin* r);
 	BINARYNINJACOREAPI void BNFreePlugin(BNPlugin* plugin);

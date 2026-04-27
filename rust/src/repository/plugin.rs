@@ -157,6 +157,11 @@ impl Extension {
         unsafe { BnString::into_string(result as *mut c_char) }
     }
 
+    /// Boolean True if this plugin requires payment, False otherwise
+    pub fn is_paid(&self) -> bool {
+        unsafe { BNPluginGetIsPaid(self.handle.as_ptr()) }
+    }
+
     /// String URL of the plugin author's url
     pub fn author_url(&self) -> String {
         let result = unsafe { BNPluginGetAuthorUrl(self.handle.as_ptr()) };

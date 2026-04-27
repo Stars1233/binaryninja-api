@@ -175,6 +175,7 @@ pub enum MediumLevelILLiftedInstructionKind {
     LoadSsa(LiftedLoadSsa),
     Ret(LiftedRet),
     Var(Var),
+    VarOutput(VarOutput),
     AddressOf(Var),
     VarField(Field),
     AddressOfField(Field),
@@ -182,6 +183,7 @@ pub enum MediumLevelILLiftedInstructionKind {
     VarAliased(VarSsa),
     VarSsaField(VarSsaField),
     VarAliasedField(VarSsaField),
+    VarOutputSsa(VarOutputSsa),
     Trap(Trap),
     // A placeholder for instructions that the Rust bindings do not yet support.
     // Distinct from `Unimpl` as that is a valid instruction.
@@ -298,6 +300,7 @@ impl MediumLevelILLiftedInstruction {
             SyscallUntyped(_) => "SyscallUntyped",
             SeparateParamList(_) => "SeparateParamList",
             SharedParamSlot(_) => "SharedParamSlot",
+            VarOutput(_) => "VarOutput",
             Neg(_) => "Neg",
             Not(_) => "Not",
             Sx(_) => "Sx",
@@ -328,6 +331,7 @@ impl MediumLevelILLiftedInstruction {
             VarAliased(_) => "VarAliased",
             VarSsaField(_) => "VarSsaField",
             VarAliasedField(_) => "VarAliasedField",
+            VarOutputSsa(_) => "VarOutputSsa",
             Trap(_) => "Trap",
         }
     }
@@ -451,7 +455,7 @@ impl MediumLevelILLiftedInstruction {
                 ("carry", Operand::Expr(*op.carry.clone())),
             ],
             Call(op) | Tailcall(op) => vec![
-                ("output", Operand::VarList(op.output.clone())),
+                ("output", Operand::ExprList(op.output.clone())),
                 ("dest", Operand::Expr(*op.dest.clone())),
                 ("params", Operand::ExprList(op.params.clone())),
             ],
@@ -466,7 +470,7 @@ impl MediumLevelILLiftedInstruction {
                 ("src_memory", Operand::Int(op.src_memory)),
             ],
             Syscall(op) => vec![
-                ("output", Operand::VarList(op.output.clone())),
+                ("output", Operand::ExprList(op.output.clone())),
                 ("params", Operand::ExprList(op.params.clone())),
             ],
             Intrinsic(op) => vec![
@@ -490,35 +494,35 @@ impl MediumLevelILLiftedInstruction {
                 ("output", Operand::VarSsaList(op.output.clone())),
             ],
             CallSsa(op) | TailcallSsa(op) => vec![
-                ("output", Operand::VarSsaList(op.output.clone())),
+                ("output", Operand::ExprList(op.output.clone())),
                 ("dest", Operand::Expr(*op.dest.clone())),
                 ("params", Operand::ExprList(op.params.clone())),
                 ("src_memory", Operand::Int(op.src_memory)),
             ],
             CallUntypedSsa(op) | TailcallUntypedSsa(op) => vec![
-                ("output", Operand::VarSsaList(op.output.clone())),
+                ("output", Operand::ExprList(op.output.clone())),
                 ("dest", Operand::Expr(*op.dest.clone())),
                 ("params", Operand::ExprList(op.params.clone())),
                 ("stack", Operand::Expr(*op.stack.clone())),
             ],
             SyscallSsa(op) => vec![
-                ("output", Operand::VarSsaList(op.output.clone())),
+                ("output", Operand::ExprList(op.output.clone())),
                 ("params", Operand::ExprList(op.params.clone())),
                 ("src_memory", Operand::Int(op.src_memory)),
             ],
             SyscallUntypedSsa(op) => vec![
-                ("output", Operand::VarSsaList(op.output.clone())),
+                ("output", Operand::ExprList(op.output.clone())),
                 ("params", Operand::ExprList(op.params.clone())),
                 ("stack", Operand::Expr(*op.stack.clone())),
             ],
             CallUntyped(op) | TailcallUntyped(op) => vec![
-                ("output", Operand::VarList(op.output.clone())),
+                ("output", Operand::ExprList(op.output.clone())),
                 ("dest", Operand::Expr(*op.dest.clone())),
                 ("params", Operand::ExprList(op.params.clone())),
                 ("stack", Operand::Expr(*op.stack.clone())),
             ],
             SyscallUntyped(op) => vec![
-                ("output", Operand::VarList(op.output.clone())),
+                ("output", Operand::ExprList(op.output.clone())),
                 ("params", Operand::ExprList(op.params.clone())),
                 ("stack", Operand::Expr(*op.stack.clone())),
             ],
@@ -544,6 +548,7 @@ impl MediumLevelILLiftedInstruction {
             SeparateParamList(op) => vec![("params", Operand::ExprList(op.params.clone()))],
             SharedParamSlot(op) => vec![("params", Operand::ExprList(op.params.clone()))],
             Var(op) | AddressOf(op) => vec![("src", Operand::Var(op.src))],
+            VarOutput(op) => vec![("dest", Operand::Var(op.dest))],
             VarField(op) | AddressOfField(op) => vec![
                 ("src", Operand::Var(op.src)),
                 ("offset", Operand::Int(op.offset)),
@@ -553,6 +558,7 @@ impl MediumLevelILLiftedInstruction {
                 ("src", Operand::VarSsa(op.src)),
                 ("offset", Operand::Int(op.offset)),
             ],
+            VarOutputSsa(op) => vec![("dest", Operand::VarSsa(op.dest))],
             Trap(op) => vec![("vector", Operand::Int(op.vector))],
         }
     }

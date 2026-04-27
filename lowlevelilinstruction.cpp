@@ -835,6 +835,16 @@ LowLevelILInstructionList::operator vector<LowLevelILInstruction>() const
 }
 
 
+LowLevelILInstructionList::operator vector<ExprId>() const
+{
+	vector<ExprId> result;
+	result.reserve(size());
+	for (auto i : *this)
+		result.push_back(i.exprIndex);
+	return result;
+}
+
+
 const RegisterOrFlag LowLevelILRegisterOrFlagList::ListIterator::operator*()
 {
 	return RegisterOrFlag::FromIdentifier(*pos);

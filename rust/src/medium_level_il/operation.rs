@@ -325,7 +325,7 @@ pub struct Call {
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedCall {
-    pub output: Vec<Variable>,
+    pub output: Vec<MediumLevelILLiftedInstruction>,
     pub dest: Box<MediumLevelILLiftedInstruction>,
     pub params: Vec<MediumLevelILLiftedInstruction>,
 }
@@ -388,7 +388,7 @@ pub struct Syscall {
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedSyscallCall {
-    pub output: Vec<Variable>,
+    pub output: Vec<MediumLevelILLiftedInstruction>,
     pub params: Vec<MediumLevelILLiftedInstruction>,
 }
 
@@ -465,7 +465,7 @@ pub struct CallSsa {
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedCallSsa {
-    pub output: Vec<SSAVariable>,
+    pub output: Vec<MediumLevelILLiftedInstruction>,
     pub dest: Box<MediumLevelILLiftedInstruction>,
     pub params: Vec<MediumLevelILLiftedInstruction>,
     pub src_memory: u64,
@@ -481,7 +481,7 @@ pub struct CallUntypedSsa {
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedCallUntypedSsa {
-    pub output: Vec<SSAVariable>,
+    pub output: Vec<MediumLevelILLiftedInstruction>,
     pub dest: Box<MediumLevelILLiftedInstruction>,
     pub params: Vec<MediumLevelILLiftedInstruction>,
     pub stack: Box<MediumLevelILLiftedInstruction>,
@@ -497,7 +497,7 @@ pub struct SyscallSsa {
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedSyscallSsa {
-    pub output: Vec<SSAVariable>,
+    pub output: Vec<MediumLevelILLiftedInstruction>,
     pub params: Vec<MediumLevelILLiftedInstruction>,
     pub src_memory: u64,
 }
@@ -511,7 +511,7 @@ pub struct SyscallUntypedSsa {
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedSyscallUntypedSsa {
-    pub output: Vec<SSAVariable>,
+    pub output: Vec<MediumLevelILLiftedInstruction>,
     pub params: Vec<MediumLevelILLiftedInstruction>,
     pub stack: Box<MediumLevelILLiftedInstruction>,
 }
@@ -519,14 +519,15 @@ pub struct LiftedSyscallUntypedSsa {
 // CALL_UNTYPED, TAILCALL_UNTYPED
 #[derive(Debug, Copy, Clone)]
 pub struct CallUntyped {
-    pub output: MediumLevelExpressionIndex,
+    pub first_output: usize,
+    pub num_outputs: usize,
     pub dest: MediumLevelExpressionIndex,
     pub params: MediumLevelExpressionIndex,
     pub stack: MediumLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedCallUntyped {
-    pub output: Vec<Variable>,
+    pub output: Vec<MediumLevelILLiftedInstruction>,
     pub dest: Box<MediumLevelILLiftedInstruction>,
     pub params: Vec<MediumLevelILLiftedInstruction>,
     pub stack: Box<MediumLevelILLiftedInstruction>,
@@ -535,13 +536,14 @@ pub struct LiftedCallUntyped {
 // SYSCALL_UNTYPED
 #[derive(Debug, Copy, Clone)]
 pub struct SyscallUntyped {
-    pub output: MediumLevelExpressionIndex,
+    pub first_output: usize,
+    pub num_outputs: usize,
     pub params: MediumLevelExpressionIndex,
     pub stack: MediumLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedSyscallUntyped {
-    pub output: Vec<Variable>,
+    pub output: Vec<MediumLevelILLiftedInstruction>,
     pub params: Vec<MediumLevelILLiftedInstruction>,
     pub stack: Box<MediumLevelILLiftedInstruction>,
 }
@@ -633,6 +635,12 @@ pub struct Var {
     pub src: Variable,
 }
 
+// VAR_OUTPUT
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+pub struct VarOutput {
+    pub dest: Variable,
+}
+
 // VAR_FIELD, ADDRESS_OF_FIELD
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub struct Field {
@@ -651,6 +659,12 @@ pub struct VarSsa {
 pub struct VarSsaField {
     pub src: SSAVariable,
     pub offset: u64,
+}
+
+// VAR_OUTPUT_SSA
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+pub struct VarOutputSsa {
+    pub dest: SSAVariable,
 }
 
 // TRAP

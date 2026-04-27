@@ -477,6 +477,16 @@ HighLevelILInstructionList::operator vector<HighLevelILInstruction>() const
 }
 
 
+HighLevelILInstructionList::operator vector<ExprId>() const
+{
+	vector<ExprId> result;
+	result.reserve(size());
+	for (auto i : *this)
+		result.push_back(i.exprIndex);
+	return result;
+}
+
+
 const SSAVariable HighLevelILSSAVariableList::ListIterator::operator*()
 {
 	HighLevelILIntegerList::const_iterator cur = pos;

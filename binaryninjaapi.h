@@ -15695,6 +15695,7 @@ namespace BinaryNinja {
 		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId VarSplitSSA(size_t size, const SSAVariable& high, const SSAVariable& low,
 		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId VarOutputSSA(size_t size, const SSAVariable& dest, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId AddressOf(const Variable& var, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId AddressOfField(const Variable& var, uint64_t offset, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Const(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
@@ -15752,35 +15753,36 @@ namespace BinaryNinja {
 		ExprId JumpTo(ExprId dest, const std::map<uint64_t, BNMediumLevelILLabel*>& targets,
 		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ReturnHint(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId Call(const std::vector<Variable>& output, ExprId dest, const std::vector<ExprId>& params,
+		ExprId Call(const std::vector<ExprId>& output, ExprId dest, const std::vector<ExprId>& params,
 		    const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CallUntyped(const std::vector<Variable>& output, ExprId dest, const std::vector<ExprId>& params,
+		ExprId CallUntyped(const std::vector<ExprId>& output, ExprId dest, const std::vector<ExprId>& params,
 			ExprId stack, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId Syscall(const std::vector<Variable>& output, const std::vector<ExprId>& params,
+		ExprId Syscall(const std::vector<ExprId>& output, const std::vector<ExprId>& params,
 		    const ILSourceLocation& loc = ILSourceLocation());
-		ExprId SyscallUntyped(const std::vector<Variable>& output, const std::vector<ExprId>& params, ExprId stack,
+		ExprId SyscallUntyped(const std::vector<ExprId>& output, const std::vector<ExprId>& params, ExprId stack,
 			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId TailCall(const std::vector<Variable>& output, ExprId dest, const std::vector<ExprId>& params,
+		ExprId TailCall(const std::vector<ExprId>& output, ExprId dest, const std::vector<ExprId>& params,
 		    const ILSourceLocation& loc = ILSourceLocation());
-		ExprId TailCallUntyped(const std::vector<Variable>& output, ExprId dest, const std::vector<ExprId>& params,
+		ExprId TailCallUntyped(const std::vector<ExprId>& output, ExprId dest, const std::vector<ExprId>& params,
 			ExprId stack, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CallSSA(const std::vector<SSAVariable>& output, ExprId dest, const std::vector<ExprId>& params,
+		ExprId CallSSA(const std::vector<ExprId>& output, ExprId dest, const std::vector<ExprId>& params,
 		    size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CallUntypedSSA(const std::vector<SSAVariable>& output, ExprId dest, const std::vector<ExprId>& params,
+		ExprId CallUntypedSSA(const std::vector<ExprId>& output, ExprId dest, const std::vector<ExprId>& params,
 			size_t newMemVersion, size_t prevMemVersion, ExprId stack,
 			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId SyscallSSA(const std::vector<SSAVariable>& output, const std::vector<ExprId>& params,
+		ExprId SyscallSSA(const std::vector<ExprId>& output, const std::vector<ExprId>& params,
 		    size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId SyscallUntypedSSA(const std::vector<SSAVariable>& output, const std::vector<ExprId>& params,
+		ExprId SyscallUntypedSSA(const std::vector<ExprId>& output, const std::vector<ExprId>& params,
 			size_t newMemVersion, size_t prevMemVersion, ExprId stack,
 			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId TailCallSSA(const std::vector<SSAVariable>& output, ExprId dest, const std::vector<ExprId>& params,
+		ExprId TailCallSSA(const std::vector<ExprId>& output, ExprId dest, const std::vector<ExprId>& params,
 		    size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId TailCallUntypedSSA(const std::vector<SSAVariable>& output, ExprId dest,
+		ExprId TailCallUntypedSSA(const std::vector<ExprId>& output, ExprId dest,
 			const std::vector<ExprId>& params, size_t newMemVersion, size_t prevMemVersion, ExprId stack,
 			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SeparateParamList(const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SharedParamSlot(const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId VarOutput(size_t size, const Variable& var, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Return(const std::vector<ExprId>& sources, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId NoReturn(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CompareEqual(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());

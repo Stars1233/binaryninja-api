@@ -533,6 +533,7 @@ namespace BinaryNinja
 		const LowLevelILInstruction operator[](size_t i) const;
 
 		operator _STD_VECTOR<LowLevelILInstruction>() const;
+		operator _STD_VECTOR<ExprId>() const;
 	};
 
 	/*!

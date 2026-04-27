@@ -84,8 +84,10 @@ static constexpr std::array s_operandTypeForUsage = {
 	OperandUsageType{SourceMemoryVersionsMediumLevelOperandUsage, IndexListMediumLevelOperand},
 	OperandUsageType{OutputVariablesMediumLevelOperandUsage, VariableListMediumLevelOperand},
 	OperandUsageType{OutputVariablesSubExprMediumLevelOperandUsage, VariableListMediumLevelOperand},
+	OperandUsageType{OutputVariablesSubExprMediumLevelOperandUsage, ExprListMediumLevelOperand},
 	OperandUsageType{OutputSSAVariablesMediumLevelOperandUsage, SSAVariableListMediumLevelOperand},
 	OperandUsageType{OutputSSAVariablesSubExprMediumLevelOperandUsage, SSAVariableListMediumLevelOperand},
+	OperandUsageType{OutputExprsSubExprMediumLevelOperandUsage, ExprListMediumLevelOperand},
 	OperandUsageType{OutputSSAMemoryVersionMediumLevelOperandUsage, IndexMediumLevelOperand},
 	OperandUsageType{ParameterExprsMediumLevelOperandUsage, ExprListMediumLevelOperand},
 	OperandUsageType{SourceExprsMediumLevelOperandUsage, ExprListMediumLevelOperand},
@@ -126,6 +128,7 @@ struct MediumLevelILOperationTraits
 			// Represented as subexpression, so only takes one slot even though it is a list
 			return 1;
 		case OutputSSAVariablesSubExprMediumLevelOperandUsage:
+		case OutputExprsSubExprMediumLevelOperandUsage:
 			// OutputSSAMemoryVersionMediumLevelOperandUsage follows at same operand
 			return 0;
 		case UntypedParameterSSAExprsMediumLevelOperandUsage:
@@ -206,12 +209,12 @@ static constexpr std::array s_instructionOperandUsage = {
 	OperandUsage{MLIL_JUMP, {DestExprMediumLevelOperandUsage}},
 	OperandUsage{MLIL_JUMP_TO, {DestExprMediumLevelOperandUsage, TargetsMediumLevelOperandUsage}},
 	OperandUsage{MLIL_RET_HINT, {DestExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CALL, {OutputVariablesMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CALL_UNTYPED, {OutputVariablesSubExprMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, UntypedParameterExprsMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CALL_OUTPUT, {OutputVariablesMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CALL, {OutputExprsMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CALL_UNTYPED, {OutputExprsMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, UntypedParameterExprsMediumLevelOperandUsage}},
 	OperandUsage{MLIL_CALL_PARAM, {ParameterExprsMediumLevelOperandUsage}},
 	OperandUsage{MLIL_SEPARATE_PARAM_LIST, {ParameterExprsMediumLevelOperandUsage}},
 	OperandUsage{MLIL_SHARED_PARAM_SLOT, {ParameterExprsMediumLevelOperandUsage}},
+	OperandUsage{MLIL_VAR_OUTPUT, {DestVariableMediumLevelOperandUsage}},
 	OperandUsage{MLIL_RET, {SourceExprsMediumLevelOperandUsage}},
 	OperandUsage{MLIL_NORET},
 	OperandUsage{MLIL_IF, {ConditionExprMediumLevelOperandUsage, TrueTargetMediumLevelOperandUsage, FalseTargetMediumLevelOperandUsage}},
@@ -229,10 +232,10 @@ static constexpr std::array s_instructionOperandUsage = {
 	OperandUsage{MLIL_TEST_BIT, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
 	OperandUsage{MLIL_BOOL_TO_INT, {SourceExprMediumLevelOperandUsage}},
 	OperandUsage{MLIL_ADD_OVERFLOW, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_SYSCALL, {OutputVariablesMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage}},
-	OperandUsage{MLIL_SYSCALL_UNTYPED, {OutputVariablesSubExprMediumLevelOperandUsage, UntypedParameterExprsMediumLevelOperandUsage, StackExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_TAILCALL, {OutputVariablesMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage}},
-	OperandUsage{MLIL_TAILCALL_UNTYPED, {OutputVariablesSubExprMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, UntypedParameterExprsMediumLevelOperandUsage}},
+	OperandUsage{MLIL_SYSCALL, {OutputExprsMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage}},
+	OperandUsage{MLIL_SYSCALL_UNTYPED, {OutputExprsMediumLevelOperandUsage, UntypedParameterExprsMediumLevelOperandUsage, StackExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_TAILCALL, {OutputExprsMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage}},
+	OperandUsage{MLIL_TAILCALL_UNTYPED, {OutputExprsMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, UntypedParameterExprsMediumLevelOperandUsage}},
 	OperandUsage{MLIL_INTRINSIC, {OutputVariablesMediumLevelOperandUsage, IntrinsicMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage}},
 	OperandUsage{MLIL_FREE_VAR_SLOT, {DestVariableMediumLevelOperandUsage}},
 	OperandUsage{MLIL_BP},
@@ -274,14 +277,15 @@ static constexpr std::array s_instructionOperandUsage = {
 	OperandUsage{MLIL_VAR_SPLIT_SSA, {HighSSAVariableMediumLevelOperandUsage, LowSSAVariableMediumLevelOperandUsage}},
 	OperandUsage{MLIL_ASSERT_SSA, {SourceSSAVariableMediumLevelOperandUsage, ConstraintMediumLevelOperandUsage}},
 	OperandUsage{MLIL_FORCE_VER_SSA, {DestSSAVariableMediumLevelOperandUsage, SourceSSAVariableMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CALL_SSA, {OutputSSAVariablesSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage}},
-	OperandUsage{MLIL_CALL_UNTYPED_SSA, {OutputSSAVariablesSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, UntypedParameterSSAExprsMediumLevelOperandUsage, ParameterSSAMemoryVersionMediumLevelOperandUsage, StackExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_SYSCALL_SSA, {OutputSSAVariablesSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage}},
-	OperandUsage{MLIL_SYSCALL_UNTYPED_SSA, {OutputSSAVariablesSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage, UntypedParameterSSAExprsMediumLevelOperandUsage, ParameterSSAMemoryVersionMediumLevelOperandUsage, StackExprMediumLevelOperandUsage}},
-	OperandUsage{MLIL_TAILCALL_SSA, {OutputSSAVariablesSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage}},
-	OperandUsage{MLIL_TAILCALL_UNTYPED_SSA, {OutputSSAVariablesSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, UntypedParameterSSAExprsMediumLevelOperandUsage, ParameterSSAMemoryVersionMediumLevelOperandUsage, StackExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CALL_SSA, {OutputExprsSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CALL_UNTYPED_SSA, {OutputExprsSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, UntypedParameterSSAExprsMediumLevelOperandUsage, ParameterSSAMemoryVersionMediumLevelOperandUsage, StackExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_SYSCALL_SSA, {OutputExprsSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage}},
+	OperandUsage{MLIL_SYSCALL_UNTYPED_SSA, {OutputExprsSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage, UntypedParameterSSAExprsMediumLevelOperandUsage, ParameterSSAMemoryVersionMediumLevelOperandUsage, StackExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_TAILCALL_SSA, {OutputExprsSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, ParameterExprsMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage}},
+	OperandUsage{MLIL_TAILCALL_UNTYPED_SSA, {OutputExprsSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage, DestExprMediumLevelOperandUsage, UntypedParameterSSAExprsMediumLevelOperandUsage, ParameterSSAMemoryVersionMediumLevelOperandUsage, StackExprMediumLevelOperandUsage}},
 	OperandUsage{MLIL_CALL_PARAM_SSA, {ParameterExprsMediumLevelOperandUsage}},
 	OperandUsage{MLIL_CALL_OUTPUT_SSA, {OutputSSAVariablesMediumLevelOperandUsage}},
+	OperandUsage{MLIL_VAR_OUTPUT_SSA, {DestSSAVariableMediumLevelOperandUsage}},
 	OperandUsage{MLIL_MEMORY_INTRINSIC_OUTPUT_SSA, {OutputSSAVariablesMediumLevelOperandUsage}},
 	OperandUsage{MLIL_LOAD_SSA, {SourceExprMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage}},
 	OperandUsage{MLIL_LOAD_STRUCT_SSA, {SourceExprMediumLevelOperandUsage, OffsetMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage}},
@@ -674,6 +678,16 @@ MediumLevelILInstructionList::operator vector<MediumLevelILInstruction>() const
 }
 
 
+MediumLevelILInstructionList::operator vector<ExprId>() const
+{
+	vector<ExprId> result;
+	result.reserve(size());
+	for (auto i : *this)
+		result.push_back(i.exprIndex);
+	return result;
+}
+
+
 MediumLevelILOperand::MediumLevelILOperand(
     const MediumLevelILInstruction& instr, MediumLevelILOperandUsage usage, size_t operandIndex) :
     m_instr(instr),
@@ -786,6 +800,8 @@ MediumLevelILInstructionList MediumLevelILOperand::GetExprList() const
 	if (m_usage == UntypedParameterExprsMediumLevelOperandUsage)
 		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsExprList(0);
 	if (m_usage == UntypedParameterSSAExprsMediumLevelOperandUsage)
+		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsExprList(1);
+	if (m_usage == OutputExprsSubExprMediumLevelOperandUsage)
 		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsExprList(1);
 	return m_instr.GetRawOperandAsExprList(m_operandIndex);
 }
@@ -1379,57 +1395,81 @@ void MediumLevelILInstruction::VisitExprs(bn::base::function_ref<bool(const Medi
 		break;
 	case MLIL_CALL:
 		GetDestExpr<MLIL_CALL>().VisitExprs(func);
+		for (auto i : GetOutputExprs<MLIL_CALL>())
+			i.VisitExprs(func);
 		for (auto i : GetParameterExprs<MLIL_CALL>())
 			i.VisitExprs(func);
 		break;
 	case MLIL_CALL_UNTYPED:
 		GetDestExpr<MLIL_CALL_UNTYPED>().VisitExprs(func);
+		for (auto i : GetOutputExprs<MLIL_CALL_UNTYPED>())
+			i.VisitExprs(func);
 		for (auto i : GetParameterExprs<MLIL_CALL_UNTYPED>())
 			i.VisitExprs(func);
 		break;
 	case MLIL_CALL_SSA:
 		GetDestExpr<MLIL_CALL_SSA>().VisitExprs(func);
+		for (auto i : GetOutputExprs<MLIL_CALL_SSA>())
+			i.VisitExprs(func);
 		for (auto i : GetParameterExprs<MLIL_CALL_SSA>())
 			i.VisitExprs(func);
 		break;
 	case MLIL_CALL_UNTYPED_SSA:
 		GetDestExpr<MLIL_CALL_UNTYPED_SSA>().VisitExprs(func);
+		for (auto i : GetOutputExprs<MLIL_CALL_UNTYPED_SSA>())
+			i.VisitExprs(func);
 		for (auto i : GetParameterExprs<MLIL_CALL_UNTYPED_SSA>())
 			i.VisitExprs(func);
 		break;
 	case MLIL_SYSCALL:
+		for (auto i : GetOutputExprs<MLIL_SYSCALL>())
+			i.VisitExprs(func);
 		for (auto i : GetParameterExprs<MLIL_SYSCALL>())
 			i.VisitExprs(func);
 		break;
 	case MLIL_SYSCALL_UNTYPED:
+		for (auto i : GetOutputExprs<MLIL_SYSCALL_UNTYPED>())
+			i.VisitExprs(func);
 		for (auto i : GetParameterExprs<MLIL_SYSCALL_UNTYPED>())
 			i.VisitExprs(func);
 		break;
 	case MLIL_SYSCALL_SSA:
+		for (auto i : GetOutputExprs<MLIL_SYSCALL_SSA>())
+			i.VisitExprs(func);
 		for (auto i : GetParameterExprs<MLIL_SYSCALL_SSA>())
 			i.VisitExprs(func);
 		break;
 	case MLIL_SYSCALL_UNTYPED_SSA:
+		for (auto i : GetOutputExprs<MLIL_SYSCALL_UNTYPED_SSA>())
+			i.VisitExprs(func);
 		for (auto i : GetParameterExprs<MLIL_SYSCALL_UNTYPED_SSA>())
 			i.VisitExprs(func);
 		break;
 	case MLIL_TAILCALL:
 		GetDestExpr<MLIL_TAILCALL>().VisitExprs(func);
+		for (auto i : GetOutputExprs<MLIL_TAILCALL>())
+			i.VisitExprs(func);
 		for (auto i : GetParameterExprs<MLIL_TAILCALL>())
 			i.VisitExprs(func);
 		break;
 	case MLIL_TAILCALL_UNTYPED:
 		GetDestExpr<MLIL_TAILCALL_UNTYPED>().VisitExprs(func);
+		for (auto i : GetOutputExprs<MLIL_TAILCALL_UNTYPED>())
+			i.VisitExprs(func);
 		for (auto i : GetParameterExprs<MLIL_TAILCALL_UNTYPED>())
 			i.VisitExprs(func);
 		break;
 	case MLIL_TAILCALL_SSA:
 		GetDestExpr<MLIL_TAILCALL_SSA>().VisitExprs(func);
+		for (auto i : GetOutputExprs<MLIL_TAILCALL_SSA>())
+			i.VisitExprs(func);
 		for (auto i : GetParameterExprs<MLIL_TAILCALL_SSA>())
 			i.VisitExprs(func);
 		break;
 	case MLIL_TAILCALL_UNTYPED_SSA:
 		GetDestExpr<MLIL_TAILCALL_UNTYPED_SSA>().VisitExprs(func);
+		for (auto i : GetOutputExprs<MLIL_TAILCALL_UNTYPED_SSA>())
+			i.VisitExprs(func);
 		for (auto i : GetParameterExprs<MLIL_TAILCALL_UNTYPED_SSA>())
 			i.VisitExprs(func);
 		break;
@@ -1569,7 +1609,7 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
     bn::base::function_ref<ExprId(const MediumLevelILInstruction& subExpr)> subExprHandler,
 	const ILSourceLocation& sourceLocation) const
 {
-	vector<ExprId> params;
+	vector<ExprId> output, params;
 	BNMediumLevelILLabel* labelA;
 	BNMediumLevelILLabel* labelB;
 
@@ -1629,6 +1669,8 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
 	case MLIL_VAR_SPLIT_SSA:
 		return dest->VarSplitSSA(
 		    size, GetHighSSAVariable<MLIL_VAR_SPLIT_SSA>(), GetLowSSAVariable<MLIL_VAR_SPLIT_SSA>(), loc);
+	case MLIL_VAR_OUTPUT_SSA:
+		return dest->VarOutputSSA(size, GetDestSSAVariable<MLIL_VAR_OUTPUT_SSA>(), loc);
 	case MLIL_FORCE_VER:
 		return dest->ForceVer(size, GetDestVariable<MLIL_FORCE_VER>(), GetSourceVariable<MLIL_FORCE_VER>(), loc);
 	case MLIL_FORCE_VER_SSA:
@@ -1643,69 +1685,93 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
 		return dest->AddressOfField(
 		    GetSourceVariable<MLIL_ADDRESS_OF_FIELD>(), GetOffset<MLIL_ADDRESS_OF_FIELD>(), loc);
 	case MLIL_CALL:
+		for (auto i : GetOutputExprs<MLIL_CALL>())
+			output.push_back(subExprHandler(i));
 		for (auto i : GetParameterExprs<MLIL_CALL>())
 			params.push_back(subExprHandler(i));
-		return dest->Call(GetOutputVariables<MLIL_CALL>(), subExprHandler(GetDestExpr<MLIL_CALL>()), params, loc);
+		return dest->Call(output, subExprHandler(GetDestExpr<MLIL_CALL>()), params, loc);
 	case MLIL_CALL_UNTYPED:
+		for (auto i : GetOutputExprs<MLIL_CALL_UNTYPED>())
+			output.push_back(subExprHandler(i));
 		for (auto i : GetParameterExprs<MLIL_CALL_UNTYPED>())
 			params.push_back(subExprHandler(i));
-		return dest->CallUntyped(GetOutputVariables<MLIL_CALL_UNTYPED>(),
+		return dest->CallUntyped(output,
 		    subExprHandler(GetDestExpr<MLIL_CALL_UNTYPED>()), params,
 		    subExprHandler(GetStackExpr<MLIL_CALL_UNTYPED>()), loc);
 	case MLIL_CALL_SSA:
+		for (auto i : GetOutputExprs<MLIL_CALL_SSA>())
+			output.push_back(subExprHandler(i));
 		for (auto i : GetParameterExprs<MLIL_CALL_SSA>())
 			params.push_back(subExprHandler(i));
-		return dest->CallSSA(GetOutputSSAVariables<MLIL_CALL_SSA>(), subExprHandler(GetDestExpr<MLIL_CALL_SSA>()),
+		return dest->CallSSA(output, subExprHandler(GetDestExpr<MLIL_CALL_SSA>()),
 		    params, GetDestMemoryVersion<MLIL_CALL_SSA>(), GetSourceMemoryVersion<MLIL_CALL_SSA>(), loc);
 	case MLIL_CALL_UNTYPED_SSA:
+		for (auto i : GetOutputExprs<MLIL_CALL_UNTYPED_SSA>())
+			output.push_back(subExprHandler(i));
 		for (auto i : GetParameterExprs<MLIL_CALL_UNTYPED_SSA>())
 			params.push_back(subExprHandler(i));
-		return dest->CallUntypedSSA(GetOutputSSAVariables<MLIL_CALL_UNTYPED_SSA>(),
+		return dest->CallUntypedSSA(output,
 		    subExprHandler(GetDestExpr<MLIL_CALL_UNTYPED_SSA>()), params,
 		    GetDestMemoryVersion<MLIL_CALL_UNTYPED_SSA>(), GetSourceMemoryVersion<MLIL_CALL_UNTYPED_SSA>(),
 		    subExprHandler(GetStackExpr<MLIL_CALL_UNTYPED_SSA>()), loc);
 	case MLIL_SYSCALL:
+		for (auto i : GetOutputExprs<MLIL_SYSCALL>())
+			output.push_back(subExprHandler(i));
 		for (auto i : GetParameterExprs<MLIL_SYSCALL>())
 			params.push_back(subExprHandler(i));
-		return dest->Syscall(GetOutputVariables<MLIL_SYSCALL>(), params, loc);
+		return dest->Syscall(output, params, loc);
 	case MLIL_SYSCALL_UNTYPED:
+		for (auto i : GetOutputExprs<MLIL_SYSCALL_UNTYPED>())
+			output.push_back(subExprHandler(i));
 		for (auto i : GetParameterExprs<MLIL_SYSCALL_UNTYPED>())
 			params.push_back(subExprHandler(i));
-		return dest->SyscallUntyped(GetOutputVariables<MLIL_SYSCALL_UNTYPED>(),
+		return dest->SyscallUntyped(output,
 		    params, subExprHandler(GetStackExpr<MLIL_SYSCALL_UNTYPED>()), loc);
 	case MLIL_SYSCALL_SSA:
+		for (auto i : GetOutputExprs<MLIL_SYSCALL_SSA>())
+			output.push_back(subExprHandler(i));
 		for (auto i : GetParameterExprs<MLIL_SYSCALL_SSA>())
 			params.push_back(subExprHandler(i));
-		return dest->SyscallSSA(GetOutputSSAVariables<MLIL_SYSCALL_SSA>(), params,
+		return dest->SyscallSSA(output, params,
 		    GetDestMemoryVersion<MLIL_SYSCALL_SSA>(), GetSourceMemoryVersion<MLIL_SYSCALL_SSA>(), loc);
 	case MLIL_SYSCALL_UNTYPED_SSA:
+		for (auto i : GetOutputExprs<MLIL_SYSCALL_UNTYPED_SSA>())
+			output.push_back(subExprHandler(i));
 		for (auto i : GetParameterExprs<MLIL_SYSCALL_UNTYPED_SSA>())
 			params.push_back(subExprHandler(i));
-		return dest->SyscallUntypedSSA(GetOutputSSAVariables<MLIL_SYSCALL_UNTYPED_SSA>(),
+		return dest->SyscallUntypedSSA(output,
 		    params, GetDestMemoryVersion<MLIL_SYSCALL_UNTYPED_SSA>(),
 		    GetSourceMemoryVersion<MLIL_SYSCALL_UNTYPED_SSA>(),
 		    subExprHandler(GetStackExpr<MLIL_SYSCALL_UNTYPED_SSA>()), loc);
 	case MLIL_TAILCALL:
+		for (auto i : GetOutputExprs<MLIL_TAILCALL>())
+			output.push_back(subExprHandler(i));
 		for (auto i : GetParameterExprs<MLIL_TAILCALL>())
 			params.push_back(subExprHandler(i));
 		return dest->TailCall(
-		    GetOutputVariables<MLIL_TAILCALL>(), subExprHandler(GetDestExpr<MLIL_TAILCALL>()), params, loc);
+		    output, subExprHandler(GetDestExpr<MLIL_TAILCALL>()), params, loc);
 	case MLIL_TAILCALL_UNTYPED:
+		for (auto i : GetOutputExprs<MLIL_TAILCALL_UNTYPED>())
+			output.push_back(subExprHandler(i));
 		for (auto i : GetParameterExprs<MLIL_TAILCALL_UNTYPED>())
 			params.push_back(subExprHandler(i));
-		return dest->TailCallUntyped(GetOutputVariables<MLIL_TAILCALL_UNTYPED>(),
+		return dest->TailCallUntyped(output,
 		    subExprHandler(GetDestExpr<MLIL_TAILCALL_UNTYPED>()), params,
 		    subExprHandler(GetStackExpr<MLIL_TAILCALL_UNTYPED>()), loc);
 	case MLIL_TAILCALL_SSA:
+		for (auto i : GetOutputExprs<MLIL_TAILCALL_SSA>())
+			output.push_back(subExprHandler(i));
 		for (auto i : GetParameterExprs<MLIL_TAILCALL_SSA>())
 			params.push_back(subExprHandler(i));
-		return dest->TailCallSSA(GetOutputSSAVariables<MLIL_TAILCALL_SSA>(),
+		return dest->TailCallSSA(output,
 		    subExprHandler(GetDestExpr<MLIL_TAILCALL_SSA>()), params, GetDestMemoryVersion<MLIL_TAILCALL_SSA>(),
 		    GetSourceMemoryVersion<MLIL_TAILCALL_SSA>(), loc);
 	case MLIL_TAILCALL_UNTYPED_SSA:
+		for (auto i : GetOutputExprs<MLIL_TAILCALL_UNTYPED_SSA>())
+			output.push_back(subExprHandler(i));
 		for (auto i : GetParameterExprs<MLIL_TAILCALL_UNTYPED_SSA>())
 			params.push_back(subExprHandler(i));
-		return dest->TailCallUntypedSSA(GetOutputSSAVariables<MLIL_TAILCALL_UNTYPED_SSA>(),
+		return dest->TailCallUntypedSSA(output,
 		    subExprHandler(GetDestExpr<MLIL_TAILCALL_UNTYPED_SSA>()),
 		    params, GetDestMemoryVersion<MLIL_TAILCALL_UNTYPED_SSA>(),
 		    GetSourceMemoryVersion<MLIL_TAILCALL_UNTYPED_SSA>(),
@@ -1718,6 +1784,8 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
 		for (auto i : GetParameterExprs<MLIL_SHARED_PARAM_SLOT>())
 			params.push_back(subExprHandler(i));
 		return dest->SharedParamSlot(params, loc);
+	case MLIL_VAR_OUTPUT:
+		return dest->VarOutput(size, GetDestVariable<MLIL_VAR_OUTPUT>(), loc);
 	case MLIL_RET:
 		for (auto i : GetSourceExprs<MLIL_RET>())
 			params.push_back(subExprHandler(i));
@@ -2165,24 +2233,39 @@ MediumLevelILIndexList MediumLevelILInstruction::GetSourceMemoryVersions() const
 }
 
 
-MediumLevelILVariableList MediumLevelILInstruction::GetOutputVariables() const
+vector<Variable> MediumLevelILInstruction::GetOutputVariables() const
 {
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(OutputVariablesMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsVariableList(operandIndex);
 	if (GetOperandIndexForUsage(OutputVariablesSubExprMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsVariableList(0);
+	if (GetOperandIndexForUsage(OutputExprsMediumLevelOperandUsage, operandIndex))
+		return reinterpret_cast<const MediumLevelILCallInstruction*>(this)->GetOutputVariables();
 	throw MediumLevelILInstructionAccessException();
 }
 
 
-MediumLevelILSSAVariableList MediumLevelILInstruction::GetOutputSSAVariables() const
+vector<SSAVariable> MediumLevelILInstruction::GetOutputSSAVariables() const
 {
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(OutputSSAVariablesMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsSSAVariableList(operandIndex);
 	if (GetOperandIndexForUsage(OutputSSAVariablesSubExprMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsSSAVariableList(1);
+	if (GetOperandIndexForUsage(OutputExprsSubExprMediumLevelOperandUsage, operandIndex))
+		return reinterpret_cast<const MediumLevelILCallSSAInstruction*>(this)->GetOutputSSAVariables();
+	throw MediumLevelILInstructionAccessException();
+}
+
+
+MediumLevelILInstructionList MediumLevelILInstruction::GetOutputExprs() const
+{
+	size_t operandIndex;
+	if (GetOperandIndexForUsage(OutputExprsMediumLevelOperandUsage, operandIndex))
+		return GetRawOperandAsExprList(operandIndex);
+	if (GetOperandIndexForUsage(OutputExprsSubExprMediumLevelOperandUsage, operandIndex))
+		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsExprList(1);
 	throw MediumLevelILInstructionAccessException();
 }
 
@@ -2215,6 +2298,30 @@ MediumLevelILSSAVariableList MediumLevelILInstruction::GetSourceSSAVariables() c
 	if (GetOperandIndexForUsage(SourceSSAVariablesMediumLevelOperandUsages, operandIndex))
 		return GetRawOperandAsSSAVariableList(operandIndex);
 	throw MediumLevelILInstructionAccessException();
+}
+
+
+vector<Variable> MediumLevelILCallInstruction::GetOutputVariables() const
+{
+	vector<Variable> result;
+	for (auto i : GetOutputExprs())
+	{
+		if (i.operation == MLIL_VAR_OUTPUT)
+			result.push_back(i.GetDestVariable<MLIL_VAR_OUTPUT>());
+	}
+	return result;
+}
+
+
+vector<SSAVariable> MediumLevelILCallSSAInstruction::GetOutputSSAVariables() const
+{
+	vector<SSAVariable> result;
+	for (auto i : GetOutputExprs())
+	{
+		if (i.operation == MLIL_VAR_OUTPUT_SSA)
+			result.push_back(i.GetDestSSAVariable<MLIL_VAR_OUTPUT_SSA>());
+	}
+	return result;
 }
 
 
@@ -2409,6 +2516,12 @@ ExprId MediumLevelILFunction::VarSplitSSA(
 {
 	return AddExprWithLocation(
 	    MLIL_VAR_SPLIT_SSA, loc, size, high.var.ToIdentifier(), high.version, low.var.ToIdentifier(), low.version);
+}
+
+
+ExprId MediumLevelILFunction::VarOutputSSA(size_t size, const SSAVariable& dest, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_VAR_OUTPUT_SSA, loc, size, dest.var.ToIdentifier(), dest.version);
 }
 
 
@@ -2689,111 +2802,111 @@ ExprId MediumLevelILFunction::ReturnHint(ExprId dest, const ILSourceLocation& lo
 
 
 ExprId MediumLevelILFunction::Call(
-    const vector<Variable>& output, ExprId dest, const vector<ExprId>& params, const ILSourceLocation& loc)
+    const vector<ExprId>& output, ExprId dest, const vector<ExprId>& params, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(
-	    MLIL_CALL, loc, 0, output.size(), AddVariableList(output), dest, params.size(), AddOperandList(params));
+	    MLIL_CALL, loc, 0, output.size(), AddOperandList(output), dest, params.size(), AddOperandList(params));
 }
 
 
-ExprId MediumLevelILFunction::CallUntyped(const vector<Variable>& output, ExprId dest, const vector<ExprId>& params,
+ExprId MediumLevelILFunction::CallUntyped(const vector<ExprId>& output, ExprId dest, const vector<ExprId>& params,
     ExprId stack, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(MLIL_CALL_UNTYPED, loc, 0,
-	    AddExprWithLocation(MLIL_CALL_OUTPUT, loc, 0, output.size(), AddVariableList(output)), dest,
+	    output.size(), AddOperandList(output), dest,
 	    AddExprWithLocation(MLIL_CALL_PARAM, loc, 0, params.size(), AddOperandList(params)), stack);
 }
 
 
 ExprId MediumLevelILFunction::Syscall(
-    const vector<Variable>& output, const vector<ExprId>& params, const ILSourceLocation& loc)
+    const vector<ExprId>& output, const vector<ExprId>& params, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(
-	    MLIL_SYSCALL, loc, 0, output.size(), AddVariableList(output), params.size(), AddOperandList(params));
+	    MLIL_SYSCALL, loc, 0, output.size(), AddOperandList(output), params.size(), AddOperandList(params));
 }
 
 
 ExprId MediumLevelILFunction::SyscallUntyped(
-    const vector<Variable>& output, const vector<ExprId>& params, ExprId stack, const ILSourceLocation& loc)
+    const vector<ExprId>& output, const vector<ExprId>& params, ExprId stack, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(MLIL_SYSCALL_UNTYPED, loc, 0,
-	    AddExprWithLocation(MLIL_CALL_OUTPUT, loc, 0, output.size(), AddVariableList(output)),
+	    output.size(), AddOperandList(output),
 	    AddExprWithLocation(MLIL_CALL_PARAM, loc, 0, params.size(), AddOperandList(params)), stack);
 }
 
 
 ExprId MediumLevelILFunction::TailCall(
-    const vector<Variable>& output, ExprId dest, const vector<ExprId>& params, const ILSourceLocation& loc)
+    const vector<ExprId>& output, ExprId dest, const vector<ExprId>& params, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(
-	    MLIL_TAILCALL, loc, 0, output.size(), AddVariableList(output), dest, params.size(), AddOperandList(params));
+	    MLIL_TAILCALL, loc, 0, output.size(), AddOperandList(output), dest, params.size(), AddOperandList(params));
 }
 
 
-ExprId MediumLevelILFunction::TailCallUntyped(const vector<Variable>& output, ExprId dest,
+ExprId MediumLevelILFunction::TailCallUntyped(const vector<ExprId>& output, ExprId dest,
     const vector<ExprId>& params, ExprId stack, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(MLIL_TAILCALL_UNTYPED, loc, 0,
-	    AddExprWithLocation(MLIL_CALL_OUTPUT, loc, 0, output.size(), AddVariableList(output)), dest,
+	    output.size(), AddOperandList(output), dest,
 	    AddExprWithLocation(MLIL_CALL_PARAM, loc, 0, params.size(), AddOperandList(params)), stack);
 }
 
 
-ExprId MediumLevelILFunction::CallSSA(const vector<SSAVariable>& output, ExprId dest, const vector<ExprId>& params,
+ExprId MediumLevelILFunction::CallSSA(const vector<ExprId>& output, ExprId dest, const vector<ExprId>& params,
     size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(MLIL_CALL_SSA, loc, 0,
-	    AddExprWithLocation(MLIL_CALL_OUTPUT_SSA, loc, 0, newMemVersion, output.size() * 2, AddSSAVariableList(output)),
+	    AddExprWithLocation(MLIL_CALL_OUTPUT_SSA, loc, 0, newMemVersion, output.size(), AddOperandList(output)),
 	    dest, params.size(), AddOperandList(params), prevMemVersion);
 }
 
 
-ExprId MediumLevelILFunction::CallUntypedSSA(const vector<SSAVariable>& output, ExprId dest,
+ExprId MediumLevelILFunction::CallUntypedSSA(const vector<ExprId>& output, ExprId dest,
     const vector<ExprId>& params, size_t newMemVersion, size_t prevMemVersion, ExprId stack,
     const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(MLIL_CALL_UNTYPED_SSA, loc, 0,
-	    AddExprWithLocation(MLIL_CALL_OUTPUT_SSA, loc, 0, newMemVersion, output.size() * 2, AddSSAVariableList(output)),
+	    AddExprWithLocation(MLIL_CALL_OUTPUT_SSA, loc, 0, newMemVersion, output.size(), AddOperandList(output)),
 	    dest,
 	    AddExprWithLocation(MLIL_CALL_PARAM_SSA, loc, 0, prevMemVersion, params.size(), AddOperandList(params)),
 	    stack);
 }
 
 
-ExprId MediumLevelILFunction::SyscallSSA(const vector<SSAVariable>& output, const vector<ExprId>& params,
+ExprId MediumLevelILFunction::SyscallSSA(const vector<ExprId>& output, const vector<ExprId>& params,
     size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(MLIL_SYSCALL_SSA, loc, 0,
-	    AddExprWithLocation(MLIL_CALL_OUTPUT_SSA, loc, 0, newMemVersion, output.size() * 2, AddSSAVariableList(output)),
+	    AddExprWithLocation(MLIL_CALL_OUTPUT_SSA, loc, 0, newMemVersion, output.size(), AddOperandList(output)),
 	    params.size(), AddOperandList(params), prevMemVersion);
 }
 
 
-ExprId MediumLevelILFunction::SyscallUntypedSSA(const vector<SSAVariable>& output, const vector<ExprId>& params,
+ExprId MediumLevelILFunction::SyscallUntypedSSA(const vector<ExprId>& output, const vector<ExprId>& params,
     size_t newMemVersion, size_t prevMemVersion, ExprId stack, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(MLIL_SYSCALL_UNTYPED_SSA, loc, 0,
-	    AddExprWithLocation(MLIL_CALL_OUTPUT_SSA, loc, 0, newMemVersion, output.size() * 2, AddSSAVariableList(output)),
+	    AddExprWithLocation(MLIL_CALL_OUTPUT_SSA, loc, 0, newMemVersion, output.size(), AddOperandList(output)),
 	    AddExprWithLocation(MLIL_CALL_PARAM_SSA, loc, 0, prevMemVersion, params.size(), AddOperandList(params)),
 	    stack);
 }
 
 
-ExprId MediumLevelILFunction::TailCallSSA(const vector<SSAVariable>& output, ExprId dest, const vector<ExprId>& params,
+ExprId MediumLevelILFunction::TailCallSSA(const vector<ExprId>& output, ExprId dest, const vector<ExprId>& params,
     size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(MLIL_TAILCALL_SSA, loc, 0,
-	    AddExprWithLocation(MLIL_CALL_OUTPUT_SSA, loc, 0, newMemVersion, output.size() * 2, AddSSAVariableList(output)),
+	    AddExprWithLocation(MLIL_CALL_OUTPUT_SSA, loc, 0, newMemVersion, output.size(), AddOperandList(output)),
 	    dest, params.size(), AddOperandList(params), prevMemVersion);
 }
 
 
-ExprId MediumLevelILFunction::TailCallUntypedSSA(const vector<SSAVariable>& output, ExprId dest,
+ExprId MediumLevelILFunction::TailCallUntypedSSA(const vector<ExprId>& output, ExprId dest,
     const vector<ExprId>& params, size_t newMemVersion, size_t prevMemVersion, ExprId stack,
     const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(MLIL_TAILCALL_UNTYPED_SSA, loc, 0,
-	    AddExprWithLocation(MLIL_CALL_OUTPUT_SSA, loc, 0, newMemVersion, output.size() * 2, AddSSAVariableList(output)),
+	    AddExprWithLocation(MLIL_CALL_OUTPUT_SSA, loc, 0, newMemVersion, output.size(), AddOperandList(output)),
 	    dest,
 	    AddExprWithLocation(MLIL_CALL_PARAM_SSA, loc, 0, prevMemVersion, params.size(), AddOperandList(params)),
 	    stack);
@@ -2809,6 +2922,12 @@ ExprId MediumLevelILFunction::SeparateParamList(const vector<ExprId>& params, co
 ExprId MediumLevelILFunction::SharedParamSlot(const vector<ExprId>& params, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(MLIL_SHARED_PARAM_SLOT, loc, 0, params.size(), AddOperandList(params));
+}
+
+
+ExprId MediumLevelILFunction::VarOutput(size_t size, const Variable& var, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_VAR_OUTPUT, loc, size, var.ToIdentifier());
 }
 
 

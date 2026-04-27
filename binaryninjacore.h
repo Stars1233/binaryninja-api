@@ -1424,12 +1424,12 @@ extern "C"
 		MLIL_RET_HINT,             // Intermediate stages, does not appear in final forms
 		MLIL_CALL,                 // Not valid in SSA form (see MLIL_CALL_SSA)
 		MLIL_CALL_UNTYPED,         // Not valid in SSA form (see MLIL_CALL_UNTYPED_SSA)
-		MLIL_CALL_OUTPUT,          // Only valid within MLIL_CALL, MLIL_SYSCALL, MLIL_TAILCALL family instructions
 		MLIL_CALL_PARAM,           // Only valid within MLIL_CALL, MLIL_SYSCALL, MLIL_TAILCALL family instructions
 		MLIL_SEPARATE_PARAM_LIST,  // Only valid within the MLIL_CALL_PARAM or MLIL_CALL_PARAM_SSA instructions inside
 		                           // untyped call variants
 		MLIL_SHARED_PARAM_SLOT,    // Only valid within the MLIL_CALL_PARAM, MLIL_CALL_PARAM_SSA, or
 		                           // MLIL_SEPARATE_PARAM_LIST instructions inside untyped call variants
+		MLIL_VAR_OUTPUT,           // Only valid within MLIL_CALL, MLIL_SYSCALL, MLIL_TAILCALL family instructions
 		MLIL_RET,
 		MLIL_NORET,
 		MLIL_IF,
@@ -1506,6 +1506,7 @@ extern "C"
 		                       // instructions
 		MLIL_CALL_OUTPUT_SSA,  // Only valid within the MLIL_CALL_SSA or MLIL_SYSCALL_SSA, MLIL_TAILCALL_SSA family
 		                       // instructions
+		MLIL_VAR_OUTPUT_SSA,  // Only valid within the MLIL_CALL_OUTPUT_SSA instruction
 		MLIL_MEMORY_INTRINSIC_OUTPUT_SSA,  // Only valid within the MLIL_MEMORY_INTRINSIC_SSA instruction
 		MLIL_LOAD_SSA,
 		MLIL_LOAD_STRUCT_SSA,

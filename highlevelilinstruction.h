@@ -305,6 +305,7 @@ namespace BinaryNinja
 		const HighLevelILInstruction operator[](size_t i) const;
 
 		operator _STD_VECTOR<HighLevelILInstruction>() const;
+		operator _STD_VECTOR<ExprId>() const;
 	};
 
 	/*!

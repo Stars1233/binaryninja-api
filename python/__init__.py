@@ -345,26 +345,31 @@ def core_serial() -> Optional[str]:
 		:return: current serial
 		:rtype: str, or None on failure
 	"""
+	_init_plugins()
 	return core.BNGetSerialNumber()
 
 
 def core_expires() -> struct_time:
 	'''License Expiration'''
+	_init_plugins()
 	return gmtime(core.BNGetLicenseExpirationTime())
 
 
 def core_product() -> Optional[str]:
 	'''Product string from the license file'''
+	_init_plugins()
 	return core.BNGetProduct()
 
 
 def core_product_type() -> Optional[str]:
 	'''Product type from the license file'''
+	_init_plugins()
 	return core.BNGetProductType()
 
 
 def core_license_count() -> int:
 	'''License count from the license file'''
+	_init_plugins()
 	return core.BNGetLicenseCount()
 
 

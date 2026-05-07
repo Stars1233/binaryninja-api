@@ -9,7 +9,7 @@ Vector 35 is grateful for the following open source packages that are used in Bi
     - [breathe] ([breathe license] - BSD)
     - [doxygen] ([doxygen license] - GPLv2)
     - [mkdocs-material] ([mkdocs-material License] - BSD)
-    - [mkdocs] ([mkdocs license] - BSD)
+    - [properdocs] ([properdocs license] - BSD)
     - [sphinx] ([sphinx license] - BSD and others)
 
 The previous tools are used in the generation of our documentation, but are not distributed themselves and are merely listed here in acknowledgement for the value they provide.
@@ -122,10 +122,10 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [llvm license]: http://llvm.org/releases/3.8.1/LICENSE.TXT
 [lzf license]: http://oldhome.schmorp.de/marc/liblzf.html
 [lzf]: http://oldhome.schmorp.de/marc/liblzf.html
-[mkdocs license]: https://github.com/mkdocs/mkdocs/blob/master/LICENSE
+[properdocs license]: https://github.com/properdocs/properdocs/blob/master/LICENSE
 [mkdocs-material license]: https://github.com/squidfunk/mkdocs-material/blob/master/LICENSE
 [mkdocs-material]: https://github.com/squidfunk/mkdocs-material
-[mkdocs]: http://www.mkdocs.org/
+[properdocs]: https://properdocs.org/
 [opensans license]: https://fonts.google.com/specimen/Open+Sans/license
 [opensans]: https://fonts.google.com/specimen/Open+Sans
 [PPC architecture module]: https://github.com/Vector35/ppc-capstone

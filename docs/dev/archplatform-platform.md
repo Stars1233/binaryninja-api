@@ -55,6 +55,16 @@ Other fields that Quark did not need, but you can specify:
 * `implicitly_defined_regs` - Certain calling conventions pass registers to calls which are not included in type signatures (such as how MIPS on Linux sets `$t9` to the address of the called function, but this should not clutter up the type signature).
 * `required_arg_regs` - If specified, heuristic calling convention detection will only consider this calling convention if all the registers specified here are used before they are defined.
 * `required_clobbered_regs` - If specified, heuristic calling convention detection will only consider this calling convention if the function clobbers all the registers specified here.
+* `stack_args_naturally_aligned` - For stack arguments, set this to True if the convention pads each stack slot up to the natural alignment of its type rather than the address-size word. Defaults to False.
+* `is_return_type_reg_compatible` — Returns True if a return value of a type fits in the convention's return register(s). Override when your ABI accepts only a subset of widths or excludes structures/arrays even when they would technically fit. Used by analysis to decide whether to use an indirect return.
+* `is_arg_type_reg_compatible` — Returns True if a parameter value of a type fits in the convention's parameter register(s).
+* `is_non_reg_arg_indirect` — Returns True if a parameter that does not fit in registers should be passed by pointer instead of pushed on the stack.
+* `get_indirect_return_value_location` — Returns the `Variable` that holds the caller-supplied pointer to the return value storage when the return value is too big for registers. Defaults to the first integer argument register.
+* `get_returned_indirect_return_value_pointer` — Returns the `Variable` that the *callee* uses to give the indirect return pointer back to the caller, or `None` if the convention does not return it.
+* `get_return_value_location` — Compute the return value location for a given `ReturnValue`.
+* `get_parameter_locations` — Compute the location for each parameter given the already resolved return value location (which the convention may need to skip past).
+* `get_stack_adjustment_for_locations` — Returns the number of bytes of stack adjustment performed by the called function on return. The default returns zero (caller cleans the stack).
+* `get_call_layout` — Compute a complete `CallLayout` (parameter locations, return value location, stack adjustment, register stack adjustments) for a function with the given signature. The default implementation composes the answer from `get_return_value_location`, `get_parameter_locations` and the stack adjustment helpers. Override only when the layout has interactions you can't express component-wise (Go's stack-after-args return slot is an example).
 
 Then, we need to register the Calling Convention and tell the Platform and Architecture to use it:
 

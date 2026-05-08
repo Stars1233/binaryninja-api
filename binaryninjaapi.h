@@ -18014,13 +18014,43 @@ namespace BinaryNinja {
 		static void FreeRegisterStackAdjustmentsCallback(void* ctxt, uint32_t* regs, int32_t* adjust, size_t count);
 
 	public:
+		/*! Get the architecture this calling convention applies to
+
+			\return The architecture this calling convention applies to
+		*/
 		Ref<Architecture> GetArchitecture() const;
+
+		/*! Get the name of this calling convention
+
+			\return The name of this calling convention
+		*/
 		std::string GetName() const;
 
+		/*! Gets the list of registers that are not preserved across a call (caller-saved /
+			volatile registers).
+
+			\return The list of caller-saved register indices
+		*/
 		virtual std::vector<uint32_t> GetCallerSavedRegisters();
+
+		/*! Gets the list of registers that a callee must preserve across a call (callee-saved /
+			non-volatile registers).
+
+			\return The list of callee-saved register indices
+		*/
 		virtual std::vector<uint32_t> GetCalleeSavedRegisters();
 
+		/*! Gets the registers used to pass integer and pointer arguments, in the order they are
+			used.
+
+			\return The ordered list of integer argument register indices
+		*/
 		virtual std::vector<uint32_t> GetIntegerArgumentRegisters();
+
+		/*! Gets the registers used to pass floating point arguments, in the order they are used.
+
+			\return The ordered list of floating point argument register indices
+		*/
 		virtual std::vector<uint32_t> GetFloatArgumentRegisters();
 
 		/*! Gets the set of registers that must be arguments for heuristic calling convention
@@ -18037,61 +18067,366 @@ namespace BinaryNinja {
 		*/
 		virtual std::vector<uint32_t> GetRequiredClobberedRegisters();
 
+		/*! Whether the integer and floating point argument registers share a single argument
+			index.
+
+			When true, the Nth argument consumes the Nth slot of both the integer and float
+			register lists regardless of its type. When false, integer and float arguments are
+			assigned from their respective register lists independently.
+
+			\return Whether argument registers share a single index
+		*/
 		virtual bool AreArgumentRegistersSharedIndex();
+
+		/*! Whether argument registers are used to pass variadic arguments.
+
+			\return Whether argument registers are used for variadic arguments
+		*/
 		virtual bool AreArgumentRegistersUsedForVarArgs();
+
+		/*! Whether stack space is reserved by the caller for the register arguments (for example,
+			the shadow/home space used by the Windows x64 calling convention).
+
+			\return Whether stack space is reserved for argument registers
+		*/
 		virtual bool IsStackReservedForArgumentRegisters();
+
+		/*! Whether the callee adjusts the stack to remove the arguments before returning (as in
+			stdcall), rather than leaving the caller to clean up the stack (as in cdecl).
+
+			\return Whether the stack is adjusted by the callee on return
+		*/
 		virtual bool IsStackAdjustedOnReturn();
+
+		/*! Whether this calling convention may be selected by heuristic calling convention
+			detection.
+
+			\return Whether this calling convention is eligible for heuristics
+		*/
 		virtual bool IsEligibleForHeuristics();
 
+		/*! Gets the register that holds the integer return value.
+
+			\return The integer return value register index
+		*/
 		virtual uint32_t GetIntegerReturnValueRegister() = 0;
+
+		/*! Gets the register that holds the high part of an integer return value that is too
+			large to fit in a single register.
+
+			\return The high integer return value register index, or BN_INVALID_REGISTER if there is none
+		*/
 		virtual uint32_t GetHighIntegerReturnValueRegister();
+
+		/*! Gets the register that holds the floating point return value.
+
+			\return The floating point return value register index, or BN_INVALID_REGISTER if there is none
+		*/
 		virtual uint32_t GetFloatReturnValueRegister();
+
+		/*! Gets the register that holds the global pointer, if the calling convention defines one.
+
+			\return The global pointer register index, or BN_INVALID_REGISTER if there is none
+		*/
 		virtual uint32_t GetGlobalPointerRegister();
 
+		/*! Gets the registers that are implicitly given a known value on function entry by this
+			calling convention.
+
+			\return The list of implicitly defined register indices
+			\see GetIncomingRegisterValue
+		*/
 		virtual std::vector<uint32_t> GetImplicitlyDefinedRegisters();
+
+		/*! Gets the known value of a register on entry to a function.
+
+			\param reg Register index
+			\param func Function being analyzed
+			\return The incoming value of the register
+		*/
 		virtual RegisterValue GetIncomingRegisterValue(uint32_t reg, Function* func);
+
+		/*! Gets the known value of a flag on entry to a function.
+
+			\param flag Flag index
+			\param func Function being analyzed
+			\return The incoming value of the flag
+		*/
 		virtual RegisterValue GetIncomingFlagValue(uint32_t flag, Function* func);
 
+		/*! Gets the incoming variable that corresponds to the given parameter variable. This is
+			the inverse of GetParameterVariableForIncomingVariable.
+
+			\param var Parameter variable
+			\param func Function being analyzed
+			\return The incoming variable corresponding to the parameter variable
+			\see GetParameterVariableForIncomingVariable
+		*/
 		virtual Variable GetIncomingVariableForParameterVariable(const Variable& var, Function* func);
+
+		/*! Gets the parameter variable that corresponds to the given incoming variable. This is
+			the inverse of GetIncomingVariableForParameterVariable.
+
+			\param var Incoming variable
+			\param func Function being analyzed
+			\return The parameter variable corresponding to the incoming variable
+			\see GetIncomingVariableForParameterVariable
+		*/
 		virtual Variable GetParameterVariableForIncomingVariable(const Variable& var, Function* func);
 
+		/*! Whether a value of the given type can be returned in registers, as opposed to being
+			returned indirectly through memory.
+
+			\param view BinaryView providing type information
+			\param type Return type to check
+			\return Whether the return type is register compatible
+			\see GetIndirectReturnValueLocation
+		*/
 		virtual bool IsReturnTypeRegisterCompatible(BinaryView* view, Type* type);
+
+		/*! Default implementation of IsReturnTypeRegisterCompatible. The default implementation allows
+			register returns for types that fit in a single register, have a size equal to two registers
+			when GetHighIntegerReturnValueRegister is a valid register, or are a floating point type when
+			GetFloatReturnValueRegister is a valid register.
+
+			\param type Return type to check
+			\return Whether the return type is register compatible
+		*/
 		bool DefaultIsReturnTypeRegisterCompatible(Type* type);
+
+		/*! Gets the location used to pass the hidden pointer argument for return values that are
+			returned indirectly through memory.
+
+			\return The location of the indirect return value pointer
+			\see IsReturnTypeRegisterCompatible
+		*/
 		virtual Variable GetIndirectReturnValueLocation();
+
+		/*! Default implementation of GetIndirectReturnValueLocation. The default location is the first
+			integer argument register, or the first stack slot if there are no integer argument registers.
+
+			\return The location of the indirect return value pointer
+		*/
 		Variable GetDefaultIndirectReturnValueLocation();
+
+		/*! Gets the location in which the hidden indirect return value pointer is returned to the
+			caller, for calling conventions that return it.
+
+			\return The location the indirect return value pointer is returned in, or std::nullopt if it is not returned
+		*/
 		virtual std::optional<Variable> GetReturnedIndirectReturnValuePointer();
 
+		/*! Whether a value of the given type can be passed as an argument in registers.
+
+			\param view BinaryView providing type information
+			\param type Argument type to check
+			\return Whether the argument type is register compatible
+		*/
 		virtual bool IsArgumentTypeRegisterCompatible(BinaryView* view, Type* type);
+
+		/*! Default implementation of IsArgumentTypeRegisterCompatible. The default implementation allows
+			register arguments for types that fit in a single register, or are a floating point type when
+			GetFloatArgumentRegisters has valid registers.
+
+			\param type Argument type to check
+			\return Whether the argument type is register compatible
+		*/
 		bool DefaultIsArgumentTypeRegisterCompatible(Type* type);
+
+		/*! Whether an argument that cannot be passed in registers is passed indirectly by pointer
+			as opposed to being passed directly on the stack.
+
+			\param view BinaryView providing type information
+			\param type Argument type to check
+			\return Whether the non-register argument is passed indirectly by pointer
+		*/
 		virtual bool IsNonRegisterArgumentIndirect(BinaryView* view, Type* type);
+
+		/*! Whether arguments passed on the stack are aligned to their natural alignment. If false,
+			arguments are aligned to the address size.
+
+			\return Whether stack arguments are naturally aligned
+		*/
 		virtual bool AreStackArgumentsNaturallyAligned();
+
+		/*! Whether arguments passed on the stack are pushed left-to-right, as opposed to the more
+			common right-to-left order.
+
+			\return Whether stack arguments are pushed left-to-right
+		*/
 		virtual bool AreStackArgumentsPushedLeftToRight();
 
+		/*! Computes the complete call layout (parameter locations, return value location, and
+			stack adjustments) for a call with the given return value and parameters. It is
+			recommended to only override this method if the calling convention behavior cannot
+			be modeled with GetReturnValueLocation and/or GetParameterLocations.
+
+			The default implementation calls GetDefaultCallLayout.
+
+			When calling this function to query the layout of a function, the return value and parameters
+			should have their named type references dereferenced before passing them to this function.
+			Calling the functions BinaryView::DerefReturnValueNamedTypeRefs and
+			BinaryView::DerefParameterNamedTypeRefs will perform this dereferencing.
+
+			\param view BinaryView providing type information
+			\param returnValue Return value of the call
+			\param params Parameters of the call
+			\param permittedRegs Optional set of register indices that argument passing is
+				restricted to; if not provided, the calling convention's default registers are used
+			\return The computed call layout
+		*/
 		virtual CallLayout GetCallLayout(BinaryView* view, const ReturnValue& returnValue,
 			const std::vector<FunctionParameter>& params,
 			const std::optional<std::set<uint32_t>>& permittedRegs = std::nullopt);
+
+		/*! Computes the location of the return value for the given return value type and location structure.
+
+			The default implementation calls GetDefaultReturnValueLocation.
+
+			\param view BinaryView providing type information
+			\param returnValue Return value to compute the location for
+			\return The location of the return value
+		*/
 		virtual ValueLocation GetReturnValueLocation(BinaryView* view, const ReturnValue& returnValue);
+
+		/*! Computes the locations of the parameters for a call with the given return value and
+			parameters.
+
+			The default implementation calls GetDefaultParameterLocations.
+
+			\param view BinaryView providing type information
+			\param returnValue Optional location of the return value, which may affect parameter
+				placement (for example, when an indirect return pointer consumes an argument
+				register)
+			\param params Parameters of the call
+			\param permittedRegs Optional set of register indices that argument passing is
+				restricted to; if not provided, the calling convention's default registers are used
+			\return The locations of the parameters, in order
+		*/
 		virtual std::vector<ValueLocation> GetParameterLocations(BinaryView* view,
 			const std::optional<ValueLocation>& returnValue, const std::vector<FunctionParameter>& params,
 			const std::optional<std::set<uint32_t>>& permittedRegs = std::nullopt);
+
+		/*! Computes the order in which the given parameter variables are passed. Used by the heuristic
+			calling convention detection to create a function type from a list of parameter variables.
+
+			The default implementation calls GetDefaultParameterOrderingForVariables.
+
+			\param view BinaryView providing type information
+			\param params Map of parameter variables to their types
+			\return The parameter variables in the order they are passed
+		*/
 		virtual std::vector<Variable> GetParameterOrderingForVariables(
 			BinaryView* view, const std::map<Variable, Ref<Type>>& params);
+
+		/*! Computes the stack adjustment applied on return for a call with the given return value
+			and parameter locations.
+
+			The default implementation calls GetDefaultStackAdjustmentForLocations.
+
+			\param view BinaryView providing type information
+			\param returnValue Optional location of the return value
+			\param locations Locations of the parameters
+			\param types Types of the parameters, corresponding to \p locations
+			\return The stack adjustment in bytes
+			\see IsStackAdjustedOnReturn
+		*/
 		virtual int64_t GetStackAdjustmentForLocations(BinaryView* view,
 			const std::optional<ValueLocation>& returnValue, const std::vector<ValueLocation>& locations,
 			const std::vector<Ref<Type>>& types);
+
+		/*! Computes the per-register-stack adjustments (for architectures with register stacks,
+			such as the x87 floating point stack) for a call with the given return value and
+			parameter locations.
+
+			The default implementation calls GetDefaultRegisterStackAdjustments.
+
+			\param view BinaryView providing type information
+			\param returnValue Optional location of the return value
+			\param params Locations of the parameters
+			\return A map from register stack index to its adjustment
+		*/
 		virtual std::map<uint32_t, int32_t> GetRegisterStackAdjustments(BinaryView* view,
 			const std::optional<ValueLocation>& returnValue, const std::vector<ValueLocation>& params);
 
+		/*! Default implementation of GetCallLayout. The default implementation uses GetReturnValueLocation,
+			GetParameterLocations, GetStackAdjustmentForLocations, and GetRegisterStackAdjustments to
+			compute the layout.
+
+			\param view BinaryView providing type information
+			\param returnValue Return value of the call
+			\param params Parameters of the call
+			\param permittedRegs Optional set of register indices that argument passing is
+				restricted to; if not provided, the calling convention's default registers are used
+			\return The computed call layout
+		*/
 		CallLayout GetDefaultCallLayout(BinaryView* view, const ReturnValue& returnValue,
 			const std::vector<FunctionParameter>& params,
 			const std::optional<std::set<uint32_t>>& permittedRegs = std::nullopt);
+
+		/*! Default implementation of GetReturnValueLocation. The default implementation checks
+			IsReturnTypeRegisterCompatible and places the return value in registers if it can,
+			or uses an indirect return by pointer if not. If an indirect return is required, then
+			GetIndirectReturnValueLocation and GetReturnedIndirectReturnValuePointer are used
+			to provide the location of the indirect return value.
+
+			\param view BinaryView providing type information
+			\param returnValue Return value to compute the location for
+			\return The location of the return value
+		*/
 		ValueLocation GetDefaultReturnValueLocation(BinaryView* view, const ReturnValue& returnValue);
+
+		/*! Default implementation of GetParameterLocations. The default implementation uses
+			GetIntegerArgumentRegisters, GetFloatArgumentRegisters, AreArgumentRegistersSharedIndex,
+			IsStackReservedForArgumentRegisters, IsArgumentTypeRegisterCompatible, IsNonRegisterArgumentIndirect,
+			AreStackArgumentsNaturallyAligned, and AreStackArgumentsPushedLeftToRight to
+			compute the parameter layout.
+
+			This function is usually sufficient unless the calling convention has unusual parameter
+			passing behavior. Most calling conventions can be defined per-argument using the methods
+			listed above.
+
+			\param view BinaryView providing type information
+			\param returnValue Optional location of the return value
+			\param params Parameters of the call
+			\param permittedRegs Optional set of register indices that argument passing is
+				restricted to; if not provided, the calling convention's default registers are used
+			\return The locations of the parameters, in order
+		*/
 		std::vector<ValueLocation> GetDefaultParameterLocations(BinaryView* view,
 			const std::optional<ValueLocation>& returnValue, const std::vector<FunctionParameter>& params,
 			const std::optional<std::set<uint32_t>>& permittedRegs = std::nullopt);
+
+		/*! Default implementation of GetParameterOrderingForVariables. The default implementation first checks
+			AreArgumentRegistersSharedIndex to see if the parameter ordering is well defined. If the arguments
+			do not share an index, it places all integer arguments before the floating point arguments.
+			Arguments that are not passed in a normal location are placed last.
+
+			\param params Map of parameter variables to their types
+			\return The parameter variables in the order they are passed
+		*/
 		std::vector<Variable> GetDefaultParameterOrderingForVariables(const std::map<Variable, Ref<Type>>& params);
+
+		/*! Default implementation of GetStackAdjustmentForLocations. The default implementation first checks
+			IsStackAdjustedOnReturn, and returns zero if that returns false. Otherwise, it checks the stack
+			parameter locations and AreStackArgumentsNaturallyAligned to compute the stack adjustment necessary
+			to cover all parameters.
+
+			\param returnValue Optional location of the return value
+			\param locations Locations of the parameters
+			\param types Types of the parameters, corresponding to \p locations
+			\return The stack adjustment in bytes
+		*/
 		int64_t GetDefaultStackAdjustmentForLocations(const std::optional<ValueLocation>& returnValue,
 			const std::vector<ValueLocation>& locations, const std::vector<Ref<Type>>& types);
+
+		/*! Default implementation of GetRegisterStackAdjustments. The default implementation compares the
+			register stack slots used by the parameters and the return value to compute the adjustments.
+
+			\param returnValue Optional location of the return value
+			\param params Locations of the parameters
+			\return A map from register stack index to its adjustment
+		*/
 		std::map<uint32_t, int32_t> GetDefaultRegisterStackAdjustments(
 			const std::optional<ValueLocation>& returnValue, const std::vector<ValueLocation>& params);
 	};

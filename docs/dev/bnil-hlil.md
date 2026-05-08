@@ -79,6 +79,8 @@ There are a number of properties that can be queried on the [`HighLevelILInstruc
 * `HLIL_SPLIT` - A split pair of variables `high`:`low` which can be used a single expression
 * `HLIL_DEREF` - Dereferences `src`
 * `HLIL_DEREF_FIELD` -
+* `HLIL_PASS_BY_REF` - Wraps `src` to indicate that the calling convention is passing a parameter by reference. The inner expression has the reference taken and has a pointer type. Only appears as a parameter expression on a call instruction.
+* `HLIL_RETURN_BY_REF` - Wraps `src` to indicate that the value is being returned indirectly through a caller-supplied pointer. The inner expression is the destination of the return value, not a pointer to it. Only appears on the left side of an assignment for the result of a call instruction.
 
 ### Arithmetic Operations
 

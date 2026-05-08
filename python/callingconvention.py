@@ -86,6 +86,51 @@ class CallLayout:
 
 
 class CallingConvention:
+	"""
+	``class CallingConvention`` describes how parameters, return values, and the stack are handled
+	when a function is called. Subclasses of ``CallingConvention`` define the behavior of a calling
+	convention by setting the class attributes below and, where necessary, overriding the methods.
+
+	:cvar name: The name of this calling convention.
+	:cvar caller_saved_regs: The list of registers that are not preserved across a call
+		(caller-saved / volatile registers).
+	:cvar callee_saved_regs: The list of registers that a callee must preserve across a call
+		(callee-saved / non-volatile registers).
+	:cvar int_arg_regs: The registers used to pass integer and pointer arguments, in the order
+		they are used.
+	:cvar float_arg_regs: The registers used to pass floating point arguments, in the order they
+		are used.
+	:cvar required_arg_regs: The set of registers that must be arguments for heuristic calling
+		convention detection to consider this calling convention as a valid option.
+	:cvar required_clobbered_regs: The set of registers that must be clobbered for heuristic
+		calling convention detection to consider this calling convention as a valid option.
+	:cvar arg_regs_share_index: Whether the integer and floating point argument registers share a
+		single argument index. When ``True``, the Nth argument consumes the Nth slot of both the
+		integer and float register lists regardless of its type. When ``False``, integer and float
+		arguments are assigned from their respective register lists independently.
+	:cvar arg_regs_for_varargs: Whether argument registers are used to pass variadic arguments.
+	:cvar stack_reserved_for_arg_regs: Whether stack space is reserved by the caller for the
+		register arguments (for example, the shadow/home space used by the Windows x64 calling
+		convention).
+	:cvar stack_adjusted_on_return: Whether the callee adjusts the stack to remove the arguments
+		before returning (as in stdcall), rather than leaving the caller to clean up the stack (as
+		in cdecl).
+	:cvar eligible_for_heuristics: Whether this calling convention may be selected by heuristic
+		calling convention detection.
+	:cvar int_return_reg: The register that holds the integer return value.
+	:cvar high_int_return_reg: The register that holds the high part of an integer return value
+		that is too large to fit in a single register, or ``None`` if there is none.
+	:cvar float_return_reg: The register that holds the floating point return value, or ``None``
+		if there is none.
+	:cvar global_pointer_reg: The register that holds the global pointer, if the calling
+		convention defines one, or ``None`` if there is none.
+	:cvar implicitly_defined_regs: The registers that are implicitly given a known value on
+		function entry by this calling convention.
+	:cvar stack_args_naturally_aligned: Whether arguments passed on the stack are aligned to their
+		natural alignment. If ``False``, arguments are aligned to the address size.
+	:cvar stack_args_pushed_left_to_right: Whether arguments passed on the stack are pushed
+		left-to-right, as opposed to the more common right-to-left order.
+	"""
 	name = None
 	caller_saved_regs = []
 	callee_saved_regs = []
@@ -867,46 +912,150 @@ class CallingConvention:
 	def get_incoming_reg_value(
 		self, reg: 'architecture.RegisterName', func: 'function.Function'
 	) -> 'variable.RegisterValue':
+		"""
+		``get_incoming_reg_value`` gets the known value of a register on entry to a function.
+
+		:param RegisterName reg: register to query
+		:param Function func: function being analyzed
+		:return: the incoming value of the register
+		:rtype: RegisterValue
+		"""
 		return self.perform_get_incoming_reg_value(reg, func)
 
 	def get_incoming_flag_value(
 		self, reg: 'architecture.RegisterName', func: 'function.Function'
 	) -> 'variable.RegisterValue':
+		"""
+		``get_incoming_flag_value`` gets the known value of a flag on entry to a function.
+
+		:param reg: flag to query
+		:param Function func: function being analyzed
+		:return: the incoming value of the flag
+		:rtype: RegisterValue
+		"""
 		return self.perform_get_incoming_flag_value(reg, func)
 
 	def get_incoming_var_for_parameter_var(
 		self, in_var: 'variable.CoreVariable', func: Optional['function.Function'] = None
 	) -> 'variable.CoreVariable':
+		"""
+		``get_incoming_var_for_parameter_var`` gets the incoming variable that corresponds to the
+		given parameter variable. This is the inverse of :py:meth:`get_parameter_var_for_incoming_var`.
+
+		:param CoreVariable in_var: parameter variable
+		:param Function func: function being analyzed
+		:return: the incoming variable corresponding to the parameter variable
+		:rtype: CoreVariable
+		"""
 		return self.perform_get_incoming_var_for_parameter_var(in_var, func)
 
 	def get_parameter_var_for_incoming_var(
 		self, in_var: 'variable.CoreVariable', func: Optional['function.Function'] = None
 	) -> 'variable.CoreVariable':
+		"""
+		``get_parameter_var_for_incoming_var`` gets the parameter variable that corresponds to the
+		given incoming variable. This is the inverse of :py:meth:`get_incoming_var_for_parameter_var`.
+
+		:param CoreVariable in_var: incoming variable
+		:param Function func: function being analyzed
+		:return: the parameter variable corresponding to the incoming variable
+		:rtype: CoreVariable
+		"""
 		return self.perform_get_incoming_var_for_parameter_var(in_var, func)
 
 	def is_return_type_reg_compatible(self, view: Optional['binaryview.BinaryView'], type: 'types.Type') -> bool:
+		"""
+		``is_return_type_reg_compatible`` determines whether a value of the given type can be
+		returned in registers, as opposed to being returned indirectly through memory.
+
+		:param BinaryView view: binary view providing type information
+		:param Type type: return type to check
+		:return: whether the return type is register compatible
+		:rtype: bool
+		"""
 		return self.default_is_return_type_reg_compatible(type)
 
 	def is_non_reg_arg_indirect(self, view: Optional['binaryview.BinaryView'], type: Optional['types.Type']) -> bool:
+		"""
+		``is_non_reg_arg_indirect`` determines whether an argument that cannot be passed in
+		registers is passed indirectly by pointer as opposed to being passed directly on the stack.
+
+		:param BinaryView view: binary view providing type information
+		:param Type type: argument type to check
+		:return: whether the non-register argument is passed indirectly by pointer
+		:rtype: bool
+		"""
 		return False
 
 	def default_is_return_type_reg_compatible(self, type: 'types.Type') -> bool:
+		"""
+		``default_is_return_type_reg_compatible`` is the default implementation of
+		:py:meth:`is_return_type_reg_compatible`. The default implementation allows register
+		returns for types that fit in a single register, have a size equal to two registers when
+		``high_int_return_reg`` is set, or are a floating point type when ``float_return_reg`` is set.
+
+		:param Type type: return type to check
+		:return: whether the return type is register compatible
+		:rtype: bool
+		"""
 		return core.BNDefaultIsReturnTypeRegisterCompatible(self.handle, type.handle)
 
 	def get_indirect_return_value_location(self) -> 'variable.CoreVariable':
+		"""
+		``get_indirect_return_value_location`` gets the location used to pass the hidden pointer
+		argument for return values that are returned indirectly through memory.
+
+		:return: the location of the indirect return value pointer
+		:rtype: CoreVariable
+		"""
 		return self.get_default_indirect_return_value_location()
 
 	def get_default_indirect_return_value_location(self) -> 'variable.CoreVariable':
+		"""
+		``get_default_indirect_return_value_location`` is the default implementation of
+		:py:meth:`get_indirect_return_value_location`. The default location is the first integer
+		argument register, or the first stack slot if there are no integer argument registers.
+
+		:return: the location of the indirect return value pointer
+		:rtype: CoreVariable
+		"""
 		result = core.BNGetDefaultIndirectReturnValueLocation(self.handle)
 		return variable.CoreVariable.from_BNVariable(result)
 
 	def get_returned_indirect_return_value_pointer(self) -> Optional['variable.CoreVariable']:
+		"""
+		``get_returned_indirect_return_value_pointer`` gets the location in which the hidden
+		indirect return value pointer is returned to the caller, for calling conventions that
+		return it.
+
+		:return: the location the indirect return value pointer is returned in, or ``None`` if it is not returned
+		:rtype: Optional[CoreVariable]
+		"""
 		return None
 
 	def is_arg_type_reg_compatible(self, view: Optional['binaryview.BinaryView'], type: 'types.Type') -> bool:
+		"""
+		``is_arg_type_reg_compatible`` determines whether a value of the given type can be passed
+		as an argument in registers.
+
+		:param BinaryView view: binary view providing type information
+		:param Type type: argument type to check
+		:return: whether the argument type is register compatible
+		:rtype: bool
+		"""
 		return self.default_is_arg_type_reg_compatible(type)
 
 	def default_is_arg_type_reg_compatible(self, type: 'types.Type') -> bool:
+		"""
+		``default_is_arg_type_reg_compatible`` is the default implementation of
+		:py:meth:`is_arg_type_reg_compatible`. The default implementation allows register arguments
+		for types that fit in a single register, or are a floating point type when ``float_arg_regs``
+		has valid registers.
+
+		:param Type type: argument type to check
+		:return: whether the argument type is register compatible
+		:rtype: bool
+		"""
 		return core.BNDefaultIsArgumentTypeRegisterCompatible(self.handle, type.handle)
 
 	def get_call_layout(
@@ -914,6 +1063,28 @@ class CallingConvention:
 		params: 'types.ParamsType', func: Optional['function.Function'] = None,
 		permitted_regs: Optional[List['architecture.RegisterIndex']] = None
 	) -> 'CallLayout':
+		"""
+		``get_call_layout`` computes the complete call layout (parameter locations, return value
+		location, and stack adjustments) for a call with the given return value and parameters. It
+		is recommended to only override this method if the calling convention behavior cannot be
+		modeled with :py:meth:`get_return_value_location` and/or :py:meth:`get_parameter_locations`.
+
+		The default implementation calls :py:meth:`get_default_call_layout`.
+
+		When calling this method to query the layout of a function, the return value and parameters
+		should have their named type references dereferenced before passing them to this method.
+		Calling the methods :py:meth:`BinaryView.deref_return_value_named_type_references` and
+		:py:meth:`BinaryView.deref_parameter_named_type_references` will perform this dereferencing.
+
+		:param BinaryView view: binary view providing type information
+		:param return_value: return value of the call
+		:param params: parameters of the call
+		:param Function func: function used to resolve the architecture of the resulting locations
+		:param permitted_regs: optional set of register indices that argument passing is restricted \
+		to; if not provided, the calling convention's default registers are used
+		:return: the computed call layout
+		:rtype: CallLayout
+		"""
 		return self.get_default_call_layout(view, return_value, params, func, permitted_regs)
 
 	def get_default_call_layout(
@@ -921,6 +1092,21 @@ class CallingConvention:
 		params: 'types.ParamsType', func: Optional['function.Function'] = None,
 		permitted_regs: Optional[List['architecture.RegisterIndex']] = None
 	) -> 'CallLayout':
+		"""
+		``get_default_call_layout`` is the default implementation of :py:meth:`get_call_layout`. The
+		default implementation uses :py:meth:`get_return_value_location`,
+		:py:meth:`get_parameter_locations`, :py:meth:`get_stack_adjustment_for_locations`, and
+		:py:meth:`get_register_stack_adjustments` to compute the layout.
+
+		:param BinaryView view: binary view providing type information
+		:param return_value: return value of the call
+		:param params: parameters of the call
+		:param Function func: function used to resolve the architecture of the resulting locations
+		:param permitted_regs: optional set of register indices that argument passing is restricted \
+		to; if not provided, the calling convention's default registers are used
+		:return: the computed call layout
+		:rtype: CallLayout
+		"""
 		if view is None:
 			view_obj = None
 		else:
@@ -947,11 +1133,36 @@ class CallingConvention:
 	def get_return_value_location(
 		self, view: Optional['binaryview.BinaryView'], return_value: 'types.ReturnValueOrType'
 	) -> Optional['types.ValueLocation']:
+		"""
+		``get_return_value_location`` computes the location of the return value for the given return
+		value type and location structure.
+
+		The default implementation calls :py:meth:`get_default_return_value_location`.
+
+		:param BinaryView view: binary view providing type information
+		:param return_value: return value to compute the location for
+		:return: the location of the return value
+		:rtype: Optional[ValueLocation]
+		"""
 		return self.get_default_return_value_location(view, return_value)
 
 	def get_default_return_value_location(
 		self, view: Optional['binaryview.BinaryView'], return_value: 'types.ReturnValueOrType'
 	) -> Optional['types.ValueLocation']:
+		"""
+		``get_default_return_value_location`` is the default implementation of
+		:py:meth:`get_return_value_location`. The default implementation checks
+		:py:meth:`is_return_type_reg_compatible` and places the return value in registers if it
+		can, or uses an indirect return by pointer if not. If an indirect return is required, then
+		:py:meth:`get_indirect_return_value_location` and
+		:py:meth:`get_returned_indirect_return_value_pointer` are used to provide the location of
+		the indirect return value.
+
+		:param BinaryView view: binary view providing type information
+		:param return_value: return value to compute the location for
+		:return: the location of the return value
+		:rtype: Optional[ValueLocation]
+		"""
 		if view is None:
 			view_obj = None
 		else:
@@ -975,6 +1186,22 @@ class CallingConvention:
 		params: 'types.ParamsType', arch: Optional['architecture.Architecture'] = None,
 		permitted_regs: Optional[List['architecture.RegisterIndex']] = None
 	) -> List['types.ValueLocation']:
+		"""
+		``get_parameter_locations`` computes the locations of the parameters for a call with the
+		given return value and parameters.
+
+		The default implementation calls :py:meth:`get_default_parameter_locations`.
+
+		:param BinaryView view: binary view providing type information
+		:param return_value: optional location of the return value, which may affect parameter \
+		placement (for example, when an indirect return pointer consumes an argument register)
+		:param params: parameters of the call
+		:param Architecture arch: architecture used to resolve the resulting locations
+		:param permitted_regs: optional set of register indices that argument passing is restricted \
+		to; if not provided, the calling convention's default registers are used
+		:return: the locations of the parameters, in order
+		:rtype: List[ValueLocation]
+		"""
 		return self.get_default_parameter_locations(view, return_value, params, arch, permitted_regs)
 
 	def get_default_parameter_locations(
@@ -982,6 +1209,27 @@ class CallingConvention:
 		params: 'types.ParamsType', arch: Optional['architecture.Architecture'] = None,
 		permitted_regs: Optional[List['architecture.RegisterIndex']] = None
 	) -> List['types.ValueLocation']:
+		"""
+		``get_default_parameter_locations`` is the default implementation of
+		:py:meth:`get_parameter_locations`. The default implementation uses ``int_arg_regs``,
+		``float_arg_regs``, ``arg_regs_share_index``, ``stack_reserved_for_arg_regs``,
+		:py:meth:`is_arg_type_reg_compatible`, :py:meth:`is_non_reg_arg_indirect`,
+		``stack_args_naturally_aligned``, and ``stack_args_pushed_left_to_right`` to compute
+		the parameter layout.
+
+		This function is usually sufficient unless the calling convention has unusual parameter
+		passing behavior. Most calling conventions can be defined per-argument using the attributes
+		and methods listed above.
+
+		:param BinaryView view: binary view providing type information
+		:param return_value: optional location of the return value
+		:param params: parameters of the call
+		:param Architecture arch: architecture used to resolve the resulting locations
+		:param permitted_regs: optional set of register indices that argument passing is restricted \
+		to; if not provided, the calling convention's default registers are used
+		:return: the locations of the parameters, in order
+		:rtype: List[ValueLocation]
+		"""
 		if view is None:
 			view_obj = None
 		else:
@@ -1010,9 +1258,32 @@ class CallingConvention:
 	def get_parameter_ordering_for_variables(
 		self, view: Optional['binaryview.BinaryView'], params: Dict['variable.CoreVariable', 'types.Type']
 	) -> List['variable.CoreVariable']:
+		"""
+		``get_parameter_ordering_for_variables`` computes the order in which the given parameter
+		variables are passed. Used by the heuristic calling convention detection to create a
+		function type from a list of parameter variables.
+
+		The default implementation calls :py:meth:`get_default_parameter_ordering_for_variables`.
+
+		:param BinaryView view: binary view providing type information
+		:param params: map of parameter variables to their types
+		:return: the parameter variables in the order they are passed
+		:rtype: List[CoreVariable]
+		"""
 		return self.get_default_parameter_ordering_for_variables(params)
 
 	def get_default_parameter_ordering_for_variables(self, params: Dict['variable.CoreVariable', 'types.Type']) -> List['variable.CoreVariable']:
+		"""
+		``get_default_parameter_ordering_for_variables`` is the default implementation of
+		:py:meth:`get_parameter_ordering_for_variables`. The default implementation first checks
+		``arg_regs_share_index`` to see if the parameter ordering is well defined. If the arguments
+		do not share an index, it places all integer arguments before the floating point arguments.
+		Arguments that are not passed in a normal location are placed last.
+
+		:param params: map of parameter variables to their types
+		:return: the parameter variables in the order they are passed
+		:rtype: List[CoreVariable]
+		"""
 		vars = (core.BNVariable * len(params))()
 		types = (ctypes.POINTER(core.BNType) * len(params))()
 		for (i, (var, ty)) in enumerate(params.items()):
@@ -1033,12 +1304,36 @@ class CallingConvention:
 		self, view: Optional['binaryview.BinaryView'], return_value: Optional['types.ValueLocation'],
 		params: List[Tuple['types.ValueLocation', 'types.Type']]
 	):
+		"""
+		``get_stack_adjustment_for_locations`` computes the stack adjustment applied on return for
+		a call with the given return value and parameter locations.
+
+		The default implementation calls :py:meth:`get_default_stack_adjustment_for_locations`.
+
+		:param BinaryView view: binary view providing type information
+		:param return_value: optional location of the return value
+		:param params: list of ``(location, type)`` tuples for the parameters
+		:return: the stack adjustment in bytes
+		:rtype: int
+		"""
 		return self.get_default_stack_adjustment_for_locations(return_value, params)
 
 	def get_default_stack_adjustment_for_locations(
 		self, return_value: Optional['types.ValueLocation'],
 		params: List[Tuple['types.ValueLocation', 'types.Type']]
 	):
+		"""
+		``get_default_stack_adjustment_for_locations`` is the default implementation of
+		:py:meth:`get_stack_adjustment_for_locations`. The default implementation first checks
+		``stack_adjusted_on_return``, and returns zero if that is ``False``. Otherwise, it checks
+		the stack parameter locations and ``stack_args_naturally_aligned`` to compute the stack
+		adjustment necessary to cover all parameters.
+
+		:param return_value: optional location of the return value
+		:param params: list of ``(location, type)`` tuples for the parameters
+		:return: the stack adjustment in bytes
+		:rtype: int
+		"""
 		if return_value is None:
 			ret = None
 		else:
@@ -1054,11 +1349,34 @@ class CallingConvention:
 		self, view: Optional['binaryview.BinaryView'], return_value: Optional['types.ValueLocation'],
 		params: List['types.ValueLocation']
 	) -> Dict['architecture.RegisterIndex', int]:
+		"""
+		``get_register_stack_adjustments`` computes the per-register-stack adjustments (for
+		architectures with register stacks, such as the x87 floating point stack) for a call with
+		the given return value and parameter locations.
+
+		The default implementation calls :py:meth:`get_default_register_stack_adjustments`.
+
+		:param BinaryView view: binary view providing type information
+		:param return_value: optional location of the return value
+		:param params: locations of the parameters
+		:return: a map from register stack index to its adjustment
+		:rtype: Dict[RegisterIndex, int]
+		"""
 		return self.get_default_register_stack_adjustments(return_value, params)
 
 	def get_default_register_stack_adjustments(
 			self, return_value: Optional['types.ValueLocation'], params: List['types.ValueLocation']
 	) -> Dict['architecture.RegisterIndex', int]:
+		"""
+		``get_default_register_stack_adjustments`` is the default implementation of
+		:py:meth:`get_register_stack_adjustments`. The default implementation compares the register
+		stack slots used by the parameters and the return value to compute the adjustments.
+
+		:param return_value: optional location of the return value
+		:param params: locations of the parameters
+		:return: a map from register stack index to its adjustment
+		:rtype: Dict[RegisterIndex, int]
+		"""
 		if return_value is None:
 			ret = None
 		else:
@@ -1085,6 +1403,13 @@ class CallingConvention:
 
 	@property
 	def arch(self) -> 'architecture.Architecture':
+		"""
+		The architecture this calling convention applies to.
+
+		:getter: returns the architecture this calling convention applies to
+		:setter: sets the architecture this calling convention applies to
+		:type: Architecture
+		"""
 		return self._arch
 
 	@arch.setter

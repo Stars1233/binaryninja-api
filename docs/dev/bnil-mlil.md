@@ -277,9 +277,8 @@ The parameter list can be accessed through the `params` property:
 
 * `MLIL_JUMP` - Branch to the `dest` expression's address
 * `MLIL_JUMP_TO` - A jump table dispatch instruction. Uses the `dest` expression to calculate the MLIL instruction target `targets` to branch to
-* `MLIL_CALL` - Branch to the `dest` expression function, saving the return address, with the list of parameters `params` and returning the list of return values `output`
+* `MLIL_CALL` - Branch to the `dest` expression function, saving the return address, with the list of parameters `params` and a list of output expressions `output_exprs` describing how each return value is delivered
 * `MLIL_CALL_UNTYPED` - This is a call instruction where stack resolution could not be determined, and thus a list of parameters and return values do not exist
-* `MLIL_CALL_OUTPUT` - This expression holds a set of return values `dest` from a call
 * `MLIL_CALL_PARAM` - This expression holds the set of parameters `src` for a call instruction
 * `MLIL_RET` - Return to the calling function.
 * `MLIL_RET_HINT` - Indirect jump to `dest` expression (only used in internal analysis passes.)
@@ -318,7 +317,7 @@ The parameter list can be accessed through the `params` property:
 * `MLIL_FLOAT_CONST` - A floating point constant `constant`
 * `MLIL_IMPORT` - A `constant` integral value representing an imported address
 * `MLIL_LOW_PART` - `size` bytes from the low end of `src` expression
-
+* `MLIL_PASS_BY_REF` - Wraps `src` to indicate that the calling convention is passing a parameter by reference. The inner expression has the reference taken and has a pointer type. Only appears as a parameter expression on a call instruction.
 
 ### Arithmetic Operations
 
@@ -401,4 +400,14 @@ The parameter list can be accessed through the `params` property:
 * `MLIL_UNIMPL` - The expression is not implemented
 * `MLIL_UNIMPL_MEM` - The expression is not implemented but does access `src` memory
 
+### Function Call Outputs
 
+Prior to version 5.4, a function call could only return a list of variables as output. The `output` property on call instructions remains a list of variables, but a function call's `output_exprs` is a list of expressions that describe in more detail how each return value is delivered to the caller, and also adds support for indirect stores. The expressions in the list are one of:
+
+* `MLIL_VAR_OUTPUT` - a whole variable is written. The simplest, most common case.
+* `MLIL_VAR_OUTPUT_FIELD` - a field of a variable (at byte `offset`) is written. Used when the return value is placed into part of a larger structure.
+* `MLIL_STORE_OUTPUT` - the return value is stored to memory at the given destination expression. Used for indirect returns that do not target a local variable.
+
+Additionally, a return value can be the following expression, wrapping one of the above:
+
+* `MLIL_RETURN_BY_REF` - Wraps `src` to indicate that the value is being returned indirectly through a caller-supplied pointer. The inner expression will be one of the `MLIL_VAR_OUTPUT`, `MLIL_VAR_OUTPUT_FIELD`, or `MLIL_STORE_OUTPUT` instructions.

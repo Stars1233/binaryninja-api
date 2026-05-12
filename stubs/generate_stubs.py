@@ -104,7 +104,7 @@ extern "C" {
 
     # Pull out all core api functions to generate stubs
     for match in re.finditer(
-        r'(?m:)\t(BINARYNINJACOREAPI [^;]*);',
+        r'(?m:^)[ \t]+(BINARYNINJACOREAPI [^;]*);',
         header_conts
     ):
         group = match.group(1)

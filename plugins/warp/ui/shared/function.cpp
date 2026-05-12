@@ -44,7 +44,8 @@ void WarpFunctionItem::SetSource(Warp::Source source)
 	setData(QString::fromStdString(sourceStr), Qt::UserRole + 1);
 }
 
-WarpFunctionItemModel::WarpFunctionItemModel(const QStringList& labels, QObject* parent)
+WarpFunctionItemModel::WarpFunctionItemModel(const QStringList& labels, QObject* parent) :
+	QStandardItemModel(parent)
 {
 	this->setHorizontalHeaderLabels(labels);
 }

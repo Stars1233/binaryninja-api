@@ -16,7 +16,7 @@ TriageFilePicker::TriageFilePicker(UIContext* context)
 	SettingsRef settings = BinaryNinja::Settings::Instance();
 	bool hiddenFiles = settings->Get<bool>("triage.hiddenFiles");
 
-	m_model = new QFileSystemModel();
+	m_model = new QFileSystemModel(this);
 	m_model->setRootPath("");
 	if (hiddenFiles)
 		m_model->setFilter(QDir::Hidden | QDir::AllEntries | QDir::System);

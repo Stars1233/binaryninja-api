@@ -13,7 +13,8 @@ WarpConstraintItem::WarpConstraintItem(const Warp::Constraint& constraint) : m_c
 	setText(guidStr);
 }
 
-WarpConstraintItemModel::WarpConstraintItemModel(const QStringList& labels, QObject* parent)
+WarpConstraintItemModel::WarpConstraintItemModel(const QStringList& labels, QObject* parent) :
+	QStandardItemModel(parent)
 {
 	this->setHorizontalHeaderLabels(labels);
 }

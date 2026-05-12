@@ -44,7 +44,7 @@ KCTriageView::KCTriageView(QWidget* parent, BinaryViewRef data) : QWidget(parent
 
 	UIContext::registerNotification(this);
 
-	m_triageCollection = new DockableTabCollection();
+	m_triageCollection = new DockableTabCollection(this);
 	m_triageTabs = new SplitTabWidget(m_triageCollection);
 
 	auto triageTabStyle = new GlobalAreaTabStyle();

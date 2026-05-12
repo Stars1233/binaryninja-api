@@ -19645,6 +19645,14 @@ namespace BinaryNinja {
 		virtual std::vector<DisassemblyTextLine> GetLinesForData(BinaryView* data, uint64_t addr, Type* type,
 		    const std::vector<InstructionTextToken>& prefix, size_t width,
 			std::vector<std::pair<Type*, size_t>>& context, const std::string& language = std::string());
+
+		/*! Render lines for data using the registered data renderers.
+
+		    \deprecated Use \c DataRendererContainer::RenderLinesForData instead. This instance method does not use
+		    any state from the receiving \c DataRenderer; constructing a transient instance just to call it leaks
+		    the underlying core object.
+		*/
+		BN_DEPRECATED("Use DataRendererContainer::RenderLinesForData", "DataRendererContainer::RenderLinesForData")
 		std::vector<DisassemblyTextLine> RenderLinesForData(BinaryView* data, uint64_t addr, Type* type,
 		    const std::vector<InstructionTextToken>& prefix, size_t width,
 		    std::vector<std::pair<Type*, size_t>>& context, const std::string& language = std::string());
@@ -19666,6 +19674,9 @@ namespace BinaryNinja {
 	  public:
 		static void RegisterGenericDataRenderer(DataRenderer* renderer);
 		static void RegisterTypeSpecificDataRenderer(DataRenderer* renderer);
+		static std::vector<DisassemblyTextLine> RenderLinesForData(BinaryView* data, uint64_t addr, Type* type,
+		    const std::vector<InstructionTextToken>& prefix, size_t width,
+		    std::vector<std::pair<Type*, size_t>>& context, const std::string& language = std::string());
 	};
 
 	/*!

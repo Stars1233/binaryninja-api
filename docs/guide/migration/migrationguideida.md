@@ -44,6 +44,7 @@ Some major exceptions are:
     - `T` for Types
     - `H` to toggle to/from Hex View
     - `[TAB]` to toggle to/from disassembly
+- `0` toggles integer display between hexadecimal and decimal, which is `H` in IDA
 
 ## Cross-References
 

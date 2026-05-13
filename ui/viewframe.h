@@ -210,6 +210,7 @@ class BINARYNINJAUIAPI View
 	virtual void writeData(const BinaryNinja::DataBuffer& data, uint64_t addr);
 
 	virtual bool canDisplayAs(const UIActionContext& context, const BNIntegerDisplayType);
+	virtual BNIntegerDisplayType getCurrentDisplayAs(const UIActionContext& context);
 	virtual void displayAs(const UIActionContext& context, BNIntegerDisplayType type);
 
 	virtual BinaryNinja::Ref<HistoryEntry> getHistoryEntry();

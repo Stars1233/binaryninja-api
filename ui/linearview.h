@@ -399,6 +399,7 @@ private Q_SLOTS:
 	void makeString(size_t charSize = 1);
 	void changeType(const UIActionContext& context);
 	void undefineInRange();
+	BNIntegerDisplayType getCurrentDisplayAs(const UIActionContext& context) override;
 	void displayAs(const UIActionContext& context, BNIntegerDisplayType displayType) override;
 	void createStructOrInferStructureType();
 	bool autoCreateArray();

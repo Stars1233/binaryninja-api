@@ -150,6 +150,7 @@ class BINARYNINJAUIAPI TokenizedTextView :
 	virtual BinaryNinja::Ref<HistoryEntry> getHistoryEntry() override;
 	void populateDefaultHistoryEntry(TokenizedTextViewHistoryEntry* entry);
 	virtual void navigateToHistoryEntry(BinaryNinja::Ref<HistoryEntry> entry) override;
+	virtual bool canDisplayAs(const UIActionContext& context, const BNIntegerDisplayType displayType) override;
 
 	virtual void OnBinaryDataWritten(BinaryNinja::BinaryView* data, uint64_t offset, size_t len) override;
 	virtual void OnBinaryDataInserted(BinaryNinja::BinaryView* data, uint64_t offset, size_t len) override;

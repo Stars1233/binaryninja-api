@@ -1097,6 +1097,8 @@ extern "C"
 		DoubleDisplayType,
 		EnumerationDisplayType,
 		InvertedCharacterConstantDisplayType,
+		UnsignedComplementDecimalDisplayType,
+		UnsignedComplementHexadecimalDisplayType,
 	};
 
 	BN_ENUM(uint8_t, BNFlowGraphOption)

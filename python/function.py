@@ -4181,6 +4181,17 @@ class DisassemblyTextRenderer:
 	def is_integer_token(token: 'InstructionTextToken') -> bool:
 		return core.BNIsIntegerToken(token.type)
 
+	@staticmethod
+	def get_display_string_for_integer(
+	    binary_view: Optional['binaryview.BinaryView'], display_type: IntegerDisplayType, value: int, input_width: int,
+	    is_signed: bool = True
+	) -> str:
+		if isinstance(display_type, str):
+			display_type = IntegerDisplayType[display_type]
+		return core.BNGetDisplayStringForInteger(
+			binary_view.handle if binary_view is not None else None, display_type, value, input_width, is_signed
+		)
+
 	def add_integer_token(
 	    self, tokens: List['InstructionTextToken'], int_token: 'InstructionTextToken', addr: int,
 	    arch: Optional['architecture.Architecture'] = None

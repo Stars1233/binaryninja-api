@@ -171,6 +171,11 @@ impl TypeBuilder {
         self
     }
 
+    pub fn set_integer_display_type(&self, display_type: IntegerDisplayType) -> &Self {
+        unsafe { BNSetIntegerTypeDisplayType(self.handle, display_type) };
+        self
+    }
+
     // Readable properties
 
     pub fn type_class(&self) -> TypeClass {
@@ -187,6 +192,10 @@ impl TypeBuilder {
 
     pub fn is_signed(&self) -> Conf<bool> {
         unsafe { BNIsTypeBuilderSigned(self.handle).into() }
+    }
+
+    pub fn integer_display_type(&self) -> IntegerDisplayType {
+        self.finalize().integer_display_type()
     }
 
     pub fn is_const(&self) -> Conf<bool> {
@@ -687,6 +696,10 @@ impl Type {
 
     pub fn is_signed(&self) -> Conf<bool> {
         unsafe { BNIsTypeSigned(self.handle).into() }
+    }
+
+    pub fn integer_display_type(&self) -> IntegerDisplayType {
+        unsafe { BNGetIntegerTypeDisplayType(self.handle) }
     }
 
     pub fn is_const(&self) -> Conf<bool> {

@@ -32,7 +32,7 @@ from .enums import (
 	TypeReferenceType, MemberAccess, MemberScope, TypeDefinitionLineType,
 	TokenEscapingType,
 	NameType, PointerSuffix, PointerBaseType,
-	Endianness
+	Endianness, IntegerDisplayType
 )
 from . import callingconvention
 from . import function as _function
@@ -902,6 +902,15 @@ class TypeBuilder:
 	def signed(self, value: BoolWithConfidenceType) -> None:
 		_value = BoolWithConfidence.get_core_struct(value)
 		core.BNTypeBuilderSetSigned(self._handle, _value)
+
+	@property
+	def display_type(self) -> IntegerDisplayType:
+		"""Integer display type for this type."""
+		return core.BNGetIntegerTypeDisplayType(self.immutable_copy().handle)
+
+	@display_type.setter
+	def display_type(self, value: IntegerDisplayType) -> None:
+		core.BNSetIntegerTypeDisplayType(self._handle, value)
 
 	@property
 	def children(self) -> List['TypeBuilder']:
@@ -2144,6 +2153,11 @@ class Type:
 			result[attributes[i].name] = attributes[i].value
 		core.BNFreeTypeAttributeList(attributes, count.value)
 		return result
+
+	@property
+	def display_type(self) -> IntegerDisplayType:
+		"""Integer display type for this type."""
+		return core.BNGetIntegerTypeDisplayType(self._handle)
 
 	def _to_core_struct(self) -> core.BNTypeWithConfidence:
 		type_conf = core.BNTypeWithConfidence()

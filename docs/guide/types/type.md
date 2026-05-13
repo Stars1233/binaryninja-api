@@ -9,6 +9,8 @@ The simplest way to directly manipulate types in disassembly is by viewing an ex
  - `1`, `2`, `4`, `8`: The number hotkeys will create a data variable at the current location if none exists, and then change the size of the variable to an integer in the size of bytes specified in the hotkey.
  - `d`: If you want to cycle through the different integer sizes, repeatedly pressing `d` has the same effect as pressing the numbers in order.
  - `-`: To quickly toggle integers between signed and unsigned integers, you can use the `-` hotkey.
+ - `0`: To quickly toggle integer display between hexadecimal and decimal, you can use the `0` hotkey.
+ - `~`: To quickly toggle integer display between normal and bitwise complement, you can use the `~` hotkey.
  - `a`: This hotkey sets or creates the current variable to a character array up until and including the next null byte.
  - `o`: `o` will set or create the current variable to be a pointer reference.
  - `*`: If you have a selection of identical variables, `*` will convert them into an array of elements. If you have no selection, the "Create Array" dialog will be shown allowing you to create an array of specific type and count at the current location.

@@ -1598,6 +1598,15 @@ Confidence<bool> TypeBuilder::IsVolatile() const
 }
 
 
+BNIntegerDisplayType TypeBuilder::GetIntegerTypeDisplayType() const
+{
+	BNType* type = BNFinalizeTypeBuilder(m_object);
+	BNIntegerDisplayType result = BNGetIntegerTypeDisplayType(type);
+	BNFreeType(type);
+	return result;
+}
+
+
 void TypeBuilder::SetIntegerTypeDisplayType(BNIntegerDisplayType displayType)
 {
 	BNSetIntegerTypeDisplayType(m_object, displayType);
@@ -3442,4 +3451,3 @@ fmt::format_context::iterator fmt::formatter<BinaryNinja::Type>::format(
 		return fmt::format_to(ctx.out(), "{}{}", obj.GetStringBeforeName(), obj.GetStringAfterName());
 	}
 }
-

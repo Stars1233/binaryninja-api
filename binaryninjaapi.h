@@ -11217,6 +11217,7 @@ namespace BinaryNinja {
 		Confidence<bool> IsConst() const;
 		Confidence<bool> IsVolatile() const;
 		bool IsSystemCall() const;
+		BNIntegerDisplayType GetIntegerTypeDisplayType() const;
 		void SetIntegerTypeDisplayType(BNIntegerDisplayType displayType);
 
 		Confidence<Ref<Type>> GetChildType() const;

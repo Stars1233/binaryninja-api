@@ -25,7 +25,7 @@ For future releases all you need to do is increment the version and create a new
 
 ### Using Your Own Plugin Repository
 
-The simplest way to run your own plugin repository is to duplicate the structure of [https://github.com/vector35/community-plugins](https://github.com/vector35/community-plugins). Specifically, the [plugins.json](https://github.com/Vector35/community-plugins/blob/master/plugins.json), as [listing.json](https://github.com/Vector35/community-plugins/blob/master/listing.json) is used along with [generate_index.py](https://github.com/Vector35/community-plugins/blob/master/generate_index.py) to create that file.
+The simplest way to run your own plugin repository using the new V2 plugin manager is to use the [mock server](https://github.com/Vector35/binaryninja-api/blob/dev/python/examples/mock_extension_server.py) helper script (a copy is available offline as well in the install path, in the python exapmle scripts subfolder).
 
 Once you've created your test repository, use the `pluginManager.unofficialName` and `pluginManager.unofficialUrl` settings to add your third-party repository.
 

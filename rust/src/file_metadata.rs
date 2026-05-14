@@ -176,8 +176,15 @@ impl FileMetadata {
         }
     }
 
-    /// The display name of the file. Useful for presenting to the user. Can differ from the original
-    /// name of the file and can be overridden with [`FileMetadata::set_display_name`].
+    /// A leaf-shaped human-readable name for UI presentation. Never contains a directory path.
+    /// Resolution order:
+    /// * An explicitly set display name (project-assigned, transform-synthesized for container
+    ///   entries, or set via [`FileMetadata::set_display_name`]).
+    /// * Otherwise the leaf of [`FileMetadata::file_path`].
+    ///
+    /// Use this for tab titles, save-dialog default leaf names, logs, and any UI surface where
+    /// you'd refer to the file by name. Use [`FileMetadata::file_path`] for the physical path
+    /// that can be reopened.
     pub fn display_name(&self) -> String {
         let raw_name = unsafe {
             let raw = BNGetDisplayName(self.handle);
@@ -243,20 +250,23 @@ impl FileMetadata {
         }
     }
 
-    /// The non-filesystem path that describes how this file was derived from the container
-    /// transform system, detailing the sequence of transform steps and selection names.
+    /// The non-filesystem path describing how this file was derived from the container transform
+    /// system in the current session. There are three meaningful states:
+    /// * `None` - not yet processed by the transform system.
+    /// * `Some(p)` where `p == file_path()` - processed, no transform chain applied (plain file,
+    ///   database, or the container system was disabled via `files.container.mode`).
+    /// * `Some(p)` where `p != file_path()` - derived container entry.
     ///
-    /// NOTE: Returns `None` if this [`FileMetadata`] was not processed by the transform system and
-    /// does not differ from that of the "physical" file path reported by [`FileMetadata::file_path`].
+    /// Session-scoped: save-as does not persist the chain. Reopening the saved artifact yields
+    /// whatever chain that session's access path produces.
     pub fn virtual_path(&self) -> Option<String> {
         unsafe {
             let raw = BNGetVirtualPath(self.handle);
             let path = BnString::into_string(raw);
-            // For whatever reason the core may report there being a virtual path as the file path.
-            // In the case where that occurs, we wish not to report there being one to the user.
-            match path.is_empty() || path == self.file_path() {
-                true => None,
-                false => Some(path),
+            if path.is_empty() {
+                None
+            } else {
+                Some(path)
             }
         }
     }
@@ -268,6 +278,12 @@ impl FileMetadata {
         unsafe {
             BNSetVirtualPath(self.handle, path.as_ptr());
         }
+    }
+
+    /// `true` if this file was produced by the container transform system, `false` for plain files,
+    /// databases, and FileMetadata that has not yet been processed by the transform system.
+    pub fn is_container_entry(&self) -> bool {
+        matches!(self.virtual_path(), Some(p) if p != self.file_path())
     }
 
     /// Whether the file is currently flagged as modified.

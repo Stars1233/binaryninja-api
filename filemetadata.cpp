@@ -73,8 +73,8 @@ FileMetadata::FileMetadata(const string& filename)
 FileMetadata::FileMetadata(Ref<ProjectFile> projectFile)
 {
 	m_object = BNCreateFileMetadata();
-	BNSetProjectFile(m_object, projectFile->m_object);
 	BNSetFilename(m_object, projectFile->GetPathOnDisk().c_str());
+	BNSetProjectFile(m_object, projectFile->m_object);
 }
 
 

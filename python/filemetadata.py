@@ -211,11 +211,18 @@ class FileMetadata:
 	@property
 	def virtual_path(self) -> str:
 		"""
-		``virtual_path`` is a logical (non-filesystem) path that describes how this file was derived from container transform system.
+		``virtual_path`` is a logical (non-filesystem) path describing how this file was derived from the
+		container transform system in the current session. There are three meaningful states:
 
-		This path records provenance for files extracted from the transform system. It may include a sequence of transform steps and selection names.
+		* Empty - not yet processed by the transform system.
+		* Equal to ``filename`` - processed, no transform chain applied (plain file, database, or container
+		  system disabled via ``files.container.mode``).
+		* Non-empty and different from ``filename`` - derived container entry.
 
-		.. note:: An empty `virtual_path` indicates the file has not yet been processed by the transform system. If `virtual_path` matches `filename`, the file is not the result of an extraction or transform.
+		Session-scoped: save-as does not persist the chain. Reopening the saved artifact yields whatever chain
+		that session's access path produces.
+
+		Use this for cache keys or identity-sensitive operations. Use ``filename`` for the physical path and ``display_name`` for UI display.
 		"""
 		return core.BNGetVirtualPath(self.handle)
 
@@ -224,17 +231,27 @@ class FileMetadata:
 		core.BNSetVirtualPath(self.handle, str(value))
 
 	@property
+	def is_container_entry(self) -> bool:
+		"""
+		``True`` if this file was produced by the container transform system (e.g. an entry extracted from a Zip
+		archive). ``False`` for plain files, databases, and FileMetadata that has not yet been processed by the
+		transform system.
+		"""
+		virtual = self.virtual_path
+		return bool(virtual) and virtual != self.filename
+
+	@property
 	def display_name(self) -> str:
 		"""
-		``display_name`` is the synthesized name for UI display purposes.
+		``display_name`` is a leaf-shaped human-readable name for UI presentation. It never contains a directory
+		path. Resolution order:
 
-		For container entries, this contains a virtual filename representing the extracted artifact (e.g., "/path/to/entry").
-		For normal files, this equals ``filename``.
+		* An explicitly set display name (project-assigned, transform-synthesized for container entries, or set
+		  by a plugin or user).
+		* Otherwise the leaf of ``filename``.
 
-		Use this property for tab titles, save dialog defaults, and other UI display purposes.
-		Use ``filename`` for the actual physical file path that can be reopened.
-
-		.. note:: For normal files, ``filename`` == ``virtual_path`` == ``display_name``. For container files, ``filename`` is the container path, ``virtual_path`` is the transform chain, and ``display_name`` is the extracted entry name.
+		Use this for tab titles, save-dialog default leaf names, logs, and any UI surface where you'd refer to
+		the file by name. Use ``filename`` for the physical path that can be reopened.
 		"""
 		return core.BNGetDisplayName(self.handle)
 

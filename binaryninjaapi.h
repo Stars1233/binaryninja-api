@@ -3809,9 +3809,21 @@ namespace BinaryNinja {
 		*/
 		void SetFilename(const std::string& name);
 
-		/*! Get the path to the container file if the current file is inside a container (e.g. ZIP, TAR, etc.)
+		/*! Get the transform-chain identity for this file in the current session There are three meaningful states:
 
-			\return The path to the container file if the current file is inside a container, otherwise an empty string
+			* Empty - not yet processed by the transform system.
+			* Equal to GetFilename() - processed, no transform chain applied (plain file,
+			  database, or container system disabled via ``files.container.mode``).
+			* Non-empty and different from GetFilename() - derived container entry.
+
+			Session-scoped: save-as does not persist the chain. Reopening the saved artifact
+			yields whatever chain that session's access path produces.
+
+			Use this for cache keys, identity-sensitive operations, or testing whether a file
+			has been processed. Use GetFilename() for the physical path, GetDisplayName() for
+			UI display.
+
+			\return The transform chain, or empty string if not yet processed.
 		*/
 		std::string GetVirtualPath() const;
 
@@ -3821,10 +3833,30 @@ namespace BinaryNinja {
 		*/
 		void SetVirtualPath(const std::string& path);
 
-		/*! Get the display name for the file. For container entries, this returns the synthesized name
-			representing the extracted artifact. For normal files, this returns the filename.
+		/*! True if this file was produced by the container transform system (e.g. an entry
+			extracted from a Zip). False for plain files, databases, and FileMetadata that
+			has not yet been processed by the transform system (virtual_path empty).
 
-			\return The display name for UI purposes (tab titles, save dialogs, etc.)
+			\return Whether this FileMetadata represents a derived container entry.
+		*/
+		bool IsContainerEntry() const
+		{
+			std::string virtualPath = GetVirtualPath();
+			return !virtualPath.empty() && GetFilename() != virtualPath;
+		}
+
+		/*! A leaf-shaped human-readable name for UI presentation. Never contains a directory
+			path. Resolution order:
+
+			* An explicitly set display name (project-assigned, transform-synthesized for
+			  container entries, or set by a plugin or user).
+			* Otherwise the leaf of GetFilename().
+
+			Use this for tab titles, save-dialog default leaf names, logs, and any UI surface
+			where you'd refer to the file by name. Use GetFilename() for the physical path that
+			can be reopened.
+
+			\return The display name for UI purposes.
 		*/
 		std::string GetDisplayName() const;
 

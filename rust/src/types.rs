@@ -454,7 +454,7 @@ impl TypeBuilder {
         parameters: Vec<FunctionParameter>,
         variable_arguments: bool,
     ) -> Self {
-        let mut owned_raw_return_value = ReturnValue::into_rust_raw(return_value.into());
+        let mut owned_raw_return_value = ReturnValue::into_rust_raw(&return_value.into());
         let mut variable_arguments = Conf::new(variable_arguments, MAX_CONFIDENCE).into();
         let mut can_return = Conf::new(true, MIN_CONFIDENCE).into();
         let mut pure = Conf::new(false, MIN_CONFIDENCE).into();
@@ -511,7 +511,7 @@ impl TypeBuilder {
         calling_convention: C,
         stack_adjust: Conf<i64>,
     ) -> Self {
-        let mut owned_raw_return_value = ReturnValue::into_rust_raw(return_value.into());
+        let mut owned_raw_return_value = ReturnValue::into_rust_raw(&return_value.into());
         let mut variable_arguments = Conf::new(variable_arguments, MAX_CONFIDENCE).into();
         let mut can_return = Conf::new(true, MIN_CONFIDENCE).into();
         let mut pure = Conf::new(false, MIN_CONFIDENCE).into();
@@ -934,7 +934,7 @@ impl Type {
         parameters: Vec<FunctionParameter>,
         variable_arguments: bool,
     ) -> Ref<Self> {
-        let mut owned_raw_return_value = ReturnValue::into_rust_raw(return_value.into());
+        let mut owned_raw_return_value = ReturnValue::into_rust_raw(&return_value.into());
         let mut variable_arguments = Conf::new(variable_arguments, MAX_CONFIDENCE).into();
         let mut can_return = Conf::new(true, MIN_CONFIDENCE).into();
         let mut pure = Conf::new(false, MIN_CONFIDENCE).into();
@@ -990,7 +990,7 @@ impl Type {
         calling_convention: C,
         stack_adjust: Conf<i64>,
     ) -> Ref<Self> {
-        let mut owned_raw_return_value = ReturnValue::into_rust_raw(return_value.into());
+        let mut owned_raw_return_value = ReturnValue::into_rust_raw(&return_value.into());
         let mut variable_arguments = Conf::new(variable_arguments, MAX_CONFIDENCE).into();
         let mut can_return = Conf::new(true, MIN_CONFIDENCE).into();
         let mut pure = Conf::new(false, MIN_CONFIDENCE).into();
@@ -1365,9 +1365,9 @@ impl ReturnValue {
         owned
     }
 
-    pub(crate) fn into_rust_raw(value: Self) -> BNReturnValue {
+    pub(crate) fn into_rust_raw(value: &Self) -> BNReturnValue {
         BNReturnValue {
-            type_: unsafe { Ref::into_raw(value.ty.contents) }.handle,
+            type_: unsafe { Ref::into_raw(value.ty.contents.clone()) }.handle,
             typeConfidence: value.ty.confidence,
             defaultLocation: value.location.is_none(),
             location: ValueLocation::into_rust_raw(

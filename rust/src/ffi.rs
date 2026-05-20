@@ -14,6 +14,8 @@
 
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+pub(crate) const INVALID_REGISTER: u32 = 0xffff_ffff;
+
 macro_rules! ffi_wrap {
     ($n:expr, $b:expr) => {{
         use std::panic;

@@ -682,7 +682,7 @@ impl Function {
     }
 
     pub fn set_auto_return_value(&self, return_value: impl Into<ReturnValue>) {
-        let mut raw_return_value = ReturnValue::into_rust_raw(return_value.into());
+        let mut raw_return_value = ReturnValue::into_rust_raw(&return_value.into());
         unsafe { BNSetAutoFunctionReturnValue(self.handle, &mut raw_return_value) }
         ReturnValue::free_rust_raw(raw_return_value);
     }
@@ -706,7 +706,7 @@ impl Function {
     }
 
     pub fn set_user_return_value(&self, return_value: impl Into<ReturnValue>) {
-        let mut raw_return_value = ReturnValue::into_rust_raw(return_value.into());
+        let mut raw_return_value = ReturnValue::into_rust_raw(&return_value.into());
         unsafe { BNSetUserFunctionReturnValue(self.handle, &mut raw_return_value) }
         ReturnValue::free_rust_raw(raw_return_value);
     }

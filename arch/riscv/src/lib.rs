@@ -14,7 +14,9 @@ use binaryninja::{
         UnusedRegisterStack,
     },
     binary_view::{BinaryView, BinaryViewType},
-    calling_convention::{register_calling_convention, CallingConvention, ConventionBuilder},
+    calling_convention::{
+        register_calling_convention, CallingConvention, ConventionBuilder, CoreCallingConvention,
+    },
     disassembly::{InstructionTextToken, InstructionTextTokenKind},
     function::Function,
     function_recognizer::FunctionRecognizer,
@@ -2755,12 +2757,22 @@ impl<D: RiscVDisassembler> AsRef<CoreRelocationHandler> for RiscVELFRelocationHa
 }
 
 struct RiscVCC<D: RiscVDisassembler> {
+    core: CoreCallingConvention,
     _dis: PhantomData<D>,
 }
 
 impl<D: RiscVDisassembler> RiscVCC<D> {
-    fn new() -> Self {
-        RiscVCC { _dis: PhantomData }
+    fn new(core: CoreCallingConvention) -> Self {
+        RiscVCC {
+            core,
+            _dis: PhantomData,
+        }
+    }
+}
+
+impl<D: RiscVDisassembler> AsRef<CoreCallingConvention> for RiscVCC<D> {
+    fn as_ref(&self) -> &CoreCallingConvention {
+        &self.core
     }
 }
 
@@ -3087,17 +3099,13 @@ pub extern "C" fn CorePluginInit() -> bool {
     arch32.register_function_recognizer(RiscVELFPLTRecognizer);
     arch64.register_function_recognizer(RiscVELFPLTRecognizer);
 
-    let cc32 = register_calling_convention(
-        arch32,
-        "default",
-        RiscVCC::<RiscVIMACDisassembler<Rv32GRegs>>::new(),
-    );
+    let cc32 = register_calling_convention(arch32, "default", |core| {
+        RiscVCC::<RiscVIMACDisassembler<Rv32GRegs>>::new(core)
+    });
     arch32.set_default_calling_convention(&cc32);
-    let cc64 = register_calling_convention(
-        arch64,
-        "default",
-        RiscVCC::<RiscVIMACDisassembler<Rv64GRegs>>::new(),
-    );
+    let cc64 = register_calling_convention(arch64, "default", |core| {
+        RiscVCC::<RiscVIMACDisassembler<Rv64GRegs>>::new(core)
+    });
     arch64.set_default_calling_convention(&cc64);
 
     if let Some(bvt) = BinaryViewType::by_name("ELF") {

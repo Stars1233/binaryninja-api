@@ -26,6 +26,7 @@ use crate::{
     calling_convention::CoreCallingConvention,
     data_buffer::DataBuffer,
     disassembly::InstructionTextToken,
+    ffi::INVALID_REGISTER,
     function::Function,
     platform::Platform,
     rc::*,
@@ -665,6 +666,13 @@ impl CoreArchitecture {
     pub fn name(&self) -> String {
         unsafe { BnString::into_string(BNGetArchitectureName(self.handle)) }
     }
+
+    pub fn register_stack_for_register(&self, reg: CoreRegister) -> Option<CoreRegisterStack> {
+        match unsafe { BNGetArchitectureRegisterStackForRegister(self.handle, reg.id().0) } {
+            INVALID_REGISTER => None,
+            reg_stack => CoreRegisterStack::new(*self, RegisterStackId::from(reg_stack)),
+        }
+    }
 }
 
 unsafe impl Send for CoreArchitecture {}
@@ -967,14 +975,14 @@ impl Architecture for CoreArchitecture {
 
     fn stack_pointer_reg(&self) -> Option<CoreRegister> {
         match unsafe { BNGetArchitectureStackPointerRegister(self.handle) } {
-            0xffff_ffff => None,
+            INVALID_REGISTER => None,
             reg => Some(CoreRegister::new(*self, reg.into())?),
         }
     }
 
     fn link_reg(&self) -> Option<CoreRegister> {
         match unsafe { BNGetArchitectureLinkRegister(self.handle) } {
-            0xffff_ffff => None,
+            INVALID_REGISTER => None,
             reg => Some(CoreRegister::new(*self, reg.into())?),
         }
     }
@@ -1257,7 +1265,7 @@ pub trait ArchitectureExt: Architecture {
         let name = name.to_cstr();
 
         match unsafe { BNGetArchitectureRegisterByName(self.as_ref().handle, name.as_ptr()) } {
-            0xffff_ffff => None,
+            INVALID_REGISTER => None,
             reg => self.register_from_id(reg.into()),
         }
     }
@@ -2130,7 +2138,7 @@ where
         if let Some(reg) = custom_arch.stack_pointer_reg() {
             reg.id().0
         } else {
-            0xffff_ffff
+            INVALID_REGISTER
         }
     }
 
@@ -2143,7 +2151,7 @@ where
         if let Some(reg) = custom_arch.link_reg() {
             reg.id().0
         } else {
-            0xffff_ffff
+            INVALID_REGISTER
         }
     }
 
@@ -2198,7 +2206,7 @@ where
                 result.firstTopRelativeReg = reg.id().0;
                 result.topRelativeCount = count as u32;
             } else {
-                result.firstTopRelativeReg = 0xffff_ffff;
+                result.firstTopRelativeReg = INVALID_REGISTER;
                 result.topRelativeCount = 0;
             }
 

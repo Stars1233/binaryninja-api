@@ -21,6 +21,13 @@ class SharedCacheView : public BinaryNinja::BinaryView
 	// NOTE: Currently this is just used to alert the user to supposed missing files.
 	std::set<std::string> m_secondaryFileNames;
 
+	std::string StorePrimaryProjectFile(BinaryNinja::ProjectFile* projectFile);
+	void StorePrimaryFilePath(const std::string& path, BinaryNinja::Project* project, const std::string& databaseDir);
+	std::optional<std::string> ResolveProjectFilePath(BinaryNinja::Project* project, const std::string& projectPath);
+	std::optional<std::string> ResolveUniqueProjectFileName(BinaryNinja::Project* project);
+	std::optional<std::string> ResolveMetadataPrimaryFilePath(BinaryNinja::Project* project, const std::string& databaseDir);
+	std::optional<std::string> PromptForPrimaryFile();
+
 public:
 	SharedCacheView(const std::string& typeName, BinaryView* data, bool parseOnly = false);
 

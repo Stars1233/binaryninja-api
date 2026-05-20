@@ -1051,6 +1051,149 @@ void SharedCacheView::LogSecondaryFileName(std::string secondaryFileName)
 	GetParentView()->StoreMetadata(VIEW_METADATA_KEY, GetMetadata());
 }
 
+
+std::string SharedCacheView::StorePrimaryProjectFile(ProjectFile* projectFile)
+{
+	SetPrimaryFileLocation(projectFile->GetPathInProject(), projectFile->GetName());
+	return projectFile->GetPathOnDisk();
+}
+
+
+void SharedCacheView::StorePrimaryFilePath(const std::string& path, Project* project, const std::string& databaseDir)
+{
+	if (project)
+	{
+		if (auto projectFile = project->GetFileByPathOnDisk(path))
+		{
+			SetPrimaryFileLocation(projectFile->GetPathInProject(), projectFile->GetName());
+			return;
+		}
+
+		m_logger->LogWarnF(
+			"Primary shared cache file '{}' is outside the current project. Add the shared cache files to the project to avoid selecting them on future opens.",
+			path);
+		SetPrimaryFileName(BaseFileName(path));
+		return;
+	}
+
+	SetPrimaryFileLocation(PathRelativeTo(path, databaseDir), BaseFileName(path));
+}
+
+
+std::optional<std::string> SharedCacheView::ResolveProjectFilePath(Project* project, const std::string& projectPath)
+{
+	if (!project || projectPath.empty())
+		return std::nullopt;
+
+	try
+	{
+		auto matches = project->GetFilesByPathInProject(projectPath);
+		if (matches.size() > 1)
+		{
+			m_logger->LogErrorF(
+				"Multiple project files match primary shared cache path '{}'. Provide loader.dsc.primaryFilePath with an unambiguous project path.",
+				projectPath);
+			return std::string();
+		}
+		if (matches.size() == 1)
+			return StorePrimaryProjectFile(matches[0]);
+	}
+	catch (const std::exception& e)
+	{
+		m_logger->LogWarnForExceptionF(e, "Failed to resolve primary shared cache project path '{}': {}", projectPath,
+			e.what());
+	}
+
+	return std::nullopt;
+}
+
+
+std::optional<std::string> SharedCacheView::ResolveUniqueProjectFileName(Project* project)
+{
+	if (!project || m_primaryFileName.empty())
+		return std::nullopt;
+
+	std::vector<Ref<ProjectFile>> matches;
+	for (const auto& projectFile : project->GetFiles())
+		if (projectFile->GetName() == m_primaryFileName)
+			matches.push_back(projectFile);
+
+	if (matches.empty())
+		return std::nullopt;
+
+	if (matches.size() > 1)
+	{
+		std::string paths;
+		for (const auto& match : matches)
+		{
+			if (!paths.empty())
+				paths += ", ";
+			paths += match->GetPathInProject();
+		}
+		m_logger->LogErrorF(
+			"Multiple project files are named '{}': {}. Provide loader.dsc.primaryFilePath with the project path to the correct primary shared cache file.",
+			m_primaryFileName, paths);
+		return std::string();
+	}
+
+	return StorePrimaryProjectFile(matches[0]);
+}
+
+
+std::optional<std::string> SharedCacheView::ResolveMetadataPrimaryFilePath(Project* project, const std::string& databaseDir)
+{
+	if (m_primaryFilePath.empty())
+		return std::nullopt;
+
+	if (project)
+		return ResolveProjectFilePath(project, m_primaryFilePath);
+
+	auto path = ResolveRelativePath(m_primaryFilePath, databaseDir);
+	if (IsUsablePrimaryCachePath(path))
+		return path;
+	return std::nullopt;
+}
+
+
+std::optional<std::string> SharedCacheView::PromptForPrimaryFile()
+{
+	if (!IsUIEnabled())
+	{
+		m_logger->LogErrorF(
+			"Primary shared cache file '{}' could not be resolved. Provide loader.dsc.primaryFilePath when loading this database headlessly.",
+			m_primaryFileName);
+		return std::nullopt;
+	}
+
+	ShowMessageBox("Select Primary Shared Cache File",
+		"Binary Ninja needs the original primary dyld shared cache file to reopen this database. "
+		"Select the primary dyld_shared_cache file, not another .bndb database.", OKButtonSet, InformationIcon);
+
+	std::string newPrimaryFilePath;
+	std::string prompt = "Select primary shared cache file";
+	if (!m_primaryFileName.empty())
+		prompt += " '" + m_primaryFileName + "'";
+	if (!GetOpenFileNameInput(newPrimaryFilePath, prompt))
+		return std::nullopt;
+
+	if (IsBndbPath(newPrimaryFilePath))
+	{
+		m_logger->LogAlertF(
+			"Selected primary shared cache path is a Binary Ninja database, not a dyld shared cache file: '{}'",
+			newPrimaryFilePath);
+		return std::nullopt;
+	}
+
+	if (!IsUsablePrimaryCachePath(newPrimaryFilePath))
+	{
+		m_logger->LogAlertF("Selected primary shared cache path is not a usable file: '{}'", newPrimaryFilePath);
+		return std::nullopt;
+	}
+
+	return newPrimaryFilePath;
+}
+
+
 std::optional<std::string> SharedCacheView::GetPrimaryFilePath()
 {
 	auto viewFile = GetFile();
@@ -1059,99 +1202,6 @@ std::optional<std::string> SharedCacheView::GetPrimaryFilePath()
 	Ref<Project> project = nullptr;
 	if (currentProjectFile)
 		project = currentProjectFile->GetProject();
-
-	auto storePrimaryProjectFile = [&](ProjectFile* projectFile) -> std::string {
-		SetPrimaryFileLocation(projectFile->GetPathInProject(), projectFile->GetName());
-		return projectFile->GetPathOnDisk();
-	};
-
-	auto storePrimaryFilePath = [&](const std::string& path) {
-		if (project)
-		{
-			if (auto projectFile = project->GetFileByPathOnDisk(path))
-			{
-				SetPrimaryFileLocation(projectFile->GetPathInProject(), projectFile->GetName());
-				return;
-			}
-
-			m_logger->LogWarnF(
-				"Primary shared cache file '{}' is outside the current project. Add the shared cache files to the project to avoid selecting them on future opens.",
-				path);
-			SetPrimaryFileName(BaseFileName(path));
-			return;
-		}
-
-		SetPrimaryFileLocation(PathRelativeTo(path, databaseDir), BaseFileName(path));
-	};
-
-	auto resolveProjectFilePath = [&](const std::string& projectPath) -> std::optional<std::string> {
-		if (!project || projectPath.empty())
-			return std::nullopt;
-
-		try
-		{
-			auto matches = project->GetFilesByPathInProject(projectPath);
-			if (matches.size() > 1)
-			{
-				m_logger->LogErrorF(
-					"Multiple project files match primary shared cache path '{}'. Provide loader.dsc.primaryFilePath with an unambiguous project path.",
-					projectPath);
-				return std::string();
-			}
-			if (matches.size() == 1)
-				return storePrimaryProjectFile(matches[0]);
-		}
-		catch (const std::exception& e)
-		{
-			m_logger->LogWarnForExceptionF(e, "Failed to resolve primary shared cache project path '{}': {}", projectPath,
-				e.what());
-		}
-
-		return std::nullopt;
-	};
-
-	auto resolveUniqueProjectFileName = [&]() -> std::optional<std::string> {
-		if (!project || m_primaryFileName.empty())
-			return std::nullopt;
-
-		std::vector<Ref<ProjectFile>> matches;
-		for (const auto& projectFile : project->GetFiles())
-			if (projectFile->GetName() == m_primaryFileName)
-				matches.push_back(projectFile);
-
-		if (matches.empty())
-			return std::nullopt;
-
-		if (matches.size() > 1)
-		{
-			std::string paths;
-			for (const auto& match : matches)
-			{
-				if (!paths.empty())
-					paths += ", ";
-				paths += match->GetPathInProject();
-			}
-			m_logger->LogErrorF(
-				"Multiple project files are named '{}': {}. Provide loader.dsc.primaryFilePath with the project path to the correct primary shared cache file.",
-				m_primaryFileName, paths);
-			return std::string();
-		}
-
-		return storePrimaryProjectFile(matches[0]);
-	};
-
-	auto resolveMetadataPrimaryFilePath = [&]() -> std::optional<std::string> {
-		if (m_primaryFilePath.empty())
-			return std::nullopt;
-
-		if (project)
-			return resolveProjectFilePath(m_primaryFilePath);
-
-		auto path = ResolveRelativePath(m_primaryFilePath, databaseDir);
-		if (IsUsablePrimaryCachePath(path))
-			return path;
-		return std::nullopt;
-	};
 
 	auto settings = GetLoadSettings(GetTypeName());
 	if (settings && settings->Contains("loader.dsc.primaryFilePath"))
@@ -1162,7 +1212,7 @@ std::optional<std::string> SharedCacheView::GetPrimaryFilePath()
 			settings->Reset("loader.dsc.primaryFilePath", this, SettingsResourceScope);
 			if (project)
 			{
-				auto projectPathResult = resolveProjectFilePath(configuredPrimaryFilePath);
+				auto projectPathResult = ResolveProjectFilePath(project, configuredPrimaryFilePath);
 				if (projectPathResult && projectPathResult->empty())
 					return std::nullopt;
 				if (projectPathResult)
@@ -1185,44 +1235,7 @@ std::optional<std::string> SharedCacheView::GetPrimaryFilePath()
 		}
 	}
 
-	auto promptForPrimaryFile = [&]() -> std::optional<std::string> {
-		if (!IsUIEnabled())
-		{
-			m_logger->LogErrorF(
-				"Primary shared cache file '{}' could not be resolved. Provide loader.dsc.primaryFilePath when loading this database headlessly.",
-				m_primaryFileName);
-			return std::nullopt;
-		}
-
-		ShowMessageBox("Select Primary Shared Cache File",
-			"Binary Ninja needs the original primary dyld shared cache file to reopen this database. "
-			"Select the primary dyld_shared_cache file, not another .bndb database.", OKButtonSet, InformationIcon);
-
-		std::string newPrimaryFilePath;
-		std::string prompt = "Select primary shared cache file";
-		if (!m_primaryFileName.empty())
-			prompt += " '" + m_primaryFileName + "'";
-		if (!GetOpenFileNameInput(newPrimaryFilePath, prompt))
-			return std::nullopt;
-
-		if (IsBndbPath(newPrimaryFilePath))
-		{
-			m_logger->LogAlertF(
-				"Selected primary shared cache path is a Binary Ninja database, not a dyld shared cache file: '{}'",
-				newPrimaryFilePath);
-			return std::nullopt;
-		}
-
-		if (!IsUsablePrimaryCachePath(newPrimaryFilePath))
-		{
-			m_logger->LogAlertF("Selected primary shared cache path is not a usable file: '{}'", newPrimaryFilePath);
-			return std::nullopt;
-		}
-
-		return newPrimaryFilePath;
-	};
-
-	if (auto metadataPrimaryPath = resolveMetadataPrimaryFilePath())
+	if (auto metadataPrimaryPath = ResolveMetadataPrimaryFilePath(project, databaseDir))
 	{
 		if (metadataPrimaryPath->empty())
 			return std::nullopt;
@@ -1254,7 +1267,7 @@ std::optional<std::string> SharedCacheView::GetPrimaryFilePath()
 
 		if (!IsUsablePrimaryCachePath(primaryFilePath))
 		{
-			auto promptedPrimaryFilePath = promptForPrimaryFile();
+			auto promptedPrimaryFilePath = PromptForPrimaryFile();
 			if (!promptedPrimaryFilePath)
 				return std::nullopt;
 			primaryFilePath = *promptedPrimaryFilePath;
@@ -1268,7 +1281,7 @@ std::optional<std::string> SharedCacheView::GetPrimaryFilePath()
 			return std::nullopt;
 		}
 
-		storePrimaryFilePath(primaryFilePath);
+		StorePrimaryFilePath(primaryFilePath, project, databaseDir);
 	}
 
 	// 3. If we are not in a project, the filesystem path is ready to use.
@@ -1295,10 +1308,10 @@ std::optional<std::string> SharedCacheView::GetPrimaryFilePath()
 		// We are looking for the file with file name we stored in metadata.
 		if (pj->GetName() != m_primaryFileName)
 			continue;
-		return storePrimaryProjectFile(pj);
+		return StorePrimaryProjectFile(pj);
 	}
 
-	if (auto uniqueProjectPath = resolveUniqueProjectFileName())
+	if (auto uniqueProjectPath = ResolveUniqueProjectFileName(project))
 	{
 		if (uniqueProjectPath->empty())
 			return std::nullopt;
@@ -1310,7 +1323,7 @@ std::optional<std::string> SharedCacheView::GetPrimaryFilePath()
 
 	// 6. If automatic project resolution failed, ask the user in UI mode. Headless callers must provide
 	// loader.dsc.primaryFilePath or arrange files so one of the automatic resolution paths works.
-	auto promptedPrimaryFilePath = promptForPrimaryFile();
+	auto promptedPrimaryFilePath = PromptForPrimaryFile();
 	if (!promptedPrimaryFilePath)
 		return std::nullopt;
 	std::string newPrimaryFilePath = *promptedPrimaryFilePath;

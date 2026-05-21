@@ -10090,11 +10090,13 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		limit: Optional[int] = None, progress_callback: Optional[ProgressFuncType] = None, match_callback: Optional[DataMatchCallbackType] = None) -> QueueGenerator:
 		r"""
 		Searches for matches of the specified ``pattern`` within this BinaryView with an optionally provided address range specified by ``start`` and ``end``.
-		This is the API used by the advanced binary search UI option. The search pattern can be interpreted in various ways:
+		This is the API used by the advanced binary search UI option. The pattern is interpreted as one of:
 
-			- specified as a string of hexadecimal digits where whitespace is ignored, and the '?' character acts as a wildcard
-			- a regular expression suitable for working with bytes
-			- or if the ``raw`` option is enabled, the pattern is interpreted as a raw string, and any special characters are escaped and interpreted literally
+			- ``"FlexHex"``: a sequence of byte tokens drawn from ``[0-9a-fA-F?]``, where ``??`` (or a whitespace-separated lone ``?``) is a full-byte wildcard and ``?X`` / ``X?`` matches a single nibble. Whitespace between byte tokens is optional, but a lone ``?`` must be whitespace-separated (so ``c3 ? 55`` is valid; ``c3?55`` is not).
+			- ``"Regex"``: a byte-level regular expression.
+			- ``"Raw String"``: a literal string match. Used when ``raw=True``, or as a fallback when the pattern is neither valid FlexHex nor a valid regex.
+
+		Use :py:meth:`detect_search_mode` to check which mode would be selected for a given pattern.
 
 		:param pattern: The pattern to search for.
 		:type pattern: :py:class:`str`
@@ -10122,6 +10124,8 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			<BinaryView: '/bin/ls', start 0x100000000, len 0x182f8>
 			>>> bytes(list(bv.search("50 ?4"))[0][1]).hex()
 			'5004'
+			>>> bytes(list(bv.search("E8 ? ? ? ?"))[0][1]).hex()  # call with 4-byte wildcard operand
+			'e83e380000'
 			>>> bytes(list(bv.search("[\x20-\x25][\x60-\x67]"))[0][1]).hex()
 			'2062'
 		"""
@@ -10175,6 +10179,12 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 	def detect_search_mode(pattern: str, raw: bool = False) -> str:
 		"""
 		Detects the search mode that would be used by :py:meth:`search` for the given pattern.
+
+		The mode is one of:
+
+			- ``"FlexHex"``: a sequence of byte tokens drawn from ``[0-9a-fA-F?]``, where ``??`` (or a whitespace-separated lone ``?``) is a full-byte wildcard and ``?X`` / ``X?`` matches a single nibble. Whitespace between byte tokens is optional, but a lone ``?`` must be whitespace-separated (so ``c3 ? 55`` is valid; ``c3?55`` is not).
+			- ``"Regex"``: a byte-level regular expression.
+			- ``"Raw String"``: a literal string match. Returned when ``raw=True``, or as a fallback when the pattern is neither valid FlexHex nor a valid regex.
 
 		:param str pattern: The search pattern to analyze.
 		:param bool raw: Whether to interpret the pattern as a raw string (default: False).

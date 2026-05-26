@@ -515,7 +515,8 @@ impl Function {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut result = 0;
         unsafe {
-            BNGetFunctionBlockSortHint(self.handle, arch.handle, addr, &mut result).then_some(result)
+            BNGetFunctionBlockSortHint(self.handle, arch.handle, addr, &mut result)
+                .then_some(result)
         }
     }
 

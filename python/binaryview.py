@@ -10872,7 +10872,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		if not core.BNParseExpression(self.handle, expression, offset, here, errors):
 			assert errors.value is not None, "core.BNParseExpression returned errors set to None"
 			error_str = errors.value.decode("utf-8")
-			core.free_string(errors)
+			core.BNFreeParseError(ctypes.cast(errors, ctypes.POINTER(ctypes.c_byte)))
 			raise ValueError(error_str)
 		return offset.value
 

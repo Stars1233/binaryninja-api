@@ -504,7 +504,7 @@ int main(int argc, char* argv[])
 
 		// From python -> C python3 requires str -> str.encode('charmap')
 		bool swizzleArgs = true;
-		if (name == "BNFreeString")
+		if (name == "BNFreeString" || name == "BNFreeParseError")
 			swizzleArgs = false;
 
 		bool callbackConvention = false;
@@ -531,9 +531,9 @@ int main(int argc, char* argv[])
 			for (auto& j : i.second->GetParameters())
 			{
 				fprintf(out, "\t\t");
-				if (name == "BNFreeString")
+				if (name == "BNFreeString" || name == "BNFreeParseError")
 				{
-					// BNFreeString expects a pointer to a string allocated by the core, so do not use
+					// These expect a pointer to a string allocated by the core, so do not use
 					// a c_char_p here, as that would be allocated by the Python runtime.  This can
 					// be enforced by outputting like a return value.
 					OutputType(out, j.type.GetValue(), true);

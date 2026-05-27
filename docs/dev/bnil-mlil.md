@@ -25,7 +25,7 @@ In the rest of this article we will explore the variable object, the type object
 
 First, it's important to understand what we mean when we talk about a MLIL variable. Continuing from our example above we can get a [`Variable`](https://api.binary.ninja/binaryninja.variable-module.html#binaryninja.variable.Variable) object.
 
-```
+```pycon
 >>> inst.output
 [<var int64_t rax>]
 >>> var = inst.output[0]
@@ -41,7 +41,7 @@ So let's look at the properties available on a [`Variable`](https://api.binary.n
 
 The `source_type` represents the storage location type and can be one of the following :
 
-```
+```c
 enum VariableSourceType
 {
 	StackVariableSourceType,
@@ -51,7 +51,7 @@ enum VariableSourceType
 ```
 
 
-```
+```pycon
 >>> var.source_type
 <VariableSourceType.RegisterVariableSourceType: 1>
 ```
@@ -60,7 +60,7 @@ enum VariableSourceType
 
 The `storage` property changes meaning depending on the [`VariableSourceType`](https://api.binary.ninja/binaryninja.enums-module.html#binaryninja.enums.VariableSourceType). When a variable is of type `RegisterVariableSourceType`, its `storage` property represents the index into the register list for the given architecture. If the `source_type` is `StackVariableSourceType`, its `storage` property represents the stack offset of the variable.
 
-```
+```pycon
 >>> var
 <var int64_t rax>
 >>> var.source_type
@@ -84,7 +84,7 @@ The `index` is an identifier chosen to be unique across different analysis passe
 
 The `type` property returns the `Type` object associated with the variable:
 
-```
+```pycon
 >>> var.type
 <type: int64_t, 0% confidence>
 ```
@@ -96,7 +96,7 @@ Type objects are described in detail in the next section.
 
 Type objects are very similar to standard C types. A Type object's type can be determined through the object’s `type_class` property. Valid types are in the [`TypeClass`](https://api.binary.ninja/binaryninja.enums-module.html#binaryninja.enums.TypeClass) enumeration:
 
-```
+```c
 enum TypeClass
 {
 	VoidTypeClass = 0,
@@ -129,7 +129,7 @@ A boolean type is an integer which has a value of False (0) or True (!0).
 
 An integer type has a sign, a width (in bytes), and a display type. The display type determines how the integer should be displayed; the options are self-explanatory:
 
-```
+```c
 enum IntegerDisplayType
 {
 	DefaultIntegerDisplayType,
@@ -202,7 +202,7 @@ Structure types are simple in principle but are complicated by the need for them
 
 NamedTypeReference types are symbolic references to other types. They function much like a C `typedef` (i.e. Name X corresponds to type Y). The NamedTypeReference has a `type_class` property describing what sort of type it is pointing at.
 
-```
+```c
 enum NamedTypeReferenceClass
 {
 	UnknownNamedTypeClass = 0,
@@ -220,7 +220,7 @@ Most of the above should be self-explanatory except for the `UnknownNamedTypeCla
 
 The instruction set is made up of [`MediumLevelILInstruction`](https://api.binary.ninja/binaryninja.mediumlevelil-module.html#binaryninja.mediumlevelil.MediumLevelILInstruction) objects. Let's start exploring by using the python console to poke around at some instructions. Open up a binary in Binary Ninja and retrieve an MLIL instruction:
 
-```
+```pycon
 >>> inst = current_mlil[8]
 <il: rax = 0x402cb0("PORT")>
 >>> type(inst)
@@ -231,27 +231,27 @@ The instruction set is made up of [`MediumLevelILInstruction`](https://api.binar
 
 There are a number of properties that can be queried on the [`MediumLevelILInstruction`](https://api.binary.ninja/binaryninja.mediumlevelil-module.html#binaryninja.mediumlevelil.MediumLevelILInstruction) object, and the validity of these properties changes depending on what the current operation is. If we look at the `operation` of `inst` we can see it is a `MLIL_CALL` instruction.
 
-```
+```pycon
 >>> inst.operation
 <MediumLevelILOperation.MLIL_CALL: 51>
 ```
 
 From the code in [`mediumlevelil.py`](https://github.com/Vector35/binaryninja-api/blob/dev/python/mediumlevelil.py#L175) we can see that the `MLIL_CALL` operation has three properties in addition to the operations available to all `MediumLevelILInstruction` objects
 
-```
+```text
 MediumLevelILOperation.MLIL_CALL: [("output", "var_list"), ("dest", "expr"), ("params", "expr_list")],
 ```
 
 Thus, we can query the call's `output` which is a list of variables:
 
-```
+```pycon
 >>> inst.output
 [<var int64_t rax>]
 ```
 
 The call's `dest` (destination expression) which in this case is a `MLIL_CONST_PTR`:
 
-```
+```pycon
 >>> inst.dest
 <il: 0x402cb0>
 >>> inst.dest.operation
@@ -264,7 +264,7 @@ The call's `dest` (destination expression) which in this case is a `MLIL_CONST_P
 
 The parameter list can be accessed through the `params` property:
 
-```
+```pycon
 >>> inst.params
 [<il: "PORT">]
 >>> inst.params[0]

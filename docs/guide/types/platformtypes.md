@@ -7,13 +7,13 @@ Binary Ninja pulls type information from a variety of sources. The highest-level
 
 Platform types are used to define types that should be available to all programs available on that particular platform. They are only for global common types. Consider, for example, that you might want to add the following on Windows:
 
-```
+```c
 typedef uint8_t u8;
 ```
 
 You could write this type into:
 
-```
+```text
 /home/user/.binaryninja/types/platform/windows-x86.c
 ```
 
@@ -30,7 +30,7 @@ The base path for these files is in your [user folder](../index.md#user-folder) 
 
 For example, something like:
 
-```
+```bash
 $ pwd
 /home/user/.binaryninja/types/platform
 $ cat windows-x86.c

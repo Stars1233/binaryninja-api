@@ -1087,8 +1087,10 @@ The interactive python prompt also has several built-in "magic" functions and va
 
 The python interpreter can be customized to run scripts on startup using `startup.py` in your user folder. Simply enter commands into that file, and they will be executed every time Binary Ninja starts. By default, it comes with an import helper:
 
-    # Commands in this file will be run in the interactive python console on startup
-    from binaryninja import *
+```python
+# Commands in this file will be run in the interactive python console on startup
+from binaryninja import *
+```
 
 From here, you can add any custom functions or objects you want to be available in the console. If you want to restore the original copy of `startup.py` at any time, simply delete the file and restart Binary Ninja. A fresh copy of the above will be generated.
 

@@ -14,13 +14,15 @@ To contribute to the Binary Ninja documentation, first sign the [contribution li
 
 ## Building
 
-    git clone https://github.com/Vector35/binaryninja-api/
-    cd binaryninja-api
-    properdocs build
-    echo User documentation available in site/
-    cd api-docs
-    make html
-    echo API documentation available in build/html
+```bash
+git clone https://github.com/Vector35/binaryninja-api/
+cd binaryninja-api
+properdocs build
+echo User documentation available in site/
+cd api-docs
+make html
+echo API documentation available in build/html
+```
 
 ## Changing
 Changing documentation for the API itself is fairly straightforward. Use [doxygen style comment blocks](https://www.doxygen.nl/manual/docblocks.html) in C++ and C, and [restructured text blocks](https://sphinx-tutorial.readthedocs.io/step-1/) for python for the source. The user documentation is located in the `api/docs/` folder and the API documentation is generated from the config in the `api/api-docs` folder.

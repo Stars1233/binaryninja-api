@@ -26,7 +26,7 @@ Some BinaryViews have parent views. The view used for decompilation includes mem
 
 When you're interacting with the Binary Ninja [scripting console](../guide/index.md#script-python-console), it's important to realize that every time you run a command, the UI is automatically going to update analysis. You can see this by even running a simple command like:
 
-```
+```python
 print("test")
 ```
 
@@ -238,7 +238,7 @@ Summing up the basic blocks of a function is one way to produce a consistent siz
 
  In Binary Ninja, there is no explicit `.size` property of functions. Rather, you can choose to calculate it one of two ways:
 
-```
+```python
 function_size = current_function.total_bytes
 # or
 function_size = current_function.highest_address - current_function.lowest_address

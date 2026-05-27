@@ -8,7 +8,7 @@ For details on what network requests Binary Ninja makes and how to control them,
 
 Vector 35 (Officially, Vector 35 Inc) is a Delaware C Corp with their primary office in Melbourne, FL and a mailing address of:
 
-```
+```text
 Vector 35
 PO Box 971
 Melbourne, FL 32902-0971

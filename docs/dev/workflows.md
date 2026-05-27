@@ -574,7 +574,7 @@ bv.workflow.machine.cli()
 
 **Available Commands**:
 
-```
+```text
 abort       configure  dump    halt  log      override  reset   run     step
 breakpoint  disable    enable  help  metrics  quit      resume  status
 ```

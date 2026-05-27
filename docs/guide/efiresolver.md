@@ -44,7 +44,7 @@ steps:
 
 2. Define a GUID in the following format:
 
-    ```
+    ```json
     {
         "EFI_EXAMPLE_CUSTOM_PROTOCOL_GUID": [
             19088743, 35243, 52719,

@@ -95,7 +95,7 @@ Binary Ninja ships with an embedded version of Python on Windows and macOS. On L
 
 You may also wish to use your own custom interpreter which you can set with the [python.interpreter setting](settings.md#python.interpreter) to point to the appropriate install location. Note that the file being pointed to should be a `.dll`, `.dylib`, or `.so` though homebrew will often install libraries without any extension. For example:
 
-```
+```bash
 $ file /usr/local/Cellar/python@3.8/3.8.5/Frameworks/Python.framework/Versions/3.8/Python
 /usr/local/Cellar/python@3.8/3.8.5/Frameworks/Python.framework/Versions/3.8/Python: Mach-O 64-bit dynamically linked shared library x86_64
 ```

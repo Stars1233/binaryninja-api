@@ -27,7 +27,7 @@ To observe the transformations that occur from MLIL to HLIL, you can use the bui
 
 The instruction set is made up of [`HighLevelILInstruction`](https://api.binary.ninja/binaryninja.highlevelil-module.html#binaryninja.highlevelil.HighLevelILInstruction) objects. Let's start exploring by using the python console to poke around at some instructions. Open up a binary in Binary Ninja and retrieve an HLIL instruction:+
 
-```
+```pycon
 >>> current_il_instruction
 <HighLevelILVarInit: uint64_t rax_2 = zx.q(rax_1 - 0x6c)>
 >>> type(current_il_instruction)

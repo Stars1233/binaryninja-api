@@ -15,7 +15,7 @@ While MacOS, Linux, and Windows all ship with python interpreters, those are onl
 
 First, make sure to run the [install_api.py](https://github.com/Vector35/binaryninja-api/tree/dev/scripts) script. Note that the script is shipped with Binary Ninja already, just look in your [binary path](../guide/index.md#binary-path) inside of the `scripts` subfolder. Run it like:
 
-```
+```bash
 python3 ~/binaryninja/scripts/install_api.py
 ```
 
@@ -38,7 +38,7 @@ with binaryninja.load("/bin/ls") as bv:
 
 If we run it, we'll see:
 
-```
+```bash
 $ ./first.py
 Opening /bin/ls which has 128 functions
 ```
@@ -73,7 +73,7 @@ for bin in glob("/bin/*"):
 
 Now let's run it and notice it's fast enough to parse all of `/bin/*` in just a few seconds:
 
-```
+```bash
  $ ./glob.py
 Opening /bin/cat which has 11 functions
 Opening /bin/echo which has 2 functions

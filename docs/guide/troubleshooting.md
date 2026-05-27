@@ -128,7 +128,7 @@ You may also manually create a `settings.json` file in your [user folder](./inde
 
 macOS Ventura enables more in-depth code signing verification that can cause issues with Binary Ninja when migrating between versions. If you receive a warning that `“Binary Ninja.app” is damaged and can’t be opened. You should move it to the Trash.`, it is likely that you have merely upgraded from an older version of Binary Ninja and older files in the application bundle are impacting code signing. The simplest fix is to simply request a [new download bundle](https://binary.ninja/recover/), drag the old bundle to the trash and drag the new bundle in place. Alternatively, if your bandwidth is low or you do not have an active license, you can try manually removing extra folders. In case you are migrating from 3.1.3439 to 3.2.3811, that would be:
 
-```
+```bash
 rm -rf /Applications/Binary\ Ninja.app/Contents/Frameworks/Python.framework/Versions/3.9/
 ```
 
@@ -142,7 +142,7 @@ Below are a few of the most common problems with Linux installations:
 
  - Some unzip utilities do not maintain the `+x` executable bit on files when extracted. To fix this, we recommend:
 
- ```
+ ```text
  chmod +x binaryninja/*.so.*
  chmod +x binaryninja/plugins/*
  ```
@@ -172,7 +172,7 @@ If you have installed Binary Ninja into a path outside your home folder such as 
 
 Ubuntu 22.04 and newer ship Firefox as a snap that is confined by AppArmor. The confinement blocks `snap.firefox.firefox` from reading arbitrary system paths outside the user's home directory, so paths such as `/opt/binaryninja/docs` are inaccessible. Binary Ninja's local help viewer fails under these conditions because Firefox cannot open the documentation files it launches from `/opt/binaryninja/`, and `dmesg` will show `apparmor="DENIED"` entries similar to:
 
-```
+```text
 apparmor="DENIED" operation="open" profile="snap.firefox.firefox" name="/opt/binaryninja/docs/index.html" requested_mask="r" denied_mask="r"
 ```
 
@@ -275,7 +275,7 @@ With the addition of [projects](../guide/projects.md) and [type archives](../gui
 1. Update to a version with support for the new extensions (builds 4860 or newer)
 1. Run:
 
-```
+```text
 /System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister -f -R -trusted "/Applications/Binary Ninja.app"
 ```
 

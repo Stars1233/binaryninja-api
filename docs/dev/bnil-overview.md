@@ -44,7 +44,7 @@ Besides the typical `&&` bitwise operators, BNIL makes use of `sx` and `zx` to i
 
 Expressions in BNIL can have one of the following suffixes to indicate a size:
 
-```
+```text
 .q -- Qword (8 bytes)
 .d -- Dword (4 bytes)
 .w -- Word (2 bytes)
@@ -53,7 +53,7 @@ Expressions in BNIL can have one of the following suffixes to indicate a size:
 
 Note that floating point IL instructions have their own possible size suffixes:
 
-```
+```text
 .h -- Half (2 bytes)
 .s -- Single (4 bytes)
 .d -- Double (8 bytes)
@@ -63,7 +63,7 @@ Note that floating point IL instructions have their own possible size suffixes:
 
 Additionally, floating point IL operations are indicated with a prefixed `f`, like:
 
-```
+```text
 f* -- Floating-point multiplication
 f/ -- Floating-point division
 f+ -- Floating-point addition
@@ -89,7 +89,7 @@ A number of macros are used to simplify output when rendering IL where no standa
 
 So putting all that together, if you were to see the following in an IL expression:
 
-```
+```text
 sx.q(rax_2:0.d)
 ```
 
@@ -103,7 +103,7 @@ When you want to use the API to access BNIL instructions, here are a few tips th
 
 So for example, if you want to try to determine whether a given instruction is a Call (which includes syscalls) you can use:
 
-```
+```python
 for h in current_hlil.instructions:
     if isinstance(h, Call):
         print(f"{str(h)} is a Call of some sort")

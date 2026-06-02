@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 171
+#define BN_CURRENT_CORE_ABI_VERSION 172
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 171
+#define BN_MINIMUM_CORE_ABI_VERSION 172
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -1322,6 +1322,12 @@ extern "C"
 		BNRegisterValue value;
 		uint8_t confidence;
 	} BNRegisterValueWithConfidence;
+
+	typedef struct BNRegisterValueWithConfidenceAndRegister
+	{
+		uint32_t reg;
+		BNRegisterValueWithConfidence value;
+	} BNRegisterValueWithConfidenceAndRegister;
 
 	typedef struct BNValueRange
 	{
@@ -2956,7 +2962,7 @@ extern "C"
 		uint32_t (*getIntegerReturnValueRegister)(void* ctxt);
 		uint32_t (*getHighIntegerReturnValueRegister)(void* ctxt);
 		uint32_t (*getFloatReturnValueRegister)(void* ctxt);
-		uint32_t (*getGlobalPointerRegister)(void* ctxt);
+		uint32_t* (*getGlobalPointerRegisters)(void* ctxt, size_t* count);
 
 		uint32_t* (*getImplicitlyDefinedRegisters)(void* ctxt, size_t* count);
 		void (*getIncomingRegisterValue)(void* ctxt, uint32_t reg, BNFunction* func, BNRegisterValue* result);
@@ -4889,10 +4895,13 @@ extern "C"
 	BINARYNINJACOREAPI BNNameSpace BNGetInternalNameSpace(void);
 	BINARYNINJACOREAPI void BNFreeNameSpace(BNNameSpace* name);
 
-	BINARYNINJACOREAPI BNRegisterValueWithConfidence BNGetGlobalPointerValue(BNBinaryView* view);
-	BINARYNINJACOREAPI bool BNUserGlobalPointerValueSet(BNBinaryView* view);
-	BINARYNINJACOREAPI void BNClearUserGlobalPointerValue(BNBinaryView* view);
-	BINARYNINJACOREAPI void BNSetUserGlobalPointerValue(BNBinaryView* view, BNRegisterValueWithConfidence value);
+	BINARYNINJACOREAPI BNRegisterValueWithConfidenceAndRegister* BNGetGlobalPointerValues(BNBinaryView* view, size_t* count);
+	BINARYNINJACOREAPI BNRegisterValueWithConfidenceAndRegister* BNGetDefaultGlobalPointerValues(BNBinaryView* view, size_t* count);
+	BINARYNINJACOREAPI BNRegisterValueWithConfidenceAndRegister* BNGetUserGlobalPointerValues(BNBinaryView* view, size_t* count);
+	BINARYNINJACOREAPI void BNFreeRegisterValueWithConfidenceAndRegisterList(BNRegisterValueWithConfidenceAndRegister* values);
+	BINARYNINJACOREAPI bool BNUserGlobalPointerValuesSet(BNBinaryView* view);
+	BINARYNINJACOREAPI void BNClearUserGlobalPointerValues(BNBinaryView* view);
+	BINARYNINJACOREAPI void BNSetUserGlobalPointerValues(BNBinaryView* view, const BNRegisterValueWithConfidenceAndRegister* values, size_t count);
 
 	BINARYNINJACOREAPI bool BNStringifyUnicodeData(BNBinaryView* data, BNArchitecture* arch, const BNDataBuffer* buffer, bool nullTerminates, bool allowShortStrings, char** string, BNStringType* type);
 
@@ -5446,7 +5455,7 @@ extern "C"
 	BINARYNINJACOREAPI BNDisassemblyTextLine* BNGetFunctionTypeTokens(
 	    BNFunction* func, BNDisassemblySettings* settings, size_t* count);
 
-	BINARYNINJACOREAPI BNRegisterValueWithConfidence BNGetFunctionGlobalPointerValue(BNFunction* func);
+	BINARYNINJACOREAPI BNRegisterValueWithConfidenceAndRegister* BNGetFunctionGlobalPointerValues(BNFunction* func, size_t* count);
 	BINARYNINJACOREAPI bool BNFunctionUsesIncomingGlobalPointer(BNFunction* func);
 	BINARYNINJACOREAPI BNRegisterValueWithConfidence BNGetFunctionRegisterValueAtExit(BNFunction* func, uint32_t reg);
 
@@ -7764,7 +7773,7 @@ extern "C"
 	BINARYNINJACOREAPI uint32_t BNGetIntegerReturnValueRegister(BNCallingConvention* cc);
 	BINARYNINJACOREAPI uint32_t BNGetHighIntegerReturnValueRegister(BNCallingConvention* cc);
 	BINARYNINJACOREAPI uint32_t BNGetFloatReturnValueRegister(BNCallingConvention* cc);
-	BINARYNINJACOREAPI uint32_t BNGetGlobalPointerRegister(BNCallingConvention* cc);
+	BINARYNINJACOREAPI uint32_t* BNGetGlobalPointerRegisters(BNCallingConvention* cc, size_t* count);
 
 	BINARYNINJACOREAPI uint32_t* BNGetImplicitlyDefinedRegisters(BNCallingConvention* cc, size_t* count);
 	BINARYNINJACOREAPI BNRegisterValue BNGetIncomingRegisterValue(

@@ -102,8 +102,13 @@ pub trait CallingConvention: 'static + Sync + Sized + AsRef<CoreCallingConventio
     /// Gets the register that holds the floating point return value.
     fn return_float_reg(&self) -> Option<RegisterId>;
 
+    /// Deprecated. Use [`CallingConvention::global_pointer_regs`] instead.
+    ///
     /// Gets the register that holds the global pointer, if the calling convention defines one.
     fn global_pointer_reg(&self) -> Option<RegisterId>;
+    fn global_pointer_regs(&self) -> Vec<RegisterId> {
+        self.global_pointer_reg().into_iter().collect()
+    }
 
     /// Gets the registers that are implicitly given a known value on function entry by this
     /// calling convention.
@@ -515,15 +520,12 @@ where
         })
     }
 
-    extern "C" fn cb_global_pointer_reg<C>(ctxt: *mut c_void) -> u32
+    extern "C" fn cb_global_pointer_regs<C>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
     where
         C: CallingConvention,
     {
-        ffi_wrap!("CallingConvention::global_pointer_reg", unsafe {
-            from_ctxt::<C>(ctxt)
-                .global_pointer_reg()
-                .map(|r| r.0)
-                .unwrap_or(INVALID_REGISTER)
+        ffi_wrap!("CallingConvention::global_pointer_regs", unsafe {
+            register_list(from_ctxt::<C>(ctxt).global_pointer_regs(), count)
         })
     }
 
@@ -1030,7 +1032,7 @@ where
         getIntegerReturnValueRegister: Some(cb_return_int_reg::<C>),
         getHighIntegerReturnValueRegister: Some(cb_return_hi_int_reg::<C>),
         getFloatReturnValueRegister: Some(cb_return_float_reg::<C>),
-        getGlobalPointerRegister: Some(cb_global_pointer_reg::<C>),
+        getGlobalPointerRegisters: Some(cb_global_pointer_regs::<C>),
 
         getImplicitlyDefinedRegisters: Some(cb_implicitly_defined_registers::<C>),
         getIncomingRegisterValue: Some(cb_incoming_reg_value::<C>),
@@ -1427,6 +1429,7 @@ impl Debug for CoreCallingConvention {
             .field("return_hi_int_reg", &self.return_hi_int_reg())
             .field("return_float_reg", &self.return_float_reg())
             .field("global_pointer_reg", &self.global_pointer_reg())
+            .field("global_pointer_regs", &self.global_pointer_regs())
             .field(
                 "implicitly_defined_registers",
                 &self.implicitly_defined_registers(),
@@ -1579,14 +1582,22 @@ impl CallingConvention for CoreCallingConvention {
         }
     }
 
+    /// Deprecated. Use [`CallingConvention::global_pointer_regs`] instead.
     fn global_pointer_reg(&self) -> Option<RegisterId> {
-        match unsafe { BNGetGlobalPointerRegister(self.handle) } {
-            id if id < 0x8000_0000 => self
-                .arch_handle
-                .borrow()
-                .register_from_id(RegisterId(id))
-                .map(|r| r.id()),
-            _ => None,
+        self.global_pointer_regs().first().copied()
+    }
+
+    fn global_pointer_regs(&self) -> Vec<RegisterId> {
+        unsafe {
+            let mut count = 0;
+            let regs_ptr = BNGetGlobalPointerRegisters(self.handle, &mut count);
+            let regs: Vec<RegisterId> = std::slice::from_raw_parts(regs_ptr, count)
+                .iter()
+                .copied()
+                .map(RegisterId::from)
+                .collect();
+            BNFreeRegisterList(regs_ptr);
+            regs
         }
     }
 
@@ -2009,6 +2020,7 @@ struct ConventionConfig {
     return_float_reg: Option<RegisterId>,
 
     global_pointer_reg: Option<RegisterId>,
+    global_pointer_regs: Vec<RegisterId>,
 
     implicitly_defined_registers: Vec<RegisterId>,
 
@@ -2085,6 +2097,7 @@ impl<A: Architecture> ConventionBuilder<A> {
                 return_float_reg: None,
 
                 global_pointer_reg: None,
+                global_pointer_regs: Vec::new(),
 
                 implicitly_defined_registers: Vec::new(),
 
@@ -2118,7 +2131,33 @@ impl<A: Architecture> ConventionBuilder<A> {
     reg!(return_hi_int_reg);
     reg!(return_float_reg);
 
-    reg!(global_pointer_reg);
+    /// Deprecated. Use [`Self::global_pointer_regs`] instead.
+    pub fn global_pointer_reg(mut self, reg: &str) -> Self {
+        {
+            // FIXME NLL
+            let arch = self.arch_handle.borrow();
+            self.config.global_pointer_reg = arch.register_by_name(reg).map(|r| r.id());
+            self.config.global_pointer_regs = self.config.global_pointer_reg.into_iter().collect();
+        }
+
+        self
+    }
+
+    pub fn global_pointer_regs(mut self, regs: &[&str]) -> Self {
+        {
+            // FIXME NLL
+            let arch = self.arch_handle.borrow();
+            let arch_regs = regs
+                .iter()
+                .filter_map(|&r| arch.register_by_name(r))
+                .map(|r| r.id());
+
+            self.config.global_pointer_regs = arch_regs.collect();
+            self.config.global_pointer_reg = self.config.global_pointer_regs.first().copied();
+        }
+
+        self
+    }
 
     reg_list!(implicitly_defined_registers);
 
@@ -2216,7 +2255,17 @@ impl CallingConvention for RegisteredConvention {
     }
 
     fn global_pointer_reg(&self) -> Option<RegisterId> {
-        self.config.global_pointer_reg
+        self.config
+            .global_pointer_reg
+            .or_else(|| self.config.global_pointer_regs.first().copied())
+    }
+
+    fn global_pointer_regs(&self) -> Vec<RegisterId> {
+        if self.config.global_pointer_regs.is_empty() {
+            self.config.global_pointer_reg.into_iter().collect()
+        } else {
+            self.config.global_pointer_regs.clone()
+        }
     }
 
     fn implicitly_defined_registers(&self) -> Vec<RegisterId> {

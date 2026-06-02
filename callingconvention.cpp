@@ -105,7 +105,7 @@ CallingConvention::CallingConvention(Architecture* arch, const string& name)
 	cc.getIntegerReturnValueRegister = GetIntegerReturnValueRegisterCallback;
 	cc.getHighIntegerReturnValueRegister = GetHighIntegerReturnValueRegisterCallback;
 	cc.getFloatReturnValueRegister = GetFloatReturnValueRegisterCallback;
-	cc.getGlobalPointerRegister = GetGlobalPointerRegisterCallback;
+	cc.getGlobalPointerRegisters = GetGlobalPointerRegistersCallback;
 	cc.getImplicitlyDefinedRegisters = GetImplicitlyDefinedRegistersCallback;
 	cc.getIncomingRegisterValue = GetIncomingRegisterValueCallback;
 	cc.getIncomingFlagValue = GetIncomingFlagValueCallback;
@@ -282,10 +282,16 @@ uint32_t CallingConvention::GetFloatReturnValueRegisterCallback(void* ctxt)
 }
 
 
-uint32_t CallingConvention::GetGlobalPointerRegisterCallback(void* ctxt)
+uint32_t* CallingConvention::GetGlobalPointerRegistersCallback(void* ctxt, size_t* count)
 {
 	CallbackRef<CallingConvention> cc(ctxt);
-	return cc->GetGlobalPointerRegister();
+	vector<uint32_t> regs = cc->GetGlobalPointerRegisters();
+	*count = regs.size();
+
+	uint32_t* result = new uint32_t[regs.size()];
+	for (size_t i = 0; i < regs.size(); i++)
+		result[i] = regs[i];
+	return result;
 }
 
 
@@ -692,6 +698,15 @@ uint32_t CallingConvention::GetFloatReturnValueRegister()
 uint32_t CallingConvention::GetGlobalPointerRegister()
 {
 	return BN_INVALID_REGISTER;
+}
+
+
+vector<uint32_t> CallingConvention::GetGlobalPointerRegisters()
+{
+	uint32_t reg = GetGlobalPointerRegister();
+	if (reg == BN_INVALID_REGISTER)
+		return vector<uint32_t>();
+	return vector<uint32_t> { reg };
 }
 
 
@@ -1141,7 +1156,21 @@ uint32_t CoreCallingConvention::GetFloatReturnValueRegister()
 
 uint32_t CoreCallingConvention::GetGlobalPointerRegister()
 {
-	return BNGetGlobalPointerRegister(m_object);
+	vector<uint32_t> regs = GetGlobalPointerRegisters();
+	if (regs.empty())
+		return BN_INVALID_REGISTER;
+	return regs[0];
+}
+
+
+vector<uint32_t> CoreCallingConvention::GetGlobalPointerRegisters()
+{
+	size_t count;
+	uint32_t* regs = BNGetGlobalPointerRegisters(m_object, &count);
+	vector<uint32_t> result;
+	result.insert(result.end(), regs, &regs[count]);
+	BNFreeRegisterList(regs);
+	return result;
 }
 
 

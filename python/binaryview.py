@@ -4204,21 +4204,65 @@ class BinaryView:
 
 	@property
 	def global_pointer_value(self) -> 'variable.RegisterValue':
-		"""Discovered value of the global pointer register, if the binary uses one (read-only)"""
-		result = core.BNGetGlobalPointerValue(self.handle)
-		return variable.RegisterValue.from_BNRegisterValue(result, self.arch)
+		"""Deprecated. Use :py:attr:`global_pointer_values` instead."""
+		values = self.global_pointer_values
+		if not values:
+			return variable.Undetermined()
+		return values[0][1]
 
 	@property
+	def global_pointer_values(self) -> List[Tuple['architecture.RegisterName', 'variable.RegisterValue']]:
+		"""Discovered values of the global pointer registers, if the binary uses any (read-only)"""
+		return self._get_global_pointer_values(core.BNGetGlobalPointerValues)
+
+	@property
+	def default_global_pointer_values(self) -> List[Tuple['architecture.RegisterName', 'variable.RegisterValue']]:
+		"""Auto-discovered values of the global pointer registers before user overrides are applied (read-only)"""
+		return self._get_global_pointer_values(core.BNGetDefaultGlobalPointerValues)
+
+	@property
+	def user_global_pointer_values(self) -> List[Tuple['architecture.RegisterName', 'variable.RegisterValue']]:
+		"""User overrides for global pointer register values (read-only)"""
+		return self._get_global_pointer_values(core.BNGetUserGlobalPointerValues)
+
+	def _get_global_pointer_values(self, getter) -> List[Tuple['architecture.RegisterName', 'variable.RegisterValue']]:
+		count = ctypes.c_ulonglong()
+		values = getter(self.handle, count)
+		if values is None:
+			return []
+		try:
+			return [
+			    (self.arch.get_reg_name(values[i].reg), variable.RegisterValue.from_BNRegisterValue(values[i].value, self.arch))
+			    for i in range(count.value)
+			]
+		finally:
+			core.BNFreeRegisterValueWithConfidenceAndRegisterList(values)
+
+	@property
+	@deprecation.deprecated(deprecated_in="5.4", details="Use `BinaryView.user_global_pointer_values_set` instead.")
 	def user_global_pointer_value_set(self) -> bool:
-		"""Check whether a user global pointer value has been set"""
-		return core.BNUserGlobalPointerValueSet(self.handle)
+		"""Deprecated. Use :py:attr:`user_global_pointer_values_set` instead."""
+		return self.user_global_pointer_values_set
 
+	@property
+	def user_global_pointer_values_set(self) -> bool:
+		"""Check whether user global pointer values have been set"""
+		return core.BNUserGlobalPointerValuesSet(self.handle)
+
+	@deprecation.deprecated(deprecated_in="5.4", details="Use `BinaryView.clear_user_global_pointer_values` instead.")
 	def clear_user_global_pointer_value(self):
-		"""Clear a previously set user global pointer value, so the auto-analysis can calculate a new value"""
-		core.BNClearUserGlobalPointerValue(self.handle)
+		"""Deprecated. Use :py:meth:`clear_user_global_pointer_values` instead."""
+		self.clear_user_global_pointer_values()
 
+	def clear_user_global_pointer_values(self):
+		"""Clear previously set user global pointer values, so the auto-analysis can calculate new values"""
+		core.BNClearUserGlobalPointerValues(self.handle)
+
+	@deprecation.deprecated(deprecated_in="5.4", details="Use `BinaryView.set_user_global_pointer_values` instead.")
 	def set_user_global_pointer_value(self, value: variable.RegisterValue, confidence = 255):
 		"""
+		Deprecated. Use :py:meth:`set_user_global_pointer_values` instead.
+
 		Set a user global pointer value. This is useful when the auto analysis fails to find out the value of the global
 		pointer, or the value is wrong. In this case, we can call ``set_user_global_pointer_value`` with a
 		``ConstantRegisterValue`` or ``ConstantPointerRegisterValue`` to provide a user global pointer value to assist the
@@ -4258,10 +4302,27 @@ class BinaryView:
 			>>> bv.global_pointer_value
 			<undetermined>
 		"""
-		val = core.BNRegisterValueWithConfidence()
-		val.value = value._to_core_struct()
-		val.confidence = confidence
-		core.BNSetUserGlobalPointerValue(self.handle, val)
+		values = [(reg, value, confidence) for reg, _ in self.global_pointer_values]
+		if not values:
+			values = [(0xffffffff, value, confidence)]
+		self.set_user_global_pointer_values(values)
+
+	def set_user_global_pointer_values(self, values):
+		"""
+		Set user global pointer values for multiple registers.
+
+		:param list[tuple[str, variable.RegisterValue]] values: register name/value pairs
+		:return: None
+		:rtype: None
+		"""
+		api_values = (core.BNRegisterValueWithConfidenceAndRegister * len(values))()
+		for i, value in enumerate(values):
+			reg, reg_value = value[:2]
+			confidence = value[2] if len(value) > 2 else 255
+			api_values[i].reg = reg if isinstance(reg, int) else self.arch.get_reg_index(reg)
+			api_values[i].value.value = reg_value._to_core_struct()
+			api_values[i].value.confidence = confidence
+		core.BNSetUserGlobalPointerValues(self.handle, api_values, len(values))
 
 	@property
 	def parameters_for_analysis(self):

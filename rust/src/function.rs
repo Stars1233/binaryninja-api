@@ -2230,10 +2230,44 @@ impl Function {
         unsafe { Array::new(refs, count, ()) }
     }
 
+    /// Deprecated. Use [`Function::global_pointer_values`] instead.
+    ///
     /// Discovered value of the global pointer register, if the function uses one
     pub fn global_pointer_value(&self) -> Conf<RegisterValue> {
-        let result = unsafe { BNGetFunctionGlobalPointerValue(self.handle) };
-        Conf::new(result.value.into(), result.confidence)
+        self.global_pointer_values()
+            .into_iter()
+            .next()
+            .map(|(_, value)| value)
+            .unwrap_or_else(|| {
+                Conf::new(
+                    RegisterValue::new(RegisterValueType::UndeterminedValue, 0, 0, 0),
+                    255,
+                )
+            })
+    }
+
+    /// Discovered values of the global pointer registers, if the function uses any
+    pub fn global_pointer_values(&self) -> Vec<(RegisterId, Conf<RegisterValue>)> {
+        unsafe {
+            let mut count = 0;
+            let values_ptr = BNGetFunctionGlobalPointerValues(self.handle, &mut count);
+            if values_ptr.is_null() {
+                return Vec::new();
+            }
+
+            let values = std::slice::from_raw_parts(values_ptr, count);
+            let result = values
+                .iter()
+                .map(|value| {
+                    (
+                        RegisterId::from(value.reg),
+                        Conf::new(value.value.value.into(), value.value.confidence),
+                    )
+                })
+                .collect();
+            BNFreeRegisterValueWithConfidenceAndRegisterList(values_ptr);
+            result
+        }
     }
 
     pub fn type_tokens(

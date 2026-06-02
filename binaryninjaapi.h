@@ -8249,10 +8249,20 @@ namespace BinaryNinja {
 		Ref<ExternalLocation> GetExternalLocation(Ref<Symbol> sourceSymbol);
 		std::vector<Ref<ExternalLocation>> GetExternalLocations();
 
+		/*! \deprecated Use GetGlobalPointerValues instead. */
 		Confidence<RegisterValue> GetGlobalPointerValue() const;
+		std::vector<std::pair<uint32_t, Confidence<RegisterValue>>> GetGlobalPointerValues() const;
+		std::vector<std::pair<uint32_t, Confidence<RegisterValue>>> GetDefaultGlobalPointerValues() const;
+		std::vector<std::pair<uint32_t, Confidence<RegisterValue>>> GetUserGlobalPointerValues() const;
+		/*! \deprecated Use UserGlobalPointerValuesSet instead. */
 		bool UserGlobalPointerValueSet() const;
+		bool UserGlobalPointerValuesSet() const;
+		/*! \deprecated Use ClearUserGlobalPointerValues instead. */
 		void ClearUserGlobalPointerValue();
+		void ClearUserGlobalPointerValues();
+		/*! \deprecated Use SetUserGlobalPointerValues instead. */
 		void SetUserGlobalPointerValue(const Confidence<RegisterValue>& value);
+		void SetUserGlobalPointerValues(const std::vector<std::pair<uint32_t, Confidence<RegisterValue>>>& values);
 
 		std::optional<std::pair<std::string, BNStringType>> StringifyUnicodeData(Architecture* arch, const DataBuffer& buffer, bool nullTerminates = true, bool allowShortStrings = false);
 
@@ -13650,7 +13660,9 @@ namespace BinaryNinja {
 
 		std::vector<DisassemblyTextLine> GetTypeTokens(DisassemblySettings* settings = nullptr);
 
+		/*! \deprecated Use GetGlobalPointerValues instead. */
 		Confidence<RegisterValue> GetGlobalPointerValue() const;
+		std::vector<std::pair<uint32_t, Confidence<RegisterValue>>> GetGlobalPointerValues() const;
 		bool UsesIncomingGlobalPointer() const;
 		Confidence<RegisterValue> GetRegisterValueAtExit(uint32_t reg) const;
 
@@ -17972,7 +17984,7 @@ namespace BinaryNinja {
 		static uint32_t GetIntegerReturnValueRegisterCallback(void* ctxt);
 		static uint32_t GetHighIntegerReturnValueRegisterCallback(void* ctxt);
 		static uint32_t GetFloatReturnValueRegisterCallback(void* ctxt);
-		static uint32_t GetGlobalPointerRegisterCallback(void* ctxt);
+		static uint32_t* GetGlobalPointerRegistersCallback(void* ctxt, size_t* count);
 
 		static uint32_t* GetImplicitlyDefinedRegistersCallback(void* ctxt, size_t* count);
 		static void GetIncomingRegisterValueCallback(
@@ -18124,11 +18136,13 @@ namespace BinaryNinja {
 		*/
 		virtual uint32_t GetFloatReturnValueRegister();
 
-		/*! Gets the register that holds the global pointer, if the calling convention defines one.
+		/*! \deprecated Use GetGlobalPointerRegisters instead. New calling convention implementations
+			should override GetGlobalPointerRegisters.
 
 			\return The global pointer register index, or BN_INVALID_REGISTER if there is none
 		*/
 		virtual uint32_t GetGlobalPointerRegister();
+		virtual std::vector<uint32_t> GetGlobalPointerRegisters();
 
 		/*! Gets the registers that are implicitly given a known value on function entry by this
 			calling convention.
@@ -18455,7 +18469,11 @@ namespace BinaryNinja {
 		virtual uint32_t GetIntegerReturnValueRegister() override;
 		virtual uint32_t GetHighIntegerReturnValueRegister() override;
 		virtual uint32_t GetFloatReturnValueRegister() override;
+		/*! \deprecated Use GetGlobalPointerRegisters instead. New calling convention implementations
+			should override GetGlobalPointerRegisters.
+		*/
 		virtual uint32_t GetGlobalPointerRegister() override;
+		virtual std::vector<uint32_t> GetGlobalPointerRegisters() override;
 
 		virtual std::vector<uint32_t> GetImplicitlyDefinedRegisters() override;
 		virtual RegisterValue GetIncomingRegisterValue(uint32_t reg, Function* func) override;

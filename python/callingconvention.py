@@ -122,8 +122,11 @@ class CallingConvention:
 		that is too large to fit in a single register, or ``None`` if there is none.
 	:cvar float_return_reg: The register that holds the floating point return value, or ``None``
 		if there is none.
-	:cvar global_pointer_reg: The register that holds the global pointer, if the calling
-		convention defines one, or ``None`` if there is none.
+	:cvar global_pointer_reg: Deprecated. Use ``global_pointer_regs`` instead. The register
+		that holds the global pointer, if the calling convention defines one, or ``None`` if
+		there is none.
+	:cvar global_pointer_regs: The registers that hold global pointers, if the calling
+		convention defines any.
 	:cvar implicitly_defined_regs: The registers that are implicitly given a known value on
 		function entry by this calling convention.
 	:cvar stack_args_naturally_aligned: Whether arguments passed on the stack are aligned to their
@@ -147,6 +150,7 @@ class CallingConvention:
 	high_int_return_reg = None
 	float_return_reg = None
 	global_pointer_reg = None
+	global_pointer_regs = []
 	implicitly_defined_regs = []
 	stack_args_naturally_aligned = False
 	stack_args_pushed_left_to_right = False
@@ -204,8 +208,8 @@ class CallingConvention:
 			self._cb.getFloatReturnValueRegister = self._cb.getFloatReturnValueRegister.__class__(
 			    self._get_float_return_reg
 			)
-			self._cb.getGlobalPointerRegister = self._cb.getGlobalPointerRegister.__class__(
-			    self._get_global_pointer_reg
+			self._cb.getGlobalPointerRegisters = self._cb.getGlobalPointerRegisters.__class__(
+			    self._get_global_pointer_regs
 			)
 			self._cb.getImplicitlyDefinedRegisters = self._cb.getImplicitlyDefinedRegisters.__class__(
 			    self._get_implicitly_defined_regs
@@ -462,6 +466,23 @@ class CallingConvention:
 		except Exception:
 			log_error_for_exception("Unhandled Python exception in CallingConvention._get_global_pointer_reg")
 			return False
+
+	def _get_global_pointer_regs(self, ctxt, count):
+		try:
+			regs = self.__class__.global_pointer_regs
+			if not regs and self.__class__.global_pointer_reg is not None:
+				regs = [self.__class__.global_pointer_reg]
+			count[0] = len(regs)
+			reg_buf = (ctypes.c_uint * len(regs))()
+			for i in range(0, len(regs)):
+				reg_buf[i] = self.arch.regs[regs[i]].index
+			result = ctypes.cast(reg_buf, ctypes.c_void_p)
+			self._pending_reg_lists[result.value] = (result, reg_buf)
+			return result.value
+		except Exception:
+			log_error_for_exception("Unhandled Python exception in CallingConvention._get_global_pointer_regs")
+			count[0] = 0
+			return None
 
 	def _get_implicitly_defined_regs(self, ctxt, count):
 		try:
@@ -1509,11 +1530,16 @@ class CoreCallingConvention(CallingConvention):
 		else:
 			self.__dict__["float_return_reg"] = self.arch.get_reg_name(reg)
 
-		reg = core.BNGetGlobalPointerRegister(handle)
-		if reg == 0xffffffff:
-			self.__dict__["global_pointer_reg"] = None
-		else:
-			self.__dict__["global_pointer_reg"] = self.arch.get_reg_name(reg)
+		count = ctypes.c_ulonglong()
+		regs = core.BNGetGlobalPointerRegisters(handle, count)
+		result = []
+		arch = self.arch
+		if regs is not None:
+			for i in range(0, count.value):
+				result.append(arch.get_reg_name(regs[i]))
+			core.BNFreeRegisterList(regs)
+		self.__dict__["global_pointer_regs"] = result
+		self.__dict__["global_pointer_reg"] = result[0] if result else None
 
 		count = ctypes.c_ulonglong()
 		regs = core.BNGetImplicitlyDefinedRegisters(handle, count)

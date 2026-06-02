@@ -2428,8 +2428,24 @@ Ref<Tag> Function::CreateUserFunctionTag(Ref<TagType> tagType, const std::string
 
 Confidence<RegisterValue> Function::GetGlobalPointerValue() const
 {
-	BNRegisterValueWithConfidence value = BNGetFunctionGlobalPointerValue(m_object);
-	return Confidence<RegisterValue>(RegisterValue::FromAPIObject(value.value), value.confidence);
+	auto values = GetGlobalPointerValues();
+	if (values.empty())
+		return Confidence<RegisterValue>();
+	return values[0].second;
+}
+
+
+vector<pair<uint32_t, Confidence<RegisterValue>>> Function::GetGlobalPointerValues() const
+{
+	size_t count;
+	BNRegisterValueWithConfidenceAndRegister* values = BNGetFunctionGlobalPointerValues(m_object, &count);
+	vector<pair<uint32_t, Confidence<RegisterValue>>> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+		result.emplace_back(values[i].reg,
+			Confidence<RegisterValue>(RegisterValue::FromAPIObject(values[i].value.value), values[i].value.confidence));
+	BNFreeRegisterValueWithConfidenceAndRegisterList(values);
+	return result;
 }
 
 

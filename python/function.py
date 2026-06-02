@@ -1605,9 +1605,26 @@ class Function:
 
 	@property
 	def global_pointer_value(self) -> variable.RegisterValue:
-		"""Discovered value of the global pointer register, if the function uses one (read-only)"""
-		result = core.BNGetFunctionGlobalPointerValue(self.handle)
-		return variable.RegisterValue.from_BNRegisterValue(result, self.arch)
+		"""Deprecated. Use :py:attr:`global_pointer_values` instead."""
+		values = self.global_pointer_values
+		if not values:
+			return variable.Undetermined()
+		return values[0][1]
+
+	@property
+	def global_pointer_values(self) -> List[Tuple['architecture.RegisterName', 'variable.RegisterValue']]:
+		"""Discovered values of the global pointer registers, if the function uses any (read-only)"""
+		count = ctypes.c_ulonglong()
+		values = core.BNGetFunctionGlobalPointerValues(self.handle, count)
+		if values is None:
+			return []
+		try:
+			return [
+			    (self.arch.get_reg_name(values[i].reg), variable.RegisterValue.from_BNRegisterValue(values[i].value, self.arch))
+			    for i in range(count.value)
+			]
+		finally:
+			core.BNFreeRegisterValueWithConfidenceAndRegisterList(values)
 
 	@property
 	def uses_incoming_global_pointer(self) -> bool:

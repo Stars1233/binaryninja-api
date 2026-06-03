@@ -20,6 +20,7 @@ using namespace std;
 #endif
 
 #define E_MIPS_MACH_5900 0x00920000
+#define EF_MIPS_ABI2 0x00000020
 
 uint32_t bswap32(uint32_t x)
 {
@@ -2867,7 +2868,7 @@ public:
 class MipsN64CallingConvention: public CallingConvention
 {
 public:
-	MipsN64CallingConvention(Architecture* arch): CallingConvention(arch, "n64")
+	MipsN64CallingConvention(Architecture* arch, const std::string& name = "n64"): CallingConvention(arch, name)
 	{
 	}
 
@@ -3690,6 +3691,9 @@ static Ref<Platform> ElfFlagsRecognize(BinaryView* view, Metadata* metadata)
 	}
 
 	uint64_t flagsValue = flagsMetadata->GetUnsignedInteger();
+	if (flagsValue & EF_MIPS_ABI2)
+		return Platform::GetByName(endianness == BigEndian ? "linux-mipsn32" : "linux-mipsn32el");
+
 	uint8_t machineVariant = (flagsValue >> 16) & 0xff;
 
 	switch (machineVariant)
@@ -3749,6 +3753,8 @@ extern "C"
 		/* calling conventions */
 		MipsO32CallingConvention* o32LE = new MipsO32CallingConvention(mipsel);
 		MipsO32CallingConvention* o32BE = new MipsO32CallingConvention(mipseb);
+		MipsN64CallingConvention* n32LE = new MipsN64CallingConvention(mips64el, "n32");
+		MipsN64CallingConvention* n32BE = new MipsN64CallingConvention(mips64eb, "n32");
 		MipsN64CallingConvention* n64LE = new MipsN64CallingConvention(mips64el);
 		MipsN64CallingConvention* n64BE = new MipsN64CallingConvention(mips64eb);
 		MipsN64CallingConvention* n64BEc = new MipsN64CallingConvention(cnmips64eb);
@@ -3764,6 +3770,8 @@ extern "C"
 		mips3->SetDefaultCallingConvention(o32BE);
 		mips3el->RegisterCallingConvention(o32LE);
 		mips3el->SetDefaultCallingConvention(o32LE);
+		mips64el->RegisterCallingConvention(n32LE);
+		mips64eb->RegisterCallingConvention(n32BE);
 		mips64el->RegisterCallingConvention(n64LE);
 		mips64el->SetDefaultCallingConvention(n64LE);
 		mips64eb->RegisterCallingConvention(n64BE);
@@ -3842,7 +3850,8 @@ extern "C"
 		{
 			elf->RegisterPlatformRecognizer(ARCH_ID_MIPS64, LittleEndian, ElfFlagsRecognize);
 			elf->RegisterPlatformRecognizer(ARCH_ID_MIPS64, BigEndian, ElfFlagsRecognize);
-			elf->RegisterPlatformRecognizer(ARCH_ID_MIPS32, LittleEndian, ElfFlagsRecognize); // R5900
+			elf->RegisterPlatformRecognizer(ARCH_ID_MIPS32, LittleEndian, ElfFlagsRecognize); // n32, R5900
+			elf->RegisterPlatformRecognizer(ARCH_ID_MIPS32, BigEndian, ElfFlagsRecognize); // n32
 		}
 
 		BinaryViewType::RegisterArchitecture("PE", 0x166, LittleEndian, mipsel);

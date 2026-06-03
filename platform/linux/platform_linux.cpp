@@ -275,12 +275,16 @@ public:
 
 class LinuxMips64Platform: public Platform
 {
+private:
+	size_t m_addressSize;
+
 public:
-	LinuxMips64Platform(Architecture* arch, const std::string& name): Platform(arch, name)
+	LinuxMips64Platform(Architecture* arch, const std::string& name, const std::string& callingConventionName = "n64", size_t addressSize = 0):
+		Platform(arch, name), m_addressSize(addressSize)
 	{
 		Ref<CallingConvention> cc;
 
-		cc = arch->GetCallingConventionByName("n64");
+		cc = arch->GetCallingConventionByName(callingConventionName);
 		if (cc)
 		{
 			RegisterDefaultCallingConvention(cc);
@@ -292,6 +296,13 @@ public:
 		cc = arch->GetCallingConventionByName("linux-syscall");
 		if (cc)
 			SetSystemCallConvention(cc);
+	}
+
+	virtual size_t GetAddressSize() const override
+	{
+		if (m_addressSize)
+			return m_addressSize;
+		return GetArchitecture()->GetAddressSize();
 	}
 };
 
@@ -543,17 +554,21 @@ extern "C"
 		Ref<Architecture> mipseb = Architecture::GetByName("mips32");
 		Ref<Architecture> mips3el = Architecture::GetByName("mipsel3");
 		Ref<Architecture> mips3eb = Architecture::GetByName("mips3");
+		Ref<Architecture> mips64el = Architecture::GetByName("mipsel64");
 		Ref<Architecture> mips64eb = Architecture::GetByName("mips64");
 		Ref<Architecture> cnmips64eb = Architecture::GetByName("cavium-mips64");
 		Ref<Architecture> cnmips64el = Architecture::GetByName("cavium-mipsel64");
-		if (mipsel && mipseb && mips64eb && cnmips64eb && cnmips64el && mips3el && mips3eb)
+		if (mipsel && mipseb && mips64el && mips64eb && cnmips64eb && cnmips64el && mips3el && mips3eb)
 		{
-			Ref<Platform> platformLE, platformBE, platformBE64, platformBE64cn, platformLE64cn, platform3LE, platform3BE;
+			Ref<Platform> platformLE, platformBE, platformBE64, platformBE64cn, platformLE64cn, platform3LE, platform3BE,
+				platformN32LE, platformN32BE;
 
 			platformLE = new LinuxMipsPlatform(mipsel, "linux-mipsel");
 			platformBE = new LinuxMipsPlatform(mipseb, "linux-mips");
 			platform3LE = new LinuxMipsPlatform(mips3el, "linux-mipsel3");
 			platform3BE = new LinuxMipsPlatform(mips3eb, "linux-mips3");
+			platformN32LE = new LinuxMips64Platform(mips64el, "linux-mipsn32el", "n32", 4);
+			platformN32BE = new LinuxMips64Platform(mips64eb, "linux-mipsn32", "n32", 4);
 			platformBE64 = new LinuxMips64Platform(mips64eb, "linux-mips64");
 			platformBE64cn = new LinuxMips64Platform(cnmips64eb, "linux-cnmips64");
 			platformLE64cn = new LinuxMips64Platform(cnmips64el, "linux-cnmipsel64");
@@ -561,6 +576,8 @@ extern "C"
 			Platform::Register("linux", platformBE);
 			Platform::Register("linux", platform3LE);
 			Platform::Register("linux", platform3BE);
+			Platform::Register("linux", platformN32LE);
+			Platform::Register("linux", platformN32BE);
 			Platform::Register("linux", platformBE64);
 			Platform::Register("linux", platformBE64cn);
 			Platform::Register("linux", platformLE64cn);

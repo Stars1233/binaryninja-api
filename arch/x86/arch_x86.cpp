@@ -2153,6 +2153,17 @@ size_t X86CommonArchitecture::GetFlagWriteLowLevelIL(BNLowLevelILOperation op, s
 		}
 	}
 
+	// POPCNT sets ZF from the result and clears every other flag. ZF falls through to the default
+	// (result == 0) handling below.
+	if (flagWriteType == IL_FLAGWRITE_POPCNT && flag != IL_FLAG_Z)
+		return il.Const(0, 0);
+
+	// LZCNT/TZCNT set CF when the source is zero and ZF from the result. The remaining flags are
+	// undefined and are not written. ZF falls through to the default (result == 0) handling below.
+	if (flagWriteType == IL_FLAGWRITE_LZTZCNT && flag == IL_FLAG_C && operandCount >= 1)
+		return il.AddExpr(LLIL_CMP_E, size, 0,
+			il.GetExprForRegisterOrConstant(operands[0], size), il.AddExpr(LLIL_CONST, size, 0, 0));
+
 	if (flagWriteType == IL_FLAGWRITE_X87RND && flag == IL_FLAG_C1)
 		return il.Unimplemented();
 
@@ -2318,6 +2329,10 @@ string X86CommonArchitecture::GetFlagWriteTypeName(uint32_t flags)
 		return "x87rnd";
 	case IL_FLAGWRITE_VCOMI:
 		return "vcomi";
+	case IL_FLAGWRITE_POPCNT:
+		return "popcnt";
+	case IL_FLAGWRITE_LZTZCNT:
+		return "lztzcnt";
 	default:
 		return "";
 	}
@@ -2344,7 +2359,7 @@ vector<uint32_t> X86CommonArchitecture::GetAllFlagWriteTypes()
 {
 	return vector<uint32_t> {IL_FLAGWRITE_ALL, IL_FLAGWRITE_NOCARRY, IL_FLAGWRITE_CO,
 		IL_FLAGWRITE_X87COM, IL_FLAGWRITE_X87COMI, IL_FLAGWRITE_X87C1Z, IL_FLAGWRITE_X87RND,
-		IL_FLAGWRITE_VCOMI};
+		IL_FLAGWRITE_VCOMI, IL_FLAGWRITE_POPCNT, IL_FLAGWRITE_LZTZCNT};
 }
 
 BNFlagRole X86CommonArchitecture::GetFlagRole(uint32_t flag, uint32_t semClass)
@@ -2558,6 +2573,10 @@ vector<uint32_t> X86CommonArchitecture::GetFlagsWrittenByFlagWriteType(uint32_t 
 		return vector<uint32_t>{ IL_FLAG_C1 };
 	case IL_FLAGWRITE_VCOMI:
 		return vector<uint32_t>{ IL_FLAG_C, IL_FLAG_P, IL_FLAG_A, IL_FLAG_Z, IL_FLAG_S, IL_FLAG_O };
+	case IL_FLAGWRITE_POPCNT:
+		return vector<uint32_t>{ IL_FLAG_C, IL_FLAG_P, IL_FLAG_A, IL_FLAG_Z, IL_FLAG_S, IL_FLAG_O };
+	case IL_FLAGWRITE_LZTZCNT:
+		return vector<uint32_t>{ IL_FLAG_C, IL_FLAG_Z };
 	default:
 		return vector<uint32_t>();
 	}

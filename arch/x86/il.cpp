@@ -4870,81 +4870,27 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		il.AddInstruction(il.SetRegister(2, REG_X87_TOP, il.Add(2, il.Register(2, REG_X87_TOP), il.Const(2, 1))));
 		break;
 
-	case XED_ICLASS_TZCNT:
-	{
-		if (opOneLen == 8)
-			il.AddInstruction(
-				il.Intrinsic(
-					vector<RegisterOrFlag> { RegisterOrFlag::Register(regOne) },
-					INTRINSIC_XED_IFORM_TZCNT_GPR64_GPRMEM64,
-					vector<ExprId> { ReadILOperand(il, xedd, addr, 1, 1) } ));
-		else if (opOneLen == 4)
-			il.AddInstruction(
-				il.Intrinsic(
-					vector<RegisterOrFlag> { RegisterOrFlag::Register(regOne) },
-					INTRINSIC_XED_IFORM_TZCNT_GPR32_GPRMEM32,
-					vector<ExprId> { ReadILOperand(il, xedd, addr, 1, 1) } ));
-		else
-			il.AddInstruction(
-				il.Intrinsic(
-					vector<RegisterOrFlag> { RegisterOrFlag::Register(regOne) },
-					INTRINSIC_XED_IFORM_TZCNT_GPR16_GPRMEM16,
-					vector<ExprId> { ReadILOperand(il, xedd, addr, 1, 1) } ));
-
+	case XED_ICLASS_BSWAP:
+		// BSWAP reverses the bytes of its single register operand in place. x86 leaves the flags
+		// unaffected, matching the native operation.
+		il.AddInstruction(WriteILOperand(il, xedd, addr, 0, 0,
+			il.ByteSwap(opOneLen, ReadILOperand(il, xedd, addr, 0, 0))));
 		break;
-	}
+
+	case XED_ICLASS_TZCNT:
+		il.AddInstruction(WriteILOperand(il, xedd, addr, 0, 0,
+			il.CountTrailingZeros(opOneLen, ReadILOperand(il, xedd, addr, 1, 1), IL_FLAGWRITE_LZTZCNT)));
+		break;
 
 	case XED_ICLASS_LZCNT:
-	{
-		if (opOneLen == 8)
-			il.AddInstruction(
-				il.Intrinsic(
-					vector<RegisterOrFlag> { RegisterOrFlag::Register(regOne) },
-					INTRINSIC_XED_IFORM_LZCNT_GPR64_GPRMEM64,
-					vector<ExprId> { ReadILOperand(il, xedd, addr, 1, 1) }
-				)
-			);
-		else if (opOneLen == 4)
-			il.AddInstruction(
-				il.Intrinsic(
-					vector<RegisterOrFlag> { RegisterOrFlag::Register(regOne) },
-					INTRINSIC_XED_IFORM_LZCNT_GPR32_GPRMEM32,
-					vector<ExprId> { ReadILOperand(il, xedd, addr, 1, 1) } ));
-		else
-			il.AddInstruction(
-				il.Intrinsic(
-					vector<RegisterOrFlag> { RegisterOrFlag::Register(regOne) },
-					INTRINSIC_XED_IFORM_LZCNT_GPR16_GPRMEM16,
-					vector<ExprId> { ReadILOperand(il, xedd, addr, 1, 1) } ));
-
+		il.AddInstruction(WriteILOperand(il, xedd, addr, 0, 0,
+			il.CountLeadingZeros(opOneLen, ReadILOperand(il, xedd, addr, 1, 1), IL_FLAGWRITE_LZTZCNT)));
 		break;
-	}
 
 	case XED_ICLASS_POPCNT:
-	{
-		if (opOneLen == 8)
-			il.AddInstruction(
-				il.Intrinsic(
-					vector<RegisterOrFlag> { RegisterOrFlag::Register(regOne) },
-					INTRINSIC_XED_IFORM_POPCNT_GPR64_GPRMEM64,
-					vector<ExprId> { ReadILOperand(il, xedd, addr, 1, 1) }
-				)
-			);
-		else if (opOneLen == 4)
-			il.AddInstruction(
-				il.Intrinsic(
-					vector<RegisterOrFlag> { RegisterOrFlag::Register(regOne) },
-					INTRINSIC_XED_IFORM_POPCNT_GPR32_GPRMEM32,
-					vector<ExprId> { ReadILOperand(il, xedd, addr, 1, 1) } ));
-		else
-			il.AddInstruction(
-				il.Intrinsic(
-					vector<RegisterOrFlag> { RegisterOrFlag::Register(regOne) },
-					INTRINSIC_XED_IFORM_POPCNT_GPR16_GPRMEM16,
-					vector<ExprId> { ReadILOperand(il, xedd, addr, 1, 1) } ));
-
+		il.AddInstruction(WriteILOperand(il, xedd, addr, 0, 0,
+			il.PopulationCount(opOneLen, ReadILOperand(il, xedd, addr, 1, 1), IL_FLAGWRITE_POPCNT)));
 		break;
-	}
 
 	default:
 		LiftAsIntrinsic();

@@ -309,6 +309,12 @@ where
 
     Neg(Operation<'func, M, F, operation::UnaryOp>),
     Not(Operation<'func, M, F, operation::UnaryOp>),
+    Bswap(Operation<'func, M, F, operation::UnaryOp>),
+    Popcnt(Operation<'func, M, F, operation::UnaryOp>),
+    Clz(Operation<'func, M, F, operation::UnaryOp>),
+    Ctz(Operation<'func, M, F, operation::UnaryOp>),
+    Rbit(Operation<'func, M, F, operation::UnaryOp>),
+    Cls(Operation<'func, M, F, operation::UnaryOp>),
     Sx(Operation<'func, M, F, operation::UnaryOp>),
     Zx(Operation<'func, M, F, operation::UnaryOp>),
     LowPart(Operation<'func, M, F, operation::UnaryOp>),
@@ -466,6 +472,12 @@ where
 
             LLIL_NEG => LowLevelILExpressionKind::Neg(Operation::new(function, op, index)),
             LLIL_NOT => LowLevelILExpressionKind::Not(Operation::new(function, op, index)),
+            LLIL_BSWAP => LowLevelILExpressionKind::Bswap(Operation::new(function, op, index)),
+            LLIL_POPCNT => LowLevelILExpressionKind::Popcnt(Operation::new(function, op, index)),
+            LLIL_CLZ => LowLevelILExpressionKind::Clz(Operation::new(function, op, index)),
+            LLIL_CTZ => LowLevelILExpressionKind::Ctz(Operation::new(function, op, index)),
+            LLIL_RBIT => LowLevelILExpressionKind::Rbit(Operation::new(function, op, index)),
+            LLIL_CLS => LowLevelILExpressionKind::Cls(Operation::new(function, op, index)),
 
             LLIL_SX => LowLevelILExpressionKind::Sx(Operation::new(function, op, index)),
             LLIL_ZX => LowLevelILExpressionKind::Zx(Operation::new(function, op, index)),
@@ -620,7 +632,8 @@ where
         use self::LowLevelILExpressionKind::*;
 
         match *self {
-            Neg(ref op) | Not(ref op) | Sx(ref op) | Zx(ref op) | LowPart(ref op)
+            Neg(ref op) | Not(ref op) | Bswap(ref op) | Popcnt(ref op) | Clz(ref op) | Ctz(ref op)
+            | Rbit(ref op) | Cls(ref op) | Sx(ref op) | Zx(ref op) | LowPart(ref op)
             | BoolToInt(ref op) | Fsqrt(ref op) | Fneg(ref op) | Fabs(ref op)
             | FloatToInt(ref op) | IntToFloat(ref op) | FloatConv(ref op) | RoundToInt(ref op)
             | Floor(ref op) | Ceil(ref op) | Ftrunc(ref op) => Some(op),
@@ -664,7 +677,8 @@ where
                 visit!(op.left());
                 visit!(op.right());
             }
-            Neg(ref op) | Not(ref op) | Sx(ref op) | Zx(ref op) | LowPart(ref op)
+            Neg(ref op) | Not(ref op) | Bswap(ref op) | Popcnt(ref op) | Clz(ref op) | Ctz(ref op)
+            | Rbit(ref op) | Cls(ref op) | Sx(ref op) | Zx(ref op) | LowPart(ref op)
             | BoolToInt(ref op) | Fsqrt(ref op) | Fneg(ref op) | Fabs(ref op)
             | FloatToInt(ref op) | IntToFloat(ref op) | FloatConv(ref op) | RoundToInt(ref op)
             | Floor(ref op) | Ceil(ref op) | Ftrunc(ref op) => {
@@ -758,7 +772,8 @@ where
 
             DivuDp(ref op) | DivsDp(ref op) | ModuDp(ref op) | ModsDp(ref op) => &op.op,
 
-            Neg(ref op) | Not(ref op) | Sx(ref op) | Zx(ref op) | LowPart(ref op)
+            Neg(ref op) | Not(ref op) | Bswap(ref op) | Popcnt(ref op) | Clz(ref op) | Ctz(ref op)
+            | Rbit(ref op) | Cls(ref op) | Sx(ref op) | Zx(ref op) | LowPart(ref op)
             | BoolToInt(ref op) | Fsqrt(ref op) | Fneg(ref op) | Fabs(ref op)
             | FloatToInt(ref op) | IntToFloat(ref op) | FloatConv(ref op) | RoundToInt(ref op)
             | Floor(ref op) | Ceil(ref op) | Ftrunc(ref op) => &op.op,
@@ -831,7 +846,8 @@ impl LowLevelILExpressionKind<'_, Mutable, NonSSA> {
 
             DivuDp(ref op) | DivsDp(ref op) | ModuDp(ref op) | ModsDp(ref op) => op.flag_write(),
 
-            Neg(ref op) | Not(ref op) | Sx(ref op) | Zx(ref op) | LowPart(ref op)
+            Neg(ref op) | Not(ref op) | Bswap(ref op) | Popcnt(ref op) | Clz(ref op) | Ctz(ref op)
+            | Rbit(ref op) | Cls(ref op) | Sx(ref op) | Zx(ref op) | LowPart(ref op)
             | BoolToInt(ref op) | Fsqrt(ref op) | Fneg(ref op) | Fabs(ref op)
             | FloatToInt(ref op) | IntToFloat(ref op) | FloatConv(ref op) | RoundToInt(ref op)
             | Floor(ref op) | Ceil(ref op) | Ftrunc(ref op) => op.flag_write(),

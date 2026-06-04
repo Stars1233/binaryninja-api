@@ -348,6 +348,12 @@ The parameter list can be accessed through the `params` property:
 * `MLIL_MODS_DP` - Signed double-precision modulus of `left` expression by the `right` expression
 * `MLIL_NEG` - Sign inversion of `src` expression
 * `MLIL_NOT` - Bitwise inversion of `src` expression
+* `MLIL_BSWAP` - Reverse the byte order of `src` expression
+* `MLIL_POPCNT` - Population count (number of set bits) of `src` expression
+* `MLIL_CLZ` - Count leading zero bits of `src` expression; the result is `8 * size` when `src` is zero
+* `MLIL_CTZ` - Count trailing zero bits of `src` expression; the result is `8 * size` when `src` is zero
+* `MLIL_RBIT` - Reverse the bit order of `src` expression
+* `MLIL_CLS` - Count leading sign bits of `src` expression (the number of bits below the sign bit that match it)
 * `MLIL_FADD` - IEEE754 floating point addition of `left` expression with `right` expression
 * `MLIL_FSUB` - IEEE754 floating point subtraction of `left` expression with `right` expression
 * `MLIL_FMUL` - IEEE754 floating point multiplication of `left` expression with `right` expression

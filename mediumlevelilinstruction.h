@@ -1786,6 +1786,24 @@ namespace BinaryNinja
 	struct MediumLevelILInstructionAccessor<MLIL_NOT> : public MediumLevelILOneOperandInstruction
 	{};
 	template <>
+	struct MediumLevelILInstructionAccessor<MLIL_BSWAP> : public MediumLevelILOneOperandInstruction
+	{};
+	template <>
+	struct MediumLevelILInstructionAccessor<MLIL_POPCNT> : public MediumLevelILOneOperandInstruction
+	{};
+	template <>
+	struct MediumLevelILInstructionAccessor<MLIL_CLZ> : public MediumLevelILOneOperandInstruction
+	{};
+	template <>
+	struct MediumLevelILInstructionAccessor<MLIL_CTZ> : public MediumLevelILOneOperandInstruction
+	{};
+	template <>
+	struct MediumLevelILInstructionAccessor<MLIL_RBIT> : public MediumLevelILOneOperandInstruction
+	{};
+	template <>
+	struct MediumLevelILInstructionAccessor<MLIL_CLS> : public MediumLevelILOneOperandInstruction
+	{};
+	template <>
 	struct MediumLevelILInstructionAccessor<MLIL_SX> : public MediumLevelILOneOperandInstruction
 	{};
 	template <>

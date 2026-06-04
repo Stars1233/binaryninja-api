@@ -377,7 +377,13 @@ class LowLevelILInstruction(BaseILInstruction):
 	        ("left", "expr"), ("right", "expr")
 	    ], LowLevelILOperation.LLIL_MODS_DP: [("left", "expr"), ("right", "expr")], LowLevelILOperation.LLIL_NEG: [
 	        ("src", "expr")
-	    ], LowLevelILOperation.LLIL_NOT: [("src", "expr")], LowLevelILOperation.LLIL_SX: [
+	    ], LowLevelILOperation.LLIL_NOT: [("src", "expr")], LowLevelILOperation.LLIL_BSWAP: [
+	        ("src", "expr")
+	    ], LowLevelILOperation.LLIL_POPCNT: [("src", "expr")], LowLevelILOperation.LLIL_CLZ: [
+	        ("src", "expr")
+	    ], LowLevelILOperation.LLIL_CTZ: [("src", "expr")], LowLevelILOperation.LLIL_RBIT: [
+	        ("src", "expr")
+	    ], LowLevelILOperation.LLIL_CLS: [("src", "expr")], LowLevelILOperation.LLIL_SX: [
 	        ("src", "expr")
 	    ], LowLevelILOperation.LLIL_ZX: [("src", "expr")], LowLevelILOperation.LLIL_LOW_PART: [
 	        ("src", "expr")
@@ -1359,6 +1365,36 @@ class LowLevelILNeg(LowLevelILUnaryBase, Arithmetic):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILNot(LowLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class LowLevelILBswap(LowLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class LowLevelILPopcnt(LowLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class LowLevelILClz(LowLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class LowLevelILCtz(LowLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class LowLevelILRbit(LowLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class LowLevelILCls(LowLevelILUnaryBase, Arithmetic):
 	pass
 
 
@@ -3132,6 +3168,12 @@ ILInstruction:Dict[LowLevelILOperation, LowLevelILInstruction] = {  # type: igno
     LowLevelILOperation.LLIL_MODS_DP: LowLevelILModsDp,                             #  [("left", "expr"), ("right", "expr")],
     LowLevelILOperation.LLIL_NEG: LowLevelILNeg,                                    #  [("src", "expr")],
     LowLevelILOperation.LLIL_NOT: LowLevelILNot,                                    #  [("src", "expr")],
+    LowLevelILOperation.LLIL_BSWAP: LowLevelILBswap,                                #  [("src", "expr")],
+    LowLevelILOperation.LLIL_POPCNT: LowLevelILPopcnt,                              #  [("src", "expr")],
+    LowLevelILOperation.LLIL_CLZ: LowLevelILClz,                                    #  [("src", "expr")],
+    LowLevelILOperation.LLIL_CTZ: LowLevelILCtz,                                    #  [("src", "expr")],
+    LowLevelILOperation.LLIL_RBIT: LowLevelILRbit,                                  #  [("src", "expr")],
+    LowLevelILOperation.LLIL_CLS: LowLevelILCls,                                    #  [("src", "expr")],
     LowLevelILOperation.LLIL_SX: LowLevelILSx,                                      #  [("src", "expr")],
     LowLevelILOperation.LLIL_ZX: LowLevelILZx,                                      #  [("src", "expr")],
     LowLevelILOperation.LLIL_LOW_PART: LowLevelILLowPart,                           #  [("src", "expr")],

@@ -1454,6 +1454,24 @@ namespace BinaryNinja
 	struct HighLevelILInstructionAccessor<HLIL_NOT> : public HighLevelILOneOperandInstruction
 	{};
 	template <>
+	struct HighLevelILInstructionAccessor<HLIL_BSWAP> : public HighLevelILOneOperandInstruction
+	{};
+	template <>
+	struct HighLevelILInstructionAccessor<HLIL_POPCNT> : public HighLevelILOneOperandInstruction
+	{};
+	template <>
+	struct HighLevelILInstructionAccessor<HLIL_CLZ> : public HighLevelILOneOperandInstruction
+	{};
+	template <>
+	struct HighLevelILInstructionAccessor<HLIL_CTZ> : public HighLevelILOneOperandInstruction
+	{};
+	template <>
+	struct HighLevelILInstructionAccessor<HLIL_RBIT> : public HighLevelILOneOperandInstruction
+	{};
+	template <>
+	struct HighLevelILInstructionAccessor<HLIL_CLS> : public HighLevelILOneOperandInstruction
+	{};
+	template <>
 	struct HighLevelILInstructionAccessor<HLIL_SX> : public HighLevelILOneOperandInstruction
 	{};
 	template <>

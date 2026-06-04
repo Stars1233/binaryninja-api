@@ -257,6 +257,12 @@ The double precision instruction multiply, divide, modulus instructions are part
 * `LLIL_MODS_DP` - Signed modulus double precision
 * `LLIL_NEG` - Sign negation
 * `LLIL_NOT` - Bitwise complement
+* `LLIL_BSWAP` - Reverse the byte order of `src`
+* `LLIL_POPCNT` - Population count (number of set bits) of `src`
+* `LLIL_CLZ` - Count leading zero bits of `src`; the result is `8 * size` when `src` is zero
+* `LLIL_CTZ` - Count trailing zero bits of `src`; the result is `8 * size` when `src` is zero
+* `LLIL_RBIT` - Reverse the bit order of `src`
+* `LLIL_CLS` - Count leading sign bits of `src` (the number of bits below the sign bit that match it)
 * `LLIL_TEST_BIT ` - Test if bit `right` in expression `left` is set
 * `LLIL_BOOL_TO_INT ` - Converts a bool `src` to an integer
 

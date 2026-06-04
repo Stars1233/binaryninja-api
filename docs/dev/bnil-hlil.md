@@ -111,6 +111,12 @@ There are a number of properties that can be queried on the [`HighLevelILInstruc
 * `HLIL_MODS_DP` - Signed double-precision modulus of `left` expression by the `right` expression
 * `HLIL_NEG` - Sign inversion of `src` expression
 * `HLIL_NOT` - Bitwise inversion of `src` expression
+* `HLIL_BSWAP` - Reverse the byte order of `src` expression
+* `HLIL_POPCNT` - Population count (number of set bits) of `src` expression
+* `HLIL_CLZ` - Count leading zero bits of `src` expression; the result is `8 * size` when `src` is zero
+* `HLIL_CTZ` - Count trailing zero bits of `src` expression; the result is `8 * size` when `src` is zero
+* `HLIL_RBIT` - Reverse the bit order of `src` expression
+* `HLIL_CLS` - Count leading sign bits of `src` expression (the number of bits below the sign bit that match it)
 * `HLIL_FADD` - IEEE754 floating point addition of `left` expression with `right` expression
 * `HLIL_FSUB` - IEEE754 floating point subtraction of `left` expression with `right` expression
 * `HLIL_FMUL` - IEEE754 floating point multiplication of `left` expression with `right` expression

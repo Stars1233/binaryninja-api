@@ -332,6 +332,12 @@ static constexpr std::array s_instructionOperandUsage = {
 	OperandUsage{LLIL_REG_STACK_PHI, {DestSSARegisterStackLowLevelOperandUsage, SourceSSARegisterStacksLowLevelOperandUsage}},
 	OperandUsage{LLIL_FLAG_PHI, {DestSSAFlagLowLevelOperandUsage, SourceSSAFlagsLowLevelOperandUsage}},
 	OperandUsage{LLIL_MEM_PHI, {DestMemoryVersionLowLevelOperandUsage, SourceMemoryVersionsLowLevelOperandUsage}},
+	OperandUsage{LLIL_BSWAP, {SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_POPCNT, {SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_CLZ, {SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_CTZ, {SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_RBIT, {SourceExprLowLevelOperandUsage}},
+	OperandUsage{LLIL_CLS, {SourceExprLowLevelOperandUsage}},
 };
 
 
@@ -1984,6 +1990,12 @@ void LowLevelILInstruction::VisitExprs(bn::base::function_ref<bool(const LowLeve
 	case LLIL_PUSH:
 	case LLIL_NEG:
 	case LLIL_NOT:
+	case LLIL_BSWAP:
+	case LLIL_POPCNT:
+	case LLIL_CLZ:
+	case LLIL_CTZ:
+	case LLIL_RBIT:
+	case LLIL_CLS:
 	case LLIL_SX:
 	case LLIL_ZX:
 	case LLIL_LOW_PART:
@@ -2301,6 +2313,12 @@ ExprId LowLevelILInstruction::CopyTo(
 	case LLIL_PUSH:
 	case LLIL_NEG:
 	case LLIL_NOT:
+	case LLIL_BSWAP:
+	case LLIL_POPCNT:
+	case LLIL_CLZ:
+	case LLIL_CTZ:
+	case LLIL_RBIT:
+	case LLIL_CLS:
 	case LLIL_SX:
 	case LLIL_ZX:
 	case LLIL_LOW_PART:
@@ -3349,6 +3367,42 @@ ExprId LowLevelILFunction::Neg(size_t size, ExprId a, uint32_t flags, const ILSo
 ExprId LowLevelILFunction::Not(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_NOT, loc, size, flags, a);
+}
+
+
+ExprId LowLevelILFunction::ByteSwap(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_BSWAP, loc, size, flags, a);
+}
+
+
+ExprId LowLevelILFunction::PopulationCount(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_POPCNT, loc, size, flags, a);
+}
+
+
+ExprId LowLevelILFunction::CountLeadingZeros(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_CLZ, loc, size, flags, a);
+}
+
+
+ExprId LowLevelILFunction::CountTrailingZeros(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_CTZ, loc, size, flags, a);
+}
+
+
+ExprId LowLevelILFunction::ReverseBits(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_RBIT, loc, size, flags, a);
+}
+
+
+ExprId LowLevelILFunction::CountLeadingSigns(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_CLS, loc, size, flags, a);
 }
 
 

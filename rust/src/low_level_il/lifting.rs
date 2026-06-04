@@ -94,6 +94,12 @@ pub enum LowLevelILFlagWriteOp<R: ArchReg> {
     Push(usize, LowLevelILRegisterOrConstant<R>),
     Neg(usize, LowLevelILRegisterOrConstant<R>),
     Not(usize, LowLevelILRegisterOrConstant<R>),
+    Bswap(usize, LowLevelILRegisterOrConstant<R>),
+    Popcnt(usize, LowLevelILRegisterOrConstant<R>),
+    Clz(usize, LowLevelILRegisterOrConstant<R>),
+    Ctz(usize, LowLevelILRegisterOrConstant<R>),
+    Rbit(usize, LowLevelILRegisterOrConstant<R>),
+    Cls(usize, LowLevelILRegisterOrConstant<R>),
     Sx(usize, LowLevelILRegisterOrConstant<R>),
     Zx(usize, LowLevelILRegisterOrConstant<R>),
     LowPart(usize, LowLevelILRegisterOrConstant<R>),
@@ -293,6 +299,12 @@ impl<R: ArchReg> LowLevelILFlagWriteOp<R> {
             (1, LLIL_PUSH) => op!(Push, 0),
             (1, LLIL_NEG) => op!(Neg, 0),
             (1, LLIL_NOT) => op!(Not, 0),
+            (1, LLIL_BSWAP) => op!(Bswap, 0),
+            (1, LLIL_POPCNT) => op!(Popcnt, 0),
+            (1, LLIL_CLZ) => op!(Clz, 0),
+            (1, LLIL_CTZ) => op!(Ctz, 0),
+            (1, LLIL_RBIT) => op!(Rbit, 0),
+            (1, LLIL_CLS) => op!(Cls, 0),
             (1, LLIL_SX) => op!(Sx, 0),
             (1, LLIL_ZX) => op!(Zx, 0),
             (1, LLIL_LOW_PART) => op!(LowPart, 0),
@@ -351,6 +363,12 @@ impl<R: ArchReg> LowLevelILFlagWriteOp<R> {
             Push(size, ..) => (size, LLIL_PUSH),
             Neg(size, ..) => (size, LLIL_NEG),
             Not(size, ..) => (size, LLIL_NOT),
+            Bswap(size, ..) => (size, LLIL_BSWAP),
+            Popcnt(size, ..) => (size, LLIL_POPCNT),
+            Clz(size, ..) => (size, LLIL_CLZ),
+            Ctz(size, ..) => (size, LLIL_CTZ),
+            Rbit(size, ..) => (size, LLIL_RBIT),
+            Cls(size, ..) => (size, LLIL_CLS),
             Sx(size, ..) => (size, LLIL_SX),
             Zx(size, ..) => (size, LLIL_ZX),
             LowPart(size, ..) => (size, LLIL_LOW_PART),
@@ -404,6 +422,12 @@ impl<R: ArchReg> LowLevelILFlagWriteOp<R> {
             | Push(_, op0)
             | Neg(_, op0)
             | Not(_, op0)
+            | Bswap(_, op0)
+            | Popcnt(_, op0)
+            | Clz(_, op0)
+            | Ctz(_, op0)
+            | Rbit(_, op0)
+            | Cls(_, op0)
             | Sx(_, op0)
             | Zx(_, op0)
             | LowPart(_, op0)
@@ -1422,6 +1446,12 @@ impl LowLevelILMutableFunction {
 
     sized_unary_op_lifter!(neg, LLIL_NEG, ValueExpr);
     sized_unary_op_lifter!(not, LLIL_NOT, ValueExpr);
+    sized_unary_op_lifter!(bswap, LLIL_BSWAP, ValueExpr);
+    sized_unary_op_lifter!(popcnt, LLIL_POPCNT, ValueExpr);
+    sized_unary_op_lifter!(clz, LLIL_CLZ, ValueExpr);
+    sized_unary_op_lifter!(ctz, LLIL_CTZ, ValueExpr);
+    sized_unary_op_lifter!(rbit, LLIL_RBIT, ValueExpr);
+    sized_unary_op_lifter!(cls, LLIL_CLS, ValueExpr);
 
     size_changing_unary_op_lifter!(sx, LLIL_SX, ValueExpr);
     size_changing_unary_op_lifter!(zx, LLIL_ZX, ValueExpr);

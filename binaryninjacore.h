@@ -762,7 +762,15 @@ extern "C"
 		LLIL_REG_PHI,
 		LLIL_REG_STACK_PHI,
 		LLIL_FLAG_PHI,
-		LLIL_MEM_PHI
+		LLIL_MEM_PHI,
+
+		// Bit manipulation
+		LLIL_BSWAP,   // Reverse byte order of the whole value
+		LLIL_POPCNT,  // Population count (number of set bits)
+		LLIL_CLZ,     // Count leading zero bits; clz(0) == 8 * size
+		LLIL_CTZ,     // Count trailing zero bits; ctz(0) == 8 * size
+		LLIL_RBIT,    // Reverse bit order of the whole value
+		LLIL_CLS      // Count leading sign bits; number of bits below the sign bit that match it
 	};
 
 	BN_ENUM(uint8_t, BNLowLevelILFlagCondition)
@@ -1540,7 +1548,15 @@ extern "C"
 		MLIL_VAR_PHI,
 		MLIL_MEM_PHI,
 
-		MLIL_BLOCK_TO_EXPAND  // Must be expanded by a future workflow step, used temporarily to insert instructions
+		MLIL_BLOCK_TO_EXPAND,  // Must be expanded by a future workflow step, used temporarily to insert instructions
+
+		// Bit manipulation
+		MLIL_BSWAP,   // Reverse byte order of the whole value
+		MLIL_POPCNT,  // Population count (number of set bits)
+		MLIL_CLZ,     // Count leading zero bits; clz(0) == 8 * size
+		MLIL_CTZ,     // Count trailing zero bits; ctz(0) == 8 * size
+		MLIL_RBIT,    // Reverse bit order of the whole value
+		MLIL_CLS      // Count leading sign bits; number of bits below the sign bit that match it
 	};
 
 	typedef struct BNMediumLevelILInstruction
@@ -1714,7 +1730,15 @@ extern "C"
 		HLIL_SYSCALL_SSA,
 		HLIL_INTRINSIC_SSA,
 		HLIL_VAR_PHI,
-		HLIL_MEM_PHI
+		HLIL_MEM_PHI,
+
+		// Bit manipulation
+		HLIL_BSWAP,   // Reverse byte order of the whole value
+		HLIL_POPCNT,  // Population count (number of set bits)
+		HLIL_CLZ,     // Count leading zero bits; clz(0) == 8 * size
+		HLIL_CTZ,     // Count trailing zero bits; ctz(0) == 8 * size
+		HLIL_RBIT,    // Reverse bit order of the whole value
+		HLIL_CLS      // Count leading sign bits; number of bits below the sign bit that match it
 	};
 
 	typedef struct BNHighLevelILInstruction

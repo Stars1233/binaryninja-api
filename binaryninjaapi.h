@@ -15006,6 +15006,69 @@ namespace BinaryNinja {
 		*/
 		ExprId Not(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
 
+		/*! Reverse the byte order of expression \c value of size \c size potentially setting flags
+
+			\param size The size of the result in bytes
+			\param a The expression to byte swap
+			\param flags Flags to set
+			\param loc Optional IL Location this expression was added from.
+			\return The expression <tt>bswap.<size>{<flags>}(value)</tt>
+		*/
+		ExprId ByteSwap(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Count the number of set bits in expression \c value of size \c size potentially setting flags
+
+			\param size The size of the result in bytes
+			\param a The expression to count set bits in
+			\param flags Flags to set
+			\param loc Optional IL Location this expression was added from.
+			\return The expression <tt>popcnt.<size>{<flags>}(value)</tt>
+		*/
+		ExprId PopulationCount(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Count the number of leading zero bits in expression \c value of size \c size potentially setting flags.
+			The result is <tt>8 * size</tt> when \c value is zero.
+
+			\param size The size of the result in bytes
+			\param a The expression to count leading zeros in
+			\param flags Flags to set
+			\param loc Optional IL Location this expression was added from.
+			\return The expression <tt>clz.<size>{<flags>}(value)</tt>
+		*/
+		ExprId CountLeadingZeros(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Count the number of trailing zero bits in expression \c value of size \c size potentially setting flags.
+			The result is <tt>8 * size</tt> when \c value is zero.
+
+			\param size The size of the result in bytes
+			\param a The expression to count trailing zeros in
+			\param flags Flags to set
+			\param loc Optional IL Location this expression was added from.
+			\return The expression <tt>ctz.<size>{<flags>}(value)</tt>
+		*/
+		ExprId CountTrailingZeros(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Reverse the bit order of expression \c value of size \c size potentially setting flags
+
+			\param size The size of the result in bytes
+			\param a The expression to bit reverse
+			\param flags Flags to set
+			\param loc Optional IL Location this expression was added from.
+			\return The expression <tt>rbit.<size>{<flags>}(value)</tt>
+		*/
+		ExprId ReverseBits(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+
+		/*! Count the number of leading bits that match the sign bit in expression \c value of size \c size,
+			not counting the sign bit itself, potentially setting flags
+
+			\param size The size of the result in bytes
+			\param a The expression to count leading sign bits in
+			\param flags Flags to set
+			\param loc Optional IL Location this expression was added from.
+			\return The expression <tt>cls.<size>{<flags>}(value)</tt>
+		*/
+		ExprId CountLeadingSigns(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+
 		/*! Two's complement sign-extends the expression in \c value to \c size bytes
 
 			\param size The size of the result in bytes
@@ -15886,6 +15949,12 @@ namespace BinaryNinja {
 		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Neg(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Not(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ByteSwap(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId PopulationCount(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CountLeadingZeros(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CountTrailingZeros(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ReverseBits(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CountLeadingSigns(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SignExtend(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ZeroExtend(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId LowPart(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
@@ -16287,6 +16356,12 @@ namespace BinaryNinja {
 		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Neg(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Not(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ByteSwap(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId PopulationCount(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CountLeadingZeros(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CountTrailingZeros(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ReverseBits(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CountLeadingSigns(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SignExtend(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ZeroExtend(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId LowPart(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());

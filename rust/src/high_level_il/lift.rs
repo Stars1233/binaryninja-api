@@ -116,6 +116,12 @@ pub enum HighLevelILLiftedInstructionKind {
     ReturnByRef(LiftedUnaryOp),
     Neg(LiftedUnaryOp),
     Not(LiftedUnaryOp),
+    Bswap(LiftedUnaryOp),
+    Popcnt(LiftedUnaryOp),
+    Clz(LiftedUnaryOp),
+    Ctz(LiftedUnaryOp),
+    Rbit(LiftedUnaryOp),
+    Cls(LiftedUnaryOp),
     Sx(LiftedUnaryOp),
     Zx(LiftedUnaryOp),
     LowPart(LiftedUnaryOp),
@@ -246,6 +252,12 @@ impl HighLevelILLiftedInstruction {
             ReturnByRef(_) => "ReturnByRef",
             Neg(_) => "Neg",
             Not(_) => "Not",
+            Bswap(_) => "Bswap",
+            Popcnt(_) => "Popcnt",
+            Clz(_) => "Clz",
+            Ctz(_) => "Ctz",
+            Rbit(_) => "Rbit",
+            Cls(_) => "Cls",
             Sx(_) => "Sx",
             Zx(_) => "Zx",
             LowPart(_) => "LowPart",
@@ -365,6 +377,7 @@ impl HighLevelILLiftedInstruction {
                 Operand::ConstantData(op.constant_data.clone()),
             )],
             Deref(op) | AddressOf(op) | PassByRef(op) | ReturnByRef(op) | Neg(op) | Not(op)
+            | Bswap(op) | Popcnt(op) | Clz(op) | Ctz(op) | Rbit(op) | Cls(op)
             | Sx(op) | Zx(op) | LowPart(op) | BoolToInt(op) | UnimplMem(op) | Fsqrt(op)
             | Fneg(op) | Fabs(op) | FloatToInt(op) | IntToFloat(op) | FloatConv(op)
             | RoundToInt(op) | Floor(op) | Ceil(op) | Ftrunc(op) => {

@@ -265,7 +265,13 @@ class MediumLevelILInstruction(BaseILInstruction):
 	                                                                                ("right", "expr")],
 	    MediumLevelILOperation.MLIL_MODS_DP: [("left", "expr"), ("right", "expr")], MediumLevelILOperation.MLIL_NEG: [
 	        ("src", "expr")
-	    ], MediumLevelILOperation.MLIL_NOT: [("src", "expr")], MediumLevelILOperation.MLIL_SX: [
+	    ], MediumLevelILOperation.MLIL_NOT: [("src", "expr")], MediumLevelILOperation.MLIL_BSWAP: [
+	        ("src", "expr")
+	    ], MediumLevelILOperation.MLIL_POPCNT: [("src", "expr")], MediumLevelILOperation.MLIL_CLZ: [
+	        ("src", "expr")
+	    ], MediumLevelILOperation.MLIL_CTZ: [("src", "expr")], MediumLevelILOperation.MLIL_RBIT: [
+	        ("src", "expr")
+	    ], MediumLevelILOperation.MLIL_CLS: [("src", "expr")], MediumLevelILOperation.MLIL_SX: [
 	        ("src", "expr")
 	    ], MediumLevelILOperation.MLIL_ZX: [("src", "expr")], MediumLevelILOperation.MLIL_LOW_PART: [
 	        ("src", "expr")
@@ -1431,6 +1437,36 @@ class MediumLevelILNeg(MediumLevelILUnaryBase, Arithmetic):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILNot(MediumLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILBswap(MediumLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILPopcnt(MediumLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILClz(MediumLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILCtz(MediumLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILRbit(MediumLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILCls(MediumLevelILUnaryBase, Arithmetic):
 	pass
 
 
@@ -3444,6 +3480,12 @@ ILInstruction = {
     MediumLevelILOperation.MLIL_MODS_DP: MediumLevelILModsDp,  # [("left", "expr"), ("right", "expr")],
     MediumLevelILOperation.MLIL_NEG: MediumLevelILNeg,  # [("src", "expr")],
     MediumLevelILOperation.MLIL_NOT: MediumLevelILNot,  # [("src", "expr")],
+    MediumLevelILOperation.MLIL_BSWAP: MediumLevelILBswap,  # [("src", "expr")],
+    MediumLevelILOperation.MLIL_POPCNT: MediumLevelILPopcnt,  # [("src", "expr")],
+    MediumLevelILOperation.MLIL_CLZ: MediumLevelILClz,  # [("src", "expr")],
+    MediumLevelILOperation.MLIL_CTZ: MediumLevelILCtz,  # [("src", "expr")],
+    MediumLevelILOperation.MLIL_RBIT: MediumLevelILRbit,  # [("src", "expr")],
+    MediumLevelILOperation.MLIL_CLS: MediumLevelILCls,  # [("src", "expr")],
     MediumLevelILOperation.MLIL_SX: MediumLevelILSx,  # [("src", "expr")],
     MediumLevelILOperation.MLIL_ZX: MediumLevelILZx,  # [("src", "expr")],
     MediumLevelILOperation.MLIL_LOW_PART: MediumLevelILLowPart,  # [("src", "expr")],

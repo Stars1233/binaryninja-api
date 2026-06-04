@@ -248,7 +248,13 @@ class HighLevelILInstruction(BaseILInstruction):
 	        ("left", "expr"), ("right", "expr")
 	    ], HighLevelILOperation.HLIL_MODS_DP: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_NEG: [
 	        ("src", "expr")
-	    ], HighLevelILOperation.HLIL_NOT: [("src", "expr")], HighLevelILOperation.HLIL_SX: [
+	    ], HighLevelILOperation.HLIL_NOT: [("src", "expr")], HighLevelILOperation.HLIL_BSWAP: [
+	        ("src", "expr")
+	    ], HighLevelILOperation.HLIL_POPCNT: [("src", "expr")], HighLevelILOperation.HLIL_CLZ: [
+	        ("src", "expr")
+	    ], HighLevelILOperation.HLIL_CTZ: [("src", "expr")], HighLevelILOperation.HLIL_RBIT: [
+	        ("src", "expr")
+	    ], HighLevelILOperation.HLIL_CLS: [("src", "expr")], HighLevelILOperation.HLIL_SX: [
 	        ("src", "expr")
 	    ], HighLevelILOperation.HLIL_ZX: [("src", "expr")], HighLevelILOperation.HLIL_LOW_PART: [
 	        ("src", "expr")
@@ -1984,6 +1990,36 @@ class HighLevelILNot(HighLevelILUnaryBase, Arithmetic):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILBswap(HighLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILPopcnt(HighLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILClz(HighLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILCtz(HighLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILRbit(HighLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILCls(HighLevelILUnaryBase, Arithmetic):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
 class HighLevelILSx(HighLevelILUnaryBase, Arithmetic):
 	pass
 
@@ -2478,6 +2514,12 @@ ILInstruction = {
     HighLevelILOperation.HLIL_MODS_DP: HighLevelILModsDp,  #  ("left", "expr"), ("right", "expr"),
     HighLevelILOperation.HLIL_NEG: HighLevelILNeg,  #  ("src", "expr"),
     HighLevelILOperation.HLIL_NOT: HighLevelILNot,  #  ("src", "expr"),
+    HighLevelILOperation.HLIL_BSWAP: HighLevelILBswap,  #  ("src", "expr"),
+    HighLevelILOperation.HLIL_POPCNT: HighLevelILPopcnt,  #  ("src", "expr"),
+    HighLevelILOperation.HLIL_CLZ: HighLevelILClz,  #  ("src", "expr"),
+    HighLevelILOperation.HLIL_CTZ: HighLevelILCtz,  #  ("src", "expr"),
+    HighLevelILOperation.HLIL_RBIT: HighLevelILRbit,  #  ("src", "expr"),
+    HighLevelILOperation.HLIL_CLS: HighLevelILCls,  #  ("src", "expr"),
     HighLevelILOperation.HLIL_SX: HighLevelILSx,  #  ("src", "expr"),
     HighLevelILOperation.HLIL_ZX: HighLevelILZx,  #  ("src", "expr"),
     HighLevelILOperation.HLIL_LOW_PART: HighLevelILLowPart,  #  ("src", "expr"),

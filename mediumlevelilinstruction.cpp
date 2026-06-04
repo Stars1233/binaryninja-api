@@ -304,6 +304,12 @@ static constexpr std::array s_instructionOperandUsage = {
 	OperandUsage{MLIL_VAR_PHI, {DestSSAVariableMediumLevelOperandUsage, SourceSSAVariablesMediumLevelOperandUsages}},
 	OperandUsage{MLIL_MEM_PHI, {DestMemoryVersionMediumLevelOperandUsage, SourceMemoryVersionsMediumLevelOperandUsage}},
 	OperandUsage{MLIL_BLOCK_TO_EXPAND, {SourceExprsMediumLevelOperandUsage}},
+	OperandUsage{MLIL_BSWAP, {SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_POPCNT, {SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CLZ, {SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CTZ, {SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_RBIT, {SourceExprMediumLevelOperandUsage}},
+	OperandUsage{MLIL_CLS, {SourceExprMediumLevelOperandUsage}},
 };
 
 VALIDATE_INSTRUCTION_ORDER(s_instructionOperandUsage);
@@ -1514,6 +1520,12 @@ void MediumLevelILInstruction::VisitExprs(bn::base::function_ref<bool(const Medi
 		break;
 	case MLIL_NEG:
 	case MLIL_NOT:
+	case MLIL_BSWAP:
+	case MLIL_POPCNT:
+	case MLIL_CLZ:
+	case MLIL_CTZ:
+	case MLIL_RBIT:
+	case MLIL_CLS:
 	case MLIL_SX:
 	case MLIL_ZX:
 	case MLIL_LOW_PART:
@@ -1855,6 +1867,12 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
 		    GetOffset<MLIL_LOAD_STRUCT_SSA>(), GetSourceMemoryVersion<MLIL_LOAD_STRUCT_SSA>(), loc);
 	case MLIL_NEG:
 	case MLIL_NOT:
+	case MLIL_BSWAP:
+	case MLIL_POPCNT:
+	case MLIL_CLZ:
+	case MLIL_CTZ:
+	case MLIL_RBIT:
+	case MLIL_CLS:
 	case MLIL_SX:
 	case MLIL_ZX:
 	case MLIL_LOW_PART:
@@ -2861,6 +2879,42 @@ ExprId MediumLevelILFunction::Neg(size_t size, ExprId src, const ILSourceLocatio
 ExprId MediumLevelILFunction::Not(size_t size, ExprId src, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(MLIL_NOT, loc, size, src);
+}
+
+
+ExprId MediumLevelILFunction::ByteSwap(size_t size, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_BSWAP, loc, size, src);
+}
+
+
+ExprId MediumLevelILFunction::PopulationCount(size_t size, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_POPCNT, loc, size, src);
+}
+
+
+ExprId MediumLevelILFunction::CountLeadingZeros(size_t size, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_CLZ, loc, size, src);
+}
+
+
+ExprId MediumLevelILFunction::CountTrailingZeros(size_t size, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_CTZ, loc, size, src);
+}
+
+
+ExprId MediumLevelILFunction::ReverseBits(size_t size, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_RBIT, loc, size, src);
+}
+
+
+ExprId MediumLevelILFunction::CountLeadingSigns(size_t size, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_CLS, loc, size, src);
 }
 
 

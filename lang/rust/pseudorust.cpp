@@ -2428,6 +2428,33 @@ void PseudoRustFunction::GetExprText(const HighLevelILInstruction& instr, HighLe
 		}();
 		break;
 
+	case HLIL_BSWAP:
+	case HLIL_POPCNT:
+	case HLIL_CLZ:
+	case HLIL_CTZ:
+	case HLIL_RBIT:
+	case HLIL_CLS:
+		[&]() {
+			const char* method;
+			switch (instr.operation)
+			{
+			case HLIL_BSWAP: method = "swap_bytes"; break;
+			case HLIL_POPCNT: method = "count_ones"; break;
+			case HLIL_CLZ: method = "leading_zeros"; break;
+			case HLIL_CTZ: method = "trailing_zeros"; break;
+			case HLIL_RBIT: method = "reverse_bits"; break;
+			default: method = "leading_sign_bits"; break;
+			}
+			GetExprText(instr.GetSourceExpr(), tokens, settings, MemberAndFunctionOperatorPrecedence);
+			tokens.Append(TextToken, ".");
+			tokens.Append(OperationToken, method);
+			tokens.AppendOpenParen();
+			tokens.AppendCloseParen();
+			if (exprType != InnerExpression)
+				tokens.AppendSemicolon();
+		}();
+		break;
+
 	case HLIL_FLOAT_CONV:
 		[&]() {
 			const auto srcExpr = instr.GetSourceExpr<HLIL_FLOAT_CONV>();

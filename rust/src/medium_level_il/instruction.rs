@@ -575,6 +575,24 @@ impl MediumLevelILInstruction {
             MLIL_NOT => Op::Not(UnaryOp {
                 src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
             }),
+            MLIL_BSWAP => Op::Bswap(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
+            }),
+            MLIL_POPCNT => Op::Popcnt(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
+            }),
+            MLIL_CLZ => Op::Clz(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
+            }),
+            MLIL_CTZ => Op::Ctz(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
+            }),
+            MLIL_RBIT => Op::Rbit(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
+            }),
+            MLIL_CLS => Op::Cls(UnaryOp {
+                src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
+            }),
             MLIL_SX => Op::Sx(UnaryOp {
                 src: MediumLevelExpressionIndex::from(op.operands[0] as usize),
             }),
@@ -1099,6 +1117,12 @@ impl MediumLevelILInstruction {
 
             Neg(op) => Lifted::Neg(self.lift_unary_op(op)),
             Not(op) => Lifted::Not(self.lift_unary_op(op)),
+            Bswap(op) => Lifted::Bswap(self.lift_unary_op(op)),
+            Popcnt(op) => Lifted::Popcnt(self.lift_unary_op(op)),
+            Clz(op) => Lifted::Clz(self.lift_unary_op(op)),
+            Ctz(op) => Lifted::Ctz(self.lift_unary_op(op)),
+            Rbit(op) => Lifted::Rbit(self.lift_unary_op(op)),
+            Cls(op) => Lifted::Cls(self.lift_unary_op(op)),
             Sx(op) => Lifted::Sx(self.lift_unary_op(op)),
             Zx(op) => Lifted::Zx(self.lift_unary_op(op)),
             LowPart(op) => Lifted::LowPart(self.lift_unary_op(op)),
@@ -1874,6 +1898,12 @@ pub enum MediumLevelILInstructionKind {
     StoreOutput(StoreOutput),
     Neg(UnaryOp),
     Not(UnaryOp),
+    Bswap(UnaryOp),
+    Popcnt(UnaryOp),
+    Clz(UnaryOp),
+    Ctz(UnaryOp),
+    Rbit(UnaryOp),
+    Cls(UnaryOp),
     Sx(UnaryOp),
     Zx(UnaryOp),
     LowPart(UnaryOp),

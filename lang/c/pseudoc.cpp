@@ -2411,6 +2411,85 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 		}();
 		break;
 
+	case HLIL_BSWAP:
+		[&]() {
+			auto src = instr.GetSourceExpr<HLIL_BSWAP>();
+			string name;
+			if (src.size == 2)
+				name = "__builtin_bswap16";
+			else if (src.size == 4)
+				name = "__builtin_bswap32";
+			else if (src.size == 8)
+				name = "__builtin_bswap64";
+			else
+				name = "__builtin_bswap";
+			tokens.Append(OperationToken, name);
+			tokens.AppendOpenParen();
+			GetExprTextInternal(src, tokens, settings);
+			tokens.AppendCloseParen();
+			if (statement)
+				tokens.AppendSemicolon();
+		}();
+		break;
+
+	case HLIL_POPCNT:
+		[&]() {
+			auto src = instr.GetSourceExpr<HLIL_POPCNT>();
+			tokens.Append(OperationToken, src.size > 4 ? "__builtin_popcountll" : "__builtin_popcount");
+			tokens.AppendOpenParen();
+			GetExprTextInternal(src, tokens, settings);
+			tokens.AppendCloseParen();
+			if (statement)
+				tokens.AppendSemicolon();
+		}();
+		break;
+
+	case HLIL_CLZ:
+		[&]() {
+			auto src = instr.GetSourceExpr<HLIL_CLZ>();
+			tokens.Append(OperationToken, src.size > 4 ? "__builtin_clzll" : "__builtin_clz");
+			tokens.AppendOpenParen();
+			GetExprTextInternal(src, tokens, settings);
+			tokens.AppendCloseParen();
+			if (statement)
+				tokens.AppendSemicolon();
+		}();
+		break;
+
+	case HLIL_CTZ:
+		[&]() {
+			auto src = instr.GetSourceExpr<HLIL_CTZ>();
+			tokens.Append(OperationToken, src.size > 4 ? "__builtin_ctzll" : "__builtin_ctz");
+			tokens.AppendOpenParen();
+			GetExprTextInternal(src, tokens, settings);
+			tokens.AppendCloseParen();
+			if (statement)
+				tokens.AppendSemicolon();
+		}();
+		break;
+
+	case HLIL_RBIT:
+		[&]() {
+			tokens.Append(OperationToken, "__rbit");
+			tokens.AppendOpenParen();
+			GetExprTextInternal(instr.GetSourceExpr<HLIL_RBIT>(), tokens, settings);
+			tokens.AppendCloseParen();
+			if (statement)
+				tokens.AppendSemicolon();
+		}();
+		break;
+
+	case HLIL_CLS:
+		[&]() {
+			tokens.Append(OperationToken, "__cls");
+			tokens.AppendOpenParen();
+			GetExprTextInternal(instr.GetSourceExpr<HLIL_CLS>(), tokens, settings);
+			tokens.AppendCloseParen();
+			if (statement)
+				tokens.AppendSemicolon();
+		}();
+		break;
+
 	case HLIL_FLOAT_CONV:
 		[&]() {
 			const auto srcExpr = instr.GetSourceExpr<HLIL_FLOAT_CONV>();

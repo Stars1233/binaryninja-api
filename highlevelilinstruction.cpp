@@ -260,6 +260,12 @@ static constexpr std::array s_instructionOperandUsage = {
 	OperandUsage{HLIL_INTRINSIC_SSA, {IntrinsicHighLevelOperandUsage, ParameterExprsHighLevelOperandUsage, DestMemoryVersionHighLevelOperandUsage, SourceMemoryVersionHighLevelOperandUsage}},
 	OperandUsage{HLIL_VAR_PHI, {DestSSAVariableHighLevelOperandUsage, SourceSSAVariablesHighLevelOperandUsage}},
 	OperandUsage{HLIL_MEM_PHI, {DestMemoryVersionHighLevelOperandUsage, SourceMemoryVersionsHighLevelOperandUsage}},
+	OperandUsage{HLIL_BSWAP, {SourceExprHighLevelOperandUsage}},
+	OperandUsage{HLIL_POPCNT, {SourceExprHighLevelOperandUsage}},
+	OperandUsage{HLIL_CLZ, {SourceExprHighLevelOperandUsage}},
+	OperandUsage{HLIL_CTZ, {SourceExprHighLevelOperandUsage}},
+	OperandUsage{HLIL_RBIT, {SourceExprHighLevelOperandUsage}},
+	OperandUsage{HLIL_CLS, {SourceExprHighLevelOperandUsage}},
 };
 
 
@@ -1261,6 +1267,12 @@ void HighLevelILInstruction::CollectSubExprs(stack<size_t>& toProcess) const
 	case HLIL_ADDRESS_OF:
 	case HLIL_NEG:
 	case HLIL_NOT:
+	case HLIL_BSWAP:
+	case HLIL_POPCNT:
+	case HLIL_CLZ:
+	case HLIL_CTZ:
+	case HLIL_RBIT:
+	case HLIL_CLS:
 	case HLIL_SX:
 	case HLIL_ZX:
 	case HLIL_LOW_PART:
@@ -1569,6 +1581,12 @@ ExprId HighLevelILInstruction::CopyTo(
 		return dest->Unreachable(loc);
 	case HLIL_NEG:
 	case HLIL_NOT:
+	case HLIL_BSWAP:
+	case HLIL_POPCNT:
+	case HLIL_CLZ:
+	case HLIL_CTZ:
+	case HLIL_RBIT:
+	case HLIL_CLS:
 	case HLIL_SX:
 	case HLIL_ZX:
 	case HLIL_LOW_PART:
@@ -2130,6 +2148,12 @@ bool HighLevelILInstruction::operator<(const HighLevelILInstruction& other) cons
 	case HLIL_DEREF:
 	case HLIL_NEG:
 	case HLIL_NOT:
+	case HLIL_BSWAP:
+	case HLIL_POPCNT:
+	case HLIL_CLZ:
+	case HLIL_CTZ:
+	case HLIL_RBIT:
+	case HLIL_CLS:
 	case HLIL_SX:
 	case HLIL_ZX:
 	case HLIL_LOW_PART:
@@ -3094,6 +3118,42 @@ ExprId HighLevelILFunction::Neg(size_t size, ExprId src, const ILSourceLocation&
 ExprId HighLevelILFunction::Not(size_t size, ExprId src, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_NOT, loc, size, src);
+}
+
+
+ExprId HighLevelILFunction::ByteSwap(size_t size, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(HLIL_BSWAP, loc, size, src);
+}
+
+
+ExprId HighLevelILFunction::PopulationCount(size_t size, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(HLIL_POPCNT, loc, size, src);
+}
+
+
+ExprId HighLevelILFunction::CountLeadingZeros(size_t size, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(HLIL_CLZ, loc, size, src);
+}
+
+
+ExprId HighLevelILFunction::CountTrailingZeros(size_t size, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(HLIL_CTZ, loc, size, src);
+}
+
+
+ExprId HighLevelILFunction::ReverseBits(size_t size, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(HLIL_RBIT, loc, size, src);
+}
+
+
+ExprId HighLevelILFunction::CountLeadingSigns(size_t size, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(HLIL_CLS, loc, size, src);
 }
 
 

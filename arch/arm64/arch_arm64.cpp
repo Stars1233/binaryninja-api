@@ -994,18 +994,12 @@ class Arm64Architecture : public Architecture
 			return "__xpaci";
 		case ARM64_INTRIN_ERET:
 			return "_eret";
-		case ARM64_INTRIN_CLZ:
-			return "_CountLeadingZeros";
 		case ARM64_INTRIN_CNT:
 			return "_PopulationCount";
-		case ARM64_INTRIN_CTZ:
-			return "_CountTrailingZeros";
 		case ARM64_INTRIN_CLREX:
 			return "__clrex";
-		case ARM64_INTRIN_REV:
-			return "_byteswap";
-		case ARM64_INTRIN_RBIT:
-			return "__rbit";
+		case ARM64_INTRIN_REV16:
+			return "__rev16";
 		case ARM64_INTRIN_AESD:
 			return "__aesd";
 		case ARM64_INTRIN_AESE:
@@ -1125,12 +1119,9 @@ class Arm64Architecture : public Architecture
 				NameAndType(Type::IntegerType(8, false))
 			};
 			break;
-		case ARM64_INTRIN_CLZ:        // reads <Xn>
 		case ARM64_INTRIN_CNT:        // reads <Xn>
-		case ARM64_INTRIN_CTZ:        // reads <Xn>
 		case ARM64_INTRIN_PRFM:
-		case ARM64_INTRIN_REV:   // reads <Xn>
-		case ARM64_INTRIN_RBIT:  // reads <Xn>
+		case ARM64_INTRIN_REV16:      // reads <Xn>
 			return {NameAndType(Type::IntegerType(8, false))};
 		case ARM64_INTRIN_AUTDA:      // reads <Xd>, <Xn|SP>
 		case ARM64_INTRIN_AUTDB:      // reads <Xd>, <Xn|SP>
@@ -1190,11 +1181,8 @@ class Arm64Architecture : public Architecture
 		case ARM64_INTRIN_PACIB:      // writes <Xd>
 		case ARM64_INTRIN_XPACD:      // writes <Xd>
 		case ARM64_INTRIN_XPACI:      // writes <Xd>
-		case ARM64_INTRIN_CLZ:        // writes <Xd>
 		case ARM64_INTRIN_CNT:        // writes <Xd>
-		case ARM64_INTRIN_CTZ:        // writes <Xd>
-		case ARM64_INTRIN_REV:        // writes <Xd>
-		case ARM64_INTRIN_RBIT:       // writes <Xd>
+		case ARM64_INTRIN_REV16:      // writes <Xd>
 			return {Type::IntegerType(8, false)};
 		case ARM64_INTRIN_AESD:
 		case ARM64_INTRIN_AESE:

@@ -1767,17 +1767,28 @@ bool GetLowLevelILForInstruction(
 		    ILSETREG_O(operand1, il.Neg(REGSZ_O(operand1), ILREG_O(operand2))),
 		    ILSETREG_O(operand1, ILREG_O(operand2)));
 		break;
+	case ARM64_CLS:
+		il.AddInstruction(ILSETREG_O(operand1, il.CountLeadingSigns(REGSZ_O(operand2), ILREG_O(operand2))));
+		break;
 	case ARM64_CLZ:
-		il.AddInstruction(il.Intrinsic(
-		    {RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_CLZ, {ILREG_O(operand2)}));
+		il.AddInstruction(ILSETREG_O(operand1, il.CountLeadingZeros(REGSZ_O(operand2), ILREG_O(operand2))));
 		break;
 	case ARM64_CNT:
-		il.AddInstruction(
-			il.Intrinsic({RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_CNT, {ILREG_O(operand2)}));
+		switch (instr.encoding) {
+		case ENC_CNT_32_DP_1SRC:
+		case ENC_CNT_64_DP_1SRC:
+			// FEAT_CSSC scalar population count on a general-purpose register
+			il.AddInstruction(ILSETREG_O(operand1, il.PopulationCount(REGSZ_O(operand2), ILREG_O(operand2))));
+			break;
+		default:
+			// The NEON and SVE forms are per-element population counts, which have no native scalar
+			// representation and are lifted as an intrinsic
+			il.AddInstruction(
+				il.Intrinsic({RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_CNT, {ILREG_O(operand2)}));
+		}
 		break;
 	case ARM64_CTZ:
-		il.AddInstruction(
-			il.Intrinsic({RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_CTZ, {ILREG_O(operand2)}));
+		il.AddInstruction(ILSETREG_O(operand1, il.CountTrailingZeros(REGSZ_O(operand2), ILREG_O(operand2))));
 		break;
 	case ARM64_DC:
 		// il.AddInstruction(
@@ -3159,12 +3170,50 @@ bool GetLowLevelILForInstruction(
 		il.AddInstruction(il.Unimplemented());
 		break;
 	case ARM64_REV16:
+		switch (instr.encoding) {
+		case ENC_REV16_ASIMDMISC_R:
+			break;
+		default:
+			if (IS_SVE_O(operand1))
+			{
+				il.AddInstruction(il.Unimplemented());
+				break;
+			}
+			if (REGSZ_O(operand1) == 4)
+			{
+				// A 32-bit register holds two 16-bit lanes, so reversing the bytes within each lane is
+				// a full byte reversal rotated by one halfword
+				il.AddInstruction(ILSETREG_O(operand1,
+					il.RotateRight(4, il.ByteSwap(4, ILREG_O(operand2)), il.Const(1, 16))));
+			}
+			else
+			{
+				// A 64-bit register holds four 16-bit lanes; reversing the bytes within each lane has
+				// no native representation and is lifted as an intrinsic
+				il.AddInstruction(il.Intrinsic(
+					{RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_REV16, {ILREG_O(operand2)}));
+			}
+		}
+		break;
 	case ARM64_REV32:
+		switch (instr.encoding) {
+		case ENC_REV32_ASIMDMISC_R:
+			break;
+		default:
+			if (IS_SVE_O(operand1))
+			{
+				il.AddInstruction(il.Unimplemented());
+				break;
+			}
+			// REV32 reverses bytes within each 32-bit lane; a 64-bit register holds two such lanes,
+			// so it is a full byte reversal rotated by one word
+			il.AddInstruction(ILSETREG_O(operand1,
+				il.RotateRight(8, il.ByteSwap(8, ILREG_O(operand2)), il.Const(1, 32))));
+		}
+		break;
 	case ARM64_REV64:
 	case ARM64_REV:
 		switch (instr.encoding) {
-		case ENC_REV16_ASIMDMISC_R:
-		case ENC_REV32_ASIMDMISC_R:
 		case ENC_REV64_ASIMDMISC_R:
 			break;
 		default:
@@ -3173,9 +3222,7 @@ bool GetLowLevelILForInstruction(
 				il.AddInstruction(il.Unimplemented());
 				break;
 			}
-			// if LLIL_BSWAP ever gets added, replace
-			il.AddInstruction(il.Intrinsic(
-				{RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_REV, {ILREG_O(operand2)}));
+			il.AddInstruction(ILSETREG_O(operand1, il.ByteSwap(REGSZ_O(operand2), ILREG_O(operand2))));
 		}
 		break;
 	case ARM64_RBIT:
@@ -3183,8 +3230,7 @@ bool GetLowLevelILForInstruction(
 		case ENC_RBIT_ASIMDMISC_R:
 			break;
 		default:
-			il.AddInstruction(il.Intrinsic(
-				{RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_RBIT, {ILREG_O(operand2)}));
+			il.AddInstruction(ILSETREG_O(operand1, il.ReverseBits(REGSZ_O(operand2), ILREG_O(operand2))));
 		}
 		break;
 	case ARM64_ROR:

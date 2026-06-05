@@ -628,7 +628,9 @@ where
             | MulsDp(ref op) | MuluDp(ref op) | Divu(ref op) | Divs(ref op) | Modu(ref op)
             | Mods(ref op) | Fadd(ref op) | Fsub(ref op) | Fmul(ref op) | Fdiv(ref op)
             | DivuDp(ref op) | DivsDp(ref op) | ModuDp(ref op) | ModsDp(ref op)
-            | MinSigned(ref op) | MaxSigned(ref op) | MinUnsigned(ref op) | MaxUnsigned(ref op) => Some(op),
+            | MinSigned(ref op) | MaxSigned(ref op) | MinUnsigned(ref op) | MaxUnsigned(ref op) => {
+                Some(op)
+            }
             _ => None,
         }
     }
@@ -646,9 +648,9 @@ where
         use self::LowLevelILExpressionKind::*;
 
         match *self {
-            Neg(ref op) | Not(ref op) | Bswap(ref op) | Popcnt(ref op) | Clz(ref op) | Ctz(ref op)
-            | Rbit(ref op) | Cls(ref op) | Abs(ref op) | Sx(ref op) | Zx(ref op) | LowPart(ref op)
-            | BoolToInt(ref op) | Fsqrt(ref op) | Fneg(ref op) | Fabs(ref op)
+            Neg(ref op) | Not(ref op) | Bswap(ref op) | Popcnt(ref op) | Clz(ref op)
+            | Ctz(ref op) | Rbit(ref op) | Cls(ref op) | Abs(ref op) | Sx(ref op) | Zx(ref op)
+            | LowPart(ref op) | BoolToInt(ref op) | Fsqrt(ref op) | Fneg(ref op) | Fabs(ref op)
             | FloatToInt(ref op) | IntToFloat(ref op) | FloatConv(ref op) | RoundToInt(ref op)
             | Floor(ref op) | Ceil(ref op) | Ftrunc(ref op) => Some(op),
             _ => None,
@@ -692,9 +694,9 @@ where
                 visit!(op.left());
                 visit!(op.right());
             }
-            Neg(ref op) | Not(ref op) | Bswap(ref op) | Popcnt(ref op) | Clz(ref op) | Ctz(ref op)
-            | Rbit(ref op) | Cls(ref op) | Abs(ref op) | Sx(ref op) | Zx(ref op) | LowPart(ref op)
-            | BoolToInt(ref op) | Fsqrt(ref op) | Fneg(ref op) | Fabs(ref op)
+            Neg(ref op) | Not(ref op) | Bswap(ref op) | Popcnt(ref op) | Clz(ref op)
+            | Ctz(ref op) | Rbit(ref op) | Cls(ref op) | Abs(ref op) | Sx(ref op) | Zx(ref op)
+            | LowPart(ref op) | BoolToInt(ref op) | Fsqrt(ref op) | Fneg(ref op) | Fabs(ref op)
             | FloatToInt(ref op) | IntToFloat(ref op) | FloatConv(ref op) | RoundToInt(ref op)
             | Floor(ref op) | Ceil(ref op) | Ftrunc(ref op) => {
                 visit!(op.operand());
@@ -788,9 +790,9 @@ where
 
             DivuDp(ref op) | DivsDp(ref op) | ModuDp(ref op) | ModsDp(ref op) => &op.op,
 
-            Neg(ref op) | Not(ref op) | Bswap(ref op) | Popcnt(ref op) | Clz(ref op) | Ctz(ref op)
-            | Rbit(ref op) | Cls(ref op) | Abs(ref op) | Sx(ref op) | Zx(ref op) | LowPart(ref op)
-            | BoolToInt(ref op) | Fsqrt(ref op) | Fneg(ref op) | Fabs(ref op)
+            Neg(ref op) | Not(ref op) | Bswap(ref op) | Popcnt(ref op) | Clz(ref op)
+            | Ctz(ref op) | Rbit(ref op) | Cls(ref op) | Abs(ref op) | Sx(ref op) | Zx(ref op)
+            | LowPart(ref op) | BoolToInt(ref op) | Fsqrt(ref op) | Fneg(ref op) | Fabs(ref op)
             | FloatToInt(ref op) | IntToFloat(ref op) | FloatConv(ref op) | RoundToInt(ref op)
             | Floor(ref op) | Ceil(ref op) | Ftrunc(ref op) => &op.op,
 
@@ -863,9 +865,9 @@ impl LowLevelILExpressionKind<'_, Mutable, NonSSA> {
 
             DivuDp(ref op) | DivsDp(ref op) | ModuDp(ref op) | ModsDp(ref op) => op.flag_write(),
 
-            Neg(ref op) | Not(ref op) | Bswap(ref op) | Popcnt(ref op) | Clz(ref op) | Ctz(ref op)
-            | Rbit(ref op) | Cls(ref op) | Abs(ref op) | Sx(ref op) | Zx(ref op) | LowPart(ref op)
-            | BoolToInt(ref op) | Fsqrt(ref op) | Fneg(ref op) | Fabs(ref op)
+            Neg(ref op) | Not(ref op) | Bswap(ref op) | Popcnt(ref op) | Clz(ref op)
+            | Ctz(ref op) | Rbit(ref op) | Cls(ref op) | Abs(ref op) | Sx(ref op) | Zx(ref op)
+            | LowPart(ref op) | BoolToInt(ref op) | Fsqrt(ref op) | Fneg(ref op) | Fabs(ref op)
             | FloatToInt(ref op) | IntToFloat(ref op) | FloatConv(ref op) | RoundToInt(ref op)
             | Floor(ref op) | Ceil(ref op) | Ftrunc(ref op) => op.flag_write(),
 

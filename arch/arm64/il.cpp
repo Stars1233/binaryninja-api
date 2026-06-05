@@ -1329,12 +1329,19 @@ bool GetLowLevelILForInstruction(
 	switch (instr.operation)
 	{
 	case ARM64_ABS:
-	{
-		ExprId src = ILREG_O(operand2);
-		GenIfElse(il, il.CompareSignedLessThan(REGSZ_O(operand2), src, il.Const(REGSZ_O(operand2), 0)),
-			ILSETREG_O(operand1, il.Neg(REGSZ_O(operand2), src)), ILSETREG_O(operand1, src));
+		switch (instr.encoding)
+		{
+		case ENC_ABS_32_DP_1SRC:
+		case ENC_ABS_64_DP_1SRC:
+			// FEAT_CSSC scalar absolute value on a general-purpose register
+			il.AddInstruction(ILSETREG_O(operand1, il.AbsoluteValue(REGSZ_O(operand2), ILREG_O(operand2))));
+			break;
+		default:
+			// The NEON and SVE forms are per-element absolute values, which have no native scalar
+			// representation
+			il.AddInstruction(il.Unimplemented());
+		}
 		break;
-	}
 	case ARM64_ADD:
 		switch (instr.encoding)
 		{
@@ -4004,8 +4011,7 @@ bool GetLowLevelILForInstruction(
 			return true;
 		}
 
-		GenIfElse(il, il.CompareSignedGreaterThan(REGSZ_O(operand2), op2, op3), ILSETREG_O(operand1, op2),
-			ILSETREG_O(operand1, op3));
+		il.AddInstruction(ILSETREG_O(operand1, il.MaxSigned(REGSZ_O(operand2), op2, op3)));
 		break;
 	}
 	case ARM64_SMIN:
@@ -4028,8 +4034,7 @@ bool GetLowLevelILForInstruction(
 			return true;
 		}
 
-		GenIfElse(il, il.CompareSignedLessThan(REGSZ_O(operand2), op2, op3), ILSETREG_O(operand1, op2),
-			ILSETREG_O(operand1, op3));
+		il.AddInstruction(ILSETREG_O(operand1, il.MinSigned(REGSZ_O(operand2), op2, op3)));
 		break;
 	}
 	case ARM64_UDIV:
@@ -4064,8 +4069,7 @@ bool GetLowLevelILForInstruction(
 			return true;
 		}
 
-		GenIfElse(il, il.CompareUnsignedGreaterThan(REGSZ_O(operand2), op2, op3), ILSETREG_O(operand1, op2),
-			ILSETREG_O(operand1, op3));
+		il.AddInstruction(ILSETREG_O(operand1, il.MaxUnsigned(REGSZ_O(operand2), op2, op3)));
 		break;
 	}
 	case ARM64_UMIN:
@@ -4088,8 +4092,7 @@ bool GetLowLevelILForInstruction(
 			return true;
 		}
 
-		GenIfElse(il, il.CompareUnsignedLessThan(REGSZ_O(operand2), op2, op3), ILSETREG_O(operand1, op2),
-			ILSETREG_O(operand1, op3));
+		il.AddInstruction(ILSETREG_O(operand1, il.MinUnsigned(REGSZ_O(operand2), op2, op3)));
 		break;
 	}
 	case ARM64_UBFIZ:

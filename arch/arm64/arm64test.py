@@ -12725,7 +12725,56 @@ tests_grab_bag = [
     (b'\x1F\x20\x03\xD5', 'LLIL_NOP()'), # nop, gets optimized from function
 ]
 
+# FEAT_CSSC integer min/max and absolute value (lifted to dedicated LLIL ops)
+tests_cssc = [
+    # smax    w0, w1, w2
+    (b'\x20\x60\xc2\x1a', 'LLIL_SET_REG.d(w0,LLIL_MAXS.d(LLIL_REG.d(w1),LLIL_REG.d(w2)))'),
+    # smax    x0, x1, x2
+    (b'\x20\x60\xc2\x9a', 'LLIL_SET_REG.q(x0,LLIL_MAXS.q(LLIL_REG.q(x1),LLIL_REG.q(x2)))'),
+    # umax    w0, w1, w2
+    (b'\x20\x64\xc2\x1a', 'LLIL_SET_REG.d(w0,LLIL_MAXU.d(LLIL_REG.d(w1),LLIL_REG.d(w2)))'),
+    # umax    x0, x1, x2
+    (b'\x20\x64\xc2\x9a', 'LLIL_SET_REG.q(x0,LLIL_MAXU.q(LLIL_REG.q(x1),LLIL_REG.q(x2)))'),
+    # smin    w0, w1, w2
+    (b'\x20\x68\xc2\x1a', 'LLIL_SET_REG.d(w0,LLIL_MINS.d(LLIL_REG.d(w1),LLIL_REG.d(w2)))'),
+    # smin    x0, x1, x2
+    (b'\x20\x68\xc2\x9a', 'LLIL_SET_REG.q(x0,LLIL_MINS.q(LLIL_REG.q(x1),LLIL_REG.q(x2)))'),
+    # umin    w0, w1, w2
+    (b'\x20\x6c\xc2\x1a', 'LLIL_SET_REG.d(w0,LLIL_MINU.d(LLIL_REG.d(w1),LLIL_REG.d(w2)))'),
+    # umin    x0, x1, x2
+    (b'\x20\x6c\xc2\x9a', 'LLIL_SET_REG.q(x0,LLIL_MINU.q(LLIL_REG.q(x1),LLIL_REG.q(x2)))'),
+    # abs     w0, w1
+    (b'\x20\x20\xc0\x5a', 'LLIL_SET_REG.d(w0,LLIL_ABS.d(LLIL_REG.d(w1)))'),
+    # abs     x0, x1
+    (b'\x20\x20\xc0\xda', 'LLIL_SET_REG.q(x0,LLIL_ABS.q(LLIL_REG.q(x1)))'),
+    # smax    w0, w1, #0x5
+    (b'\x20\x14\xc0\x11', 'LLIL_SET_REG.d(w0,LLIL_MAXS.d(LLIL_REG.d(w1),LLIL_CONST.d(0x5)))'),
+    # umin    w0, w1, #0x7
+    (b'\x20\x1c\xcc\x11', 'LLIL_SET_REG.d(w0,LLIL_MINU.d(LLIL_REG.d(w1),LLIL_CONST.d(0x7)))'),
+    # ctz     w0, w1
+    (b'\x20\x18\xc0\x5a', 'LLIL_SET_REG.d(w0,LLIL_CTZ.d(LLIL_REG.d(w1)))'),
+    # ctz     x0, x1
+    (b'\x20\x18\xc0\xda', 'LLIL_SET_REG.q(x0,LLIL_CTZ.q(LLIL_REG.q(x1)))'),
+    # cnt     w0, w1 (FEAT_CSSC scalar population count)
+    (b'\x20\x1c\xc0\x5a', 'LLIL_SET_REG.d(w0,LLIL_POPCNT.d(LLIL_REG.d(w1)))'),
+    # cnt     x0, x1 (FEAT_CSSC scalar population count)
+    (b'\x20\x1c\xc0\xda', 'LLIL_SET_REG.q(x0,LLIL_POPCNT.q(LLIL_REG.q(x1)))'),
+
+    # Vector/SVE forms of these mnemonics are not FEAT_CSSC scalar ops and must not be lifted
+    # as whole-register scalar operations. The NEON cnt has a per-element intrinsic; the others
+    # have no native scalar representation and are left unimplemented.
+    # cnt     v0.8b, v1.8b
+    (b'\x20\x58\x20\x0e', 'LLIL_INTRINSIC([v0],_PopulationCount,[LLIL_REG.o(v1)])'),
+    # cnt     v0.16b, v1.16b
+    (b'\x20\x58\x20\x4e', 'LLIL_INTRINSIC([v0],_PopulationCount,[LLIL_REG.o(v1)])'),
+    # abs     v0.8b, v1.8b
+    (b'\x20\xb8\x20\x0e', 'LLIL_UNIMPL()'),
+    # abs     v0.2d, v1.2d
+    (b'\x20\xb8\xe0\x4e', 'LLIL_UNIMPL()'),
+]
+
 test_cases = \
+	tests_cssc + \
 	tests_shll + \
 	tests_udf + \
 	tests_pac + \

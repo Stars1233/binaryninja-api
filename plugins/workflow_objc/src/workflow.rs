@@ -37,6 +37,19 @@ pub fn register_activities() -> Result<(), WorkflowRegistrationError> {
         run(activities::objc_msg_send_calls::process),
     );
 
+    let name_stubs_activity = Activity::new_with_action(
+        activity::Config::action(
+            "core.function.objectiveC.nameSelectorStubs",
+            "Obj-C: Rename Message Send Stubs",
+            "Reconstruct names for Objective-C selector stubs, such as _objc_msgSend$foo, that have no symbol table entry.",
+        )
+        .eligibility(
+            activity::Eligibility::auto().predicate(
+                activity::ViewType::in_(["Mach-O", "DSCView"]),
+        )),
+        run(activities::name_stubs::process),
+    );
+
     let inline_stubs_activity = Activity::new_with_action(
         activity::Config::action(
             "core.function.objectiveC.inlineStubs",
@@ -93,7 +106,8 @@ pub fn register_activities() -> Result<(), WorkflowRegistrationError> {
     );
 
     workflow
-        .activity_after(&inline_stubs_activity, "core.function.translateTailCalls")?
+        .activity_after(&name_stubs_activity, "core.function.translateTailCalls")?
+        .activity_after(&inline_stubs_activity, &name_stubs_activity.name())?
         .activity_after(&objc_msg_send_calls_activity, &inline_stubs_activity.name())?
         .activity_before(
             &remove_memory_management_activity,

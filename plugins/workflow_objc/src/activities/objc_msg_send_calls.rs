@@ -119,12 +119,12 @@ fn process_instruction(
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-enum MessageSendType {
+pub(crate) enum MessageSendType {
     Normal,
     Super,
 }
 
-fn call_target_type(bv: &BinaryView, call_target: u64) -> Option<MessageSendType> {
+pub(crate) fn call_target_type(bv: &BinaryView, call_target: u64) -> Option<MessageSendType> {
     let name = bv
         .symbol_by_address(call_target)
         .map(|s| s.raw_name().to_string_lossy().into_owned())?;
@@ -141,7 +141,7 @@ fn call_target_type(bv: &BinaryView, call_target: u64) -> Option<MessageSendType
     }
 }
 
-fn selector_from_call(
+pub(crate) fn selector_from_call(
     bv: &BinaryView,
     ssa: &LowLevelILFunction<Mutable, SSA>,
     call_op: &Operation<Mutable, SSA, CallSsa>,

@@ -531,8 +531,16 @@ std::vector<CacheSymbol> SharedCacheMachOHeader::ReadSymbolTable(VirtualMemory& 
 		{
 			if (!flags.has_value())
 			{
-				// TODO: where logger?
-				LogErrorF("Symbol {:?} at address {:#x} is not in any section", symbolName.c_str(), symbolAddress);
+				// In iOS / macOS 27 shared caches, sections such as __objc_stubs are coalesced out of
+				// individual dylibs, leaving a zero-size section whose symbols no longer point at
+				// anything in this image. These are not an error.
+				bool coalescedSection = nlist.n_sect > 0 && (size_t)(nlist.n_sect - 1) < sections.size()
+					&& sections[nlist.n_sect - 1].size == 0;
+				if (!coalescedSection)
+				{
+					// TODO: where logger?
+					LogErrorF("Symbol {:?} at address {:#x} is not in any section", symbolName, symbolAddress);
+				}
 				continue;
 			}
 

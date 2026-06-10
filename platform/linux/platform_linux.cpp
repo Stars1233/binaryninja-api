@@ -671,6 +671,18 @@ extern "C"
 			BinaryViewType::RegisterPlatform("ELF", 3, platform);
 		}
 
+		Ref<Architecture> cskyv2be = Architecture::GetByName("csky_be");
+		if (cskyv2be)
+		{
+			Ref<Platform> platform;
+
+			platform = new LinuxCSkyV2Platform(cskyv2be, "linux-csky_be");
+			Platform::Register("linux", platform);
+			// Linux binaries sometimes have an OS identifier of zero, even though 3 is the correct one
+			BinaryViewType::RegisterPlatform("ELF", 0, platform);
+			BinaryViewType::RegisterPlatform("ELF", 3, platform);
+		}
+
 		Ref<Architecture> nds32 = Architecture::GetByName("nds32");
 		if (nds32)
 		{

@@ -268,6 +268,7 @@ namespace BinaryNinja {
 			QualifiedName imageInfoSwiftVersion;
 			QualifiedName imageInfo;
 			QualifiedName methodEntry;
+			QualifiedName methodEntryTypeOffsets;
 			QualifiedName method;
 			QualifiedName methodList;
 			QualifiedName classRO;
@@ -337,7 +338,7 @@ namespace BinaryNinja {
 		Ref<Logger> m_logger;
 
 		virtual uint64_t GetObjCRelativeMethodBaseAddress(ObjCReader* reader);
-		virtual void GetRelativeMethod(ObjCReader* reader, method_t& meth);
+		virtual void GetRelativeMethod(ObjCReader* reader, method_t& meth, bool typesAreOffsetsFromSelectorBase);
 		virtual std::shared_ptr<ObjCReader> GetReader() = 0;
 		// Because an objective-c processor might have access to other non-view symbols that we want to retrieve.
 		// By default, this will just get symbol at the address in the view.

@@ -918,8 +918,11 @@ void ObjCProcessor::LoadProtocols(ObjCReader* reader, Ref<Section> listSection)
 	}
 }
 
-void ObjCProcessor::GetRelativeMethod(ObjCReader* reader, method_t& meth)
+void ObjCProcessor::GetRelativeMethod(ObjCReader* reader, method_t& meth, bool typesAreOffsetsFromSelectorBase)
 {
+	// `typesAreOffsetsFromSelectorBase` is only relevant for shared caches
+	(void)typesAreOffsetsFromSelectorBase;
+
 	uint64_t offset = reader->GetOffset();
 	meth.name = offset + reader->ReadS32();
 
@@ -980,15 +983,16 @@ void ObjCProcessor::ReadMethodList(ObjCReader* reader, ClassBase& cls, std::stri
 	uint64_t pointerSize = m_data->GetAddressSize();
 	bool relativeOffsets = (head.entsizeAndFlags & 0xFFFF0000) & 0x80000000;
 	bool directSelectors = (head.entsizeAndFlags & 0xFFFF0000) & 0x40000000;
+	bool typesAreOffsetsFromSelectorBase = (head.entsizeAndFlags & 0xFFFF0000) & 0x20000000;
 	auto methodSize = relativeOffsets ? 12 : pointerSize * 3;
 	DefineObjCSymbol(DataSymbol, m_typeNames.methodList, "method_list_" + std::string(name), start, true);
 
 	for (unsigned i = 0; i < head.count; i++)
 	{
+		auto cursor = start + sizeof(method_list_t) + (i * methodSize);
 		try
 		{
 			Method method;
-			auto cursor = start + sizeof(method_list_t) + (i * methodSize);
 			reader->Seek(cursor);
 			method_t meth;
 			// workflow_objc support
@@ -997,7 +1001,7 @@ void ObjCProcessor::ReadMethodList(ObjCReader* reader, ClassBase& cls, std::stri
 			// --
 			if (relativeOffsets)
 			{
-				GetRelativeMethod(reader, meth);
+				GetRelativeMethod(reader, meth, typesAreOffsetsFromSelectorBase);
 			}
 			else
 			{
@@ -1050,8 +1054,12 @@ void ObjCProcessor::ReadMethodList(ObjCReader* reader, ClassBase& cls, std::stri
 				m_selRefToImplementations[selRefAddr].push_back(meth.imp);
 			// --
 
-			DefineObjCSymbol(DataSymbol, relativeOffsets ? m_typeNames.methodEntry : m_typeNames.method,
-				"method_" + method.name, cursor, true);
+			QualifiedName methodTypeName = m_typeNames.method;
+			if (relativeOffsets)
+				methodTypeName = typesAreOffsetsFromSelectorBase && !m_typeNames.methodEntryTypeOffsets.IsEmpty()
+					? m_typeNames.methodEntryTypeOffsets
+					: m_typeNames.methodEntry;
+			DefineObjCSymbol(DataSymbol, methodTypeName, "method_" + method.name, cursor, true);
 			method.imp = meth.imp;
 			cls.methodList[cursor] = method;
 			m_localMethods[cursor] = method;
@@ -1061,10 +1069,14 @@ void ObjCProcessor::ReadMethodList(ObjCReader* reader, ClassBase& cls, std::stri
 			if (selRefAddr)
 				m_data->AddDataReference(selRefAddr, meth.imp);
 		}
+		catch (const std::exception& ex)
+		{
+			m_logger->LogErrorF(
+				"Failed to process a method at offset {:#x} in method list \"{}\": {}", cursor, name, ex.what());
+		}
 		catch (...)
 		{
-			m_logger->LogError(
-				"Failed to process a method at offset 0x%llx", start + sizeof(method_list_t) + (i * methodSize));
+			m_logger->LogErrorF("Failed to process a method at offset {:#x} in method list \"{}\"", cursor, name);
 		}
 	}
 }
@@ -1511,6 +1523,23 @@ void ObjCProcessor::ProcessObjCData()
 	methodEntry.AddMember(Type::NamedType(m_data, relativeIMPPtrName), "imp");
 	auto type = finalizeStructureBuilder(m_data, methodEntry, "objc_method_entry_t");
 	m_typeNames.methodEntry = type.first;
+
+	// Shared caches built with type offsets store the `types` field as an offset from the same base address as
+	// relative selectors. That base address is only known for shared caches, so the struct is only defined for them.
+	if (relativeSelectorBaseOffset)
+	{
+		auto relativeTypesPtrName = defineTypedef(m_data, {"rel_types"},
+			TypeBuilder::PointerType(4, Type::PointerType(addrSize, Type::IntegerType(1, false)))
+				.SetPointerBase(RelativeToConstantPointerBaseType, relativeSelectorBaseOffset)
+				.Finalize());
+
+		StructureBuilder methodEntryTypeOffsets;
+		methodEntryTypeOffsets.AddMember(Type::NamedType(m_data, relativeSelectorPtrName), "name");
+		methodEntryTypeOffsets.AddMember(Type::NamedType(m_data, relativeTypesPtrName), "types");
+		methodEntryTypeOffsets.AddMember(Type::NamedType(m_data, relativeIMPPtrName), "imp");
+		type = finalizeStructureBuilder(m_data, methodEntryTypeOffsets, "objc_method_entry_type_offsets_t");
+		m_typeNames.methodEntryTypeOffsets = type.first;
+	}
 
 	StructureBuilder method;
 	method.AddMember(Type::PointerType(addrSize, Type::IntegerType(1, true)), "name");

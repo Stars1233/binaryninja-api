@@ -345,140 +345,138 @@ static const char* GetRelocationString(MachoArmRelocationType rel)
 
 static const char* GetRelocationString(ElfArmRelocationType rel)
 {
-	static map<ElfArmRelocationType, const char*> relocTable =
+	switch (rel)
 	{
-		{R_ARM_NONE, "R_ARM_NONE"},
-		{R_ARM_PC24, "R_ARM_PC24"},
-		{R_ARM_ABS32, "R_ARM_ABS32"},
-		{R_ARM_REL32, "R_ARM_REL32"},
-		{R_ARM_LDR_PC_G0, "R_ARM_LDR_PC_G0"},
-		{R_ARM_ABS16, "R_ARM_ABS16"},
-		{R_ARM_ABS12, "R_ARM_ABS12"},
-		{R_ARM_THM_ABS5, "R_ARM_THM_ABS5"},
-		{R_ARM_ABS8, "R_ARM_ABS8"},
-		{R_ARM_SBREL32, "R_ARM_SBREL32"},
-		{R_ARM_THM_CALL, "R_ARM_THM_CALL"},
-		{R_ARM_THM_PC8, "R_ARM_THM_PC8"},
-		{R_ARM_BREL_ADJ, "R_ARM_BREL_ADJ"},
-		{R_ARM_TLS_DESC, "R_ARM_TLS_DESC"},
-		{R_ARM_THM_SWI8, "R_ARM_THM_SWI8"},
-		{R_ARM_XPC25, "R_ARM_XPC25"},
-		{R_ARM_THM_XPC22, "R_ARM_THM_XPC22"},
-		{R_ARM_TLS_DTPMOD32, "R_ARM_TLS_DTPMOD32"},
-		{R_ARM_TLS_DTPOFF32, "R_ARM_TLS_DTPOFF32"},
-		{R_ARM_TLS_TPOFF32, "R_ARM_TLS_TPOFF32"},
-		{R_ARM_COPY, "R_ARM_COPY"},
-		{R_ARM_GLOB_DAT, "R_ARM_GLOB_DAT"},
-		{R_ARM_JUMP_SLOT, "R_ARM_JUMP_SLOT"},
-		{R_ARM_RELATIVE, "R_ARM_RELATIVE"},
-		{R_ARM_GOTOFF32, "R_ARM_GOTOFF32"},
-		{R_ARM_BASE_PREL, "R_ARM_BASE_PREL"},
-		{R_ARM_GOT_BREL, "R_ARM_GOT_BREL"},
-		{R_ARM_PLT32, "R_ARM_PLT32"},
-		{R_ARM_CALL, "R_ARM_CALL"},
-		{R_ARM_JUMP24, "R_ARM_JUMP24"},
-		{R_ARM_THM_JUMP24, "R_ARM_THM_JUMP24"},
-		{R_ARM_BASE_ABS, "R_ARM_BASE_ABS"},
-		{R_ARM_ALU_PCREL_7_0, "R_ARM_ALU_PCREL_7_0"},
-		{R_ARM_ALU_PCREL_15_8, "R_ARM_ALU_PCREL_15_8"},
-		{R_ARM_ALU_PCREL_23_15, "R_ARM_ALU_PCREL_23_15"},
-		{R_ARM_LDR_SBREL_11_0_NC, "R_ARM_LDR_SBREL_11_0_NC"},
-		{R_ARM_ALU_SBREL_19_12_NC, "R_ARM_ALU_SBREL_19_12_NC"},
-		{R_ARM_ALU_SBREL_27_20_CK, "R_ARM_ALU_SBREL_27_20_CK"},
-		{R_ARM_TARGET1, "R_ARM_TARGET1"},
-		{R_ARM_SBREL31, "R_ARM_SBREL31"},
-		{R_ARM_V4BX, "R_ARM_V4BX"},
-		{R_ARM_TARGET2, "R_ARM_TARGET2"},
-		{R_ARM_PREL31, "R_ARM_PREL31"},
-		{R_ARM_MOVW_ABS_NC, "R_ARM_MOVW_ABS_NC"},
-		{R_ARM_MOVT_ABS, "R_ARM_MOVT_ABS"},
-		{R_ARM_MOVW_PREL_NC, "R_ARM_MOVW_PREL_NC"},
-		{R_ARM_MOVT_PREL, "R_ARM_MOVT_PREL"},
-		{R_ARM_THM_MOVW_ABS_NC, "R_ARM_THM_MOVW_ABS_NC"},
-		{R_ARM_THM_MOVT_ABS, "R_ARM_THM_MOVT_ABS"},
-		{R_ARM_THM_MOVW_PREL_NC, "R_ARM_THM_MOVW_PREL_NC"},
-		{R_ARM_THM_MOVT_PREL, "R_ARM_THM_MOVT_PREL"},
-		{R_ARM_THM_JUMP19, "R_ARM_THM_JUMP19"},
-		{R_ARM_THM_JUMP6, "R_ARM_THM_JUMP6"},
-		{R_ARM_THM_ALU_PREL_11_0, "R_ARM_THM_ALU_PREL_11_0"},
-		{R_ARM_THM_PC12, "R_ARM_THM_PC12"},
-		{R_ARM_ABS32_NOI, "R_ARM_ABS32_NOI"},
-		{R_ARM_REL32_NOI, "R_ARM_REL32_NOI"},
-		{R_ARM_ALU_PC_G0_NC, "R_ARM_ALU_PC_G0_NC"},
-		{R_ARM_ALU_PC_G0, "R_ARM_ALU_PC_G0"},
-		{R_ARM_ALU_PC_G1_NC, "R_ARM_ALU_PC_G1_NC"},
-		{R_ARM_ALU_PC_G1, "R_ARM_ALU_PC_G1"},
-		{R_ARM_ALU_PC_G2, "R_ARM_ALU_PC_G2"},
-		{R_ARM_LDR_PC_G1, "R_ARM_LDR_PC_G1"},
-		{R_ARM_LDR_PC_G2, "R_ARM_LDR_PC_G2"},
-		{R_ARM_LDRS_PC_G0, "R_ARM_LDRS_PC_G0"},
-		{R_ARM_LDRS_PC_G1, "R_ARM_LDRS_PC_G1"},
-		{R_ARM_LDRS_PC_G2, "R_ARM_LDRS_PC_G2"},
-		{R_ARM_LDC_PC_G0, "R_ARM_LDC_PC_G0"},
-		{R_ARM_LDC_PC_G1, "R_ARM_LDC_PC_G1"},
-		{R_ARM_LDC_PC_G2, "R_ARM_LDC_PC_G2"},
-		{R_ARM_ALU_SB_G0_NC, "R_ARM_ALU_SB_G0_NC"},
-		{R_ARM_ALU_SB_G0, "R_ARM_ALU_SB_G0"},
-		{R_ARM_ALU_SB_G1_NC, "R_ARM_ALU_SB_G1_NC"},
-		{R_ARM_ALU_SB_G1, "R_ARM_ALU_SB_G1"},
-		{R_ARM_ALU_SB_G2, "R_ARM_ALU_SB_G2"},
-		{R_ARM_LDR_SB_G0, "R_ARM_LDR_SB_G0"},
-		{R_ARM_LDR_SB_G1, "R_ARM_LDR_SB_G1"},
-		{R_ARM_LDR_SB_G2, "R_ARM_LDR_SB_G2"},
-		{R_ARM_LDRS_SB_G0, "R_ARM_LDRS_SB_G0"},
-		{R_ARM_LDRS_SB_G1, "R_ARM_LDRS_SB_G1"},
-		{R_ARM_LDRS_SB_G2, "R_ARM_LDRS_SB_G2"},
-		{R_ARM_LDC_SB_G0, "R_ARM_LDC_SB_G0"},
-		{R_ARM_LDC_SB_G1, "R_ARM_LDC_SB_G1"},
-		{R_ARM_LDC_SB_G2, "R_ARM_LDC_SB_G2"},
-		{R_ARM_MOVW_BREL_NC, "R_ARM_MOVW_BREL_NC"},
-		{R_ARM_MOVT_BREL, "R_ARM_MOVT_BREL"},
-		{R_ARM_MOVW_BREL, "R_ARM_MOVW_BREL"},
-		{R_ARM_THM_MOVW_BREL_NC, "R_ARM_THM_MOVW_BREL_NC"},
-		{R_ARM_THM_MOVT_BREL, "R_ARM_THM_MOVT_BREL"},
-		{R_ARM_THM_MOVW_BREL, "R_ARM_THM_MOVW_BREL"},
-		{R_ARM_TLS_GOTDESC, "R_ARM_TLS_GOTDESC"},
-		{R_ARM_TLS_CALL, "R_ARM_TLS_CALL"},
-		{R_ARM_TLS_DESCSEQ, "R_ARM_TLS_DESCSEQ"},
-		{R_ARM_THM_TLS_CALL, "R_ARM_THM_TLS_CALL"},
-		{R_ARM_PLT32_ABS, "R_ARM_PLT32_ABS"},
-		{R_ARM_GOT_ABS, "R_ARM_GOT_ABS"},
-		{R_ARM_GOT_PREL, "R_ARM_GOT_PREL"},
-		{R_ARM_GOT_BREL12, "R_ARM_GOT_BREL12"},
-		{R_ARM_GOTOFF12, "R_ARM_GOTOFF12"},
-		{R_ARM_GOTRELAX, "R_ARM_GOTRELAX"},
-		{R_ARM_GNU_VTENTRY, "R_ARM_GNU_VTENTRY"},
-		{R_ARM_GNU_VTINHERIT, "R_ARM_GNU_VTINHERIT"},
-		{R_ARM_THM_JUMP11, "R_ARM_THM_JUMP11"},
-		{R_ARM_THM_JUMP8, "R_ARM_THM_JUMP8"},
-		{R_ARM_TLS_GD32, "R_ARM_TLS_GD32"},
-		{R_ARM_TLS_LDM32, "R_ARM_TLS_LDM32"},
-		{R_ARM_TLS_LDO32, "R_ARM_TLS_LDO32"},
-		{R_ARM_TLS_IE32, "R_ARM_TLS_IE32"},
-		{R_ARM_TLS_LE32, "R_ARM_TLS_LE32"},
-		{R_ARM_TLS_LDO12, "R_ARM_TLS_LDO12"},
-		{R_ARM_TLS_LE12, "R_ARM_TLS_LE12"},
-		{R_ARM_TLS_IE12GP, "R_ARM_TLS_IE12GP"},
-		{R_ARM_ME_TOO, "R_ARM_ME_TOO"},
-		{R_ARM_THM_TLS_DESCSEQ16, "R_ARM_THM_TLS_DESCSEQ16"},
-		{R_ARM_THM_TLS_DESCSEQ32, "R_ARM_THM_TLS_DESCSEQ32"},
-		{R_ARM_THM_GOT_BREL12, "R_ARM_THM_GOT_BREL12"},
-		{R_ARM_THM_ALU_ABS_G0_NC, "R_ARM_THM_ALU_ABS_G0_NC"},
-		{R_ARM_THM_ALU_ABS_G1_NC, "R_ARM_THM_ALU_ABS_G1_NC"},
-		{R_ARM_THM_ALU_ABS_G2_NC, "R_ARM_THM_ALU_ABS_G2_NC"},
-		{R_ARM_THM_ALU_ABS_G3, "R_ARM_THM_ALU_ABS_G3"},
-		{R_ARM_IRELATIVE, "R_ARM_IRELATIVE"},
-		{R_ARM_RXPC25, "R_ARM_RXPC25"},
-		{R_ARM_RSBREL32, "R_ARM_RSBREL32"},
-		{R_ARM_THM_RPC22, "R_ARM_THM_RPC22"},
-		{R_ARM_RREL32, "R_ARM_RREL32"},
-		{R_ARM_RABS32, "R_ARM_RABS32"},
-		{R_ARM_RPC24, "R_ARM_RPC24"},
-		{R_ARM_RBASE, "R_ARM_RBASE"}
-	};
-	if (relocTable.count(rel))
-		return relocTable.at(rel);
-	return "Unknown ARM relocation";
+	case R_ARM_NONE: return "R_ARM_NONE";
+	case R_ARM_PC24: return "R_ARM_PC24";
+	case R_ARM_ABS32: return "R_ARM_ABS32";
+	case R_ARM_REL32: return "R_ARM_REL32";
+	case R_ARM_LDR_PC_G0: return "R_ARM_LDR_PC_G0";
+	case R_ARM_ABS16: return "R_ARM_ABS16";
+	case R_ARM_ABS12: return "R_ARM_ABS12";
+	case R_ARM_THM_ABS5: return "R_ARM_THM_ABS5";
+	case R_ARM_ABS8: return "R_ARM_ABS8";
+	case R_ARM_SBREL32: return "R_ARM_SBREL32";
+	case R_ARM_THM_CALL: return "R_ARM_THM_CALL";
+	case R_ARM_THM_PC8: return "R_ARM_THM_PC8";
+	case R_ARM_BREL_ADJ: return "R_ARM_BREL_ADJ";
+	case R_ARM_TLS_DESC: return "R_ARM_TLS_DESC";
+	case R_ARM_THM_SWI8: return "R_ARM_THM_SWI8";
+	case R_ARM_XPC25: return "R_ARM_XPC25";
+	case R_ARM_THM_XPC22: return "R_ARM_THM_XPC22";
+	case R_ARM_TLS_DTPMOD32: return "R_ARM_TLS_DTPMOD32";
+	case R_ARM_TLS_DTPOFF32: return "R_ARM_TLS_DTPOFF32";
+	case R_ARM_TLS_TPOFF32: return "R_ARM_TLS_TPOFF32";
+	case R_ARM_COPY: return "R_ARM_COPY";
+	case R_ARM_GLOB_DAT: return "R_ARM_GLOB_DAT";
+	case R_ARM_JUMP_SLOT: return "R_ARM_JUMP_SLOT";
+	case R_ARM_RELATIVE: return "R_ARM_RELATIVE";
+	case R_ARM_GOTOFF32: return "R_ARM_GOTOFF32";
+	case R_ARM_BASE_PREL: return "R_ARM_BASE_PREL";
+	case R_ARM_GOT_BREL: return "R_ARM_GOT_BREL";
+	case R_ARM_PLT32: return "R_ARM_PLT32";
+	case R_ARM_CALL: return "R_ARM_CALL";
+	case R_ARM_JUMP24: return "R_ARM_JUMP24";
+	case R_ARM_THM_JUMP24: return "R_ARM_THM_JUMP24";
+	case R_ARM_BASE_ABS: return "R_ARM_BASE_ABS";
+	case R_ARM_ALU_PCREL_7_0: return "R_ARM_ALU_PCREL_7_0";
+	case R_ARM_ALU_PCREL_15_8: return "R_ARM_ALU_PCREL_15_8";
+	case R_ARM_ALU_PCREL_23_15: return "R_ARM_ALU_PCREL_23_15";
+	case R_ARM_LDR_SBREL_11_0_NC: return "R_ARM_LDR_SBREL_11_0_NC";
+	case R_ARM_ALU_SBREL_19_12_NC: return "R_ARM_ALU_SBREL_19_12_NC";
+	case R_ARM_ALU_SBREL_27_20_CK: return "R_ARM_ALU_SBREL_27_20_CK";
+	case R_ARM_TARGET1: return "R_ARM_TARGET1";
+	case R_ARM_SBREL31: return "R_ARM_SBREL31";
+	case R_ARM_V4BX: return "R_ARM_V4BX";
+	case R_ARM_TARGET2: return "R_ARM_TARGET2";
+	case R_ARM_PREL31: return "R_ARM_PREL31";
+	case R_ARM_MOVW_ABS_NC: return "R_ARM_MOVW_ABS_NC";
+	case R_ARM_MOVT_ABS: return "R_ARM_MOVT_ABS";
+	case R_ARM_MOVW_PREL_NC: return "R_ARM_MOVW_PREL_NC";
+	case R_ARM_MOVT_PREL: return "R_ARM_MOVT_PREL";
+	case R_ARM_THM_MOVW_ABS_NC: return "R_ARM_THM_MOVW_ABS_NC";
+	case R_ARM_THM_MOVT_ABS: return "R_ARM_THM_MOVT_ABS";
+	case R_ARM_THM_MOVW_PREL_NC: return "R_ARM_THM_MOVW_PREL_NC";
+	case R_ARM_THM_MOVT_PREL: return "R_ARM_THM_MOVT_PREL";
+	case R_ARM_THM_JUMP19: return "R_ARM_THM_JUMP19";
+	case R_ARM_THM_JUMP6: return "R_ARM_THM_JUMP6";
+	case R_ARM_THM_ALU_PREL_11_0: return "R_ARM_THM_ALU_PREL_11_0";
+	case R_ARM_THM_PC12: return "R_ARM_THM_PC12";
+	case R_ARM_ABS32_NOI: return "R_ARM_ABS32_NOI";
+	case R_ARM_REL32_NOI: return "R_ARM_REL32_NOI";
+	case R_ARM_ALU_PC_G0_NC: return "R_ARM_ALU_PC_G0_NC";
+	case R_ARM_ALU_PC_G0: return "R_ARM_ALU_PC_G0";
+	case R_ARM_ALU_PC_G1_NC: return "R_ARM_ALU_PC_G1_NC";
+	case R_ARM_ALU_PC_G1: return "R_ARM_ALU_PC_G1";
+	case R_ARM_ALU_PC_G2: return "R_ARM_ALU_PC_G2";
+	case R_ARM_LDR_PC_G1: return "R_ARM_LDR_PC_G1";
+	case R_ARM_LDR_PC_G2: return "R_ARM_LDR_PC_G2";
+	case R_ARM_LDRS_PC_G0: return "R_ARM_LDRS_PC_G0";
+	case R_ARM_LDRS_PC_G1: return "R_ARM_LDRS_PC_G1";
+	case R_ARM_LDRS_PC_G2: return "R_ARM_LDRS_PC_G2";
+	case R_ARM_LDC_PC_G0: return "R_ARM_LDC_PC_G0";
+	case R_ARM_LDC_PC_G1: return "R_ARM_LDC_PC_G1";
+	case R_ARM_LDC_PC_G2: return "R_ARM_LDC_PC_G2";
+	case R_ARM_ALU_SB_G0_NC: return "R_ARM_ALU_SB_G0_NC";
+	case R_ARM_ALU_SB_G0: return "R_ARM_ALU_SB_G0";
+	case R_ARM_ALU_SB_G1_NC: return "R_ARM_ALU_SB_G1_NC";
+	case R_ARM_ALU_SB_G1: return "R_ARM_ALU_SB_G1";
+	case R_ARM_ALU_SB_G2: return "R_ARM_ALU_SB_G2";
+	case R_ARM_LDR_SB_G0: return "R_ARM_LDR_SB_G0";
+	case R_ARM_LDR_SB_G1: return "R_ARM_LDR_SB_G1";
+	case R_ARM_LDR_SB_G2: return "R_ARM_LDR_SB_G2";
+	case R_ARM_LDRS_SB_G0: return "R_ARM_LDRS_SB_G0";
+	case R_ARM_LDRS_SB_G1: return "R_ARM_LDRS_SB_G1";
+	case R_ARM_LDRS_SB_G2: return "R_ARM_LDRS_SB_G2";
+	case R_ARM_LDC_SB_G0: return "R_ARM_LDC_SB_G0";
+	case R_ARM_LDC_SB_G1: return "R_ARM_LDC_SB_G1";
+	case R_ARM_LDC_SB_G2: return "R_ARM_LDC_SB_G2";
+	case R_ARM_MOVW_BREL_NC: return "R_ARM_MOVW_BREL_NC";
+	case R_ARM_MOVT_BREL: return "R_ARM_MOVT_BREL";
+	case R_ARM_MOVW_BREL: return "R_ARM_MOVW_BREL";
+	case R_ARM_THM_MOVW_BREL_NC: return "R_ARM_THM_MOVW_BREL_NC";
+	case R_ARM_THM_MOVT_BREL: return "R_ARM_THM_MOVT_BREL";
+	case R_ARM_THM_MOVW_BREL: return "R_ARM_THM_MOVW_BREL";
+	case R_ARM_TLS_GOTDESC: return "R_ARM_TLS_GOTDESC";
+	case R_ARM_TLS_CALL: return "R_ARM_TLS_CALL";
+	case R_ARM_TLS_DESCSEQ: return "R_ARM_TLS_DESCSEQ";
+	case R_ARM_THM_TLS_CALL: return "R_ARM_THM_TLS_CALL";
+	case R_ARM_PLT32_ABS: return "R_ARM_PLT32_ABS";
+	case R_ARM_GOT_ABS: return "R_ARM_GOT_ABS";
+	case R_ARM_GOT_PREL: return "R_ARM_GOT_PREL";
+	case R_ARM_GOT_BREL12: return "R_ARM_GOT_BREL12";
+	case R_ARM_GOTOFF12: return "R_ARM_GOTOFF12";
+	case R_ARM_GOTRELAX: return "R_ARM_GOTRELAX";
+	case R_ARM_GNU_VTENTRY: return "R_ARM_GNU_VTENTRY";
+	case R_ARM_GNU_VTINHERIT: return "R_ARM_GNU_VTINHERIT";
+	case R_ARM_THM_JUMP11: return "R_ARM_THM_JUMP11";
+	case R_ARM_THM_JUMP8: return "R_ARM_THM_JUMP8";
+	case R_ARM_TLS_GD32: return "R_ARM_TLS_GD32";
+	case R_ARM_TLS_LDM32: return "R_ARM_TLS_LDM32";
+	case R_ARM_TLS_LDO32: return "R_ARM_TLS_LDO32";
+	case R_ARM_TLS_IE32: return "R_ARM_TLS_IE32";
+	case R_ARM_TLS_LE32: return "R_ARM_TLS_LE32";
+	case R_ARM_TLS_LDO12: return "R_ARM_TLS_LDO12";
+	case R_ARM_TLS_LE12: return "R_ARM_TLS_LE12";
+	case R_ARM_TLS_IE12GP: return "R_ARM_TLS_IE12GP";
+	case R_ARM_ME_TOO: return "R_ARM_ME_TOO";
+	case R_ARM_THM_TLS_DESCSEQ16: return "R_ARM_THM_TLS_DESCSEQ16";
+	case R_ARM_THM_TLS_DESCSEQ32: return "R_ARM_THM_TLS_DESCSEQ32";
+	case R_ARM_THM_GOT_BREL12: return "R_ARM_THM_GOT_BREL12";
+	case R_ARM_THM_ALU_ABS_G0_NC: return "R_ARM_THM_ALU_ABS_G0_NC";
+	case R_ARM_THM_ALU_ABS_G1_NC: return "R_ARM_THM_ALU_ABS_G1_NC";
+	case R_ARM_THM_ALU_ABS_G2_NC: return "R_ARM_THM_ALU_ABS_G2_NC";
+	case R_ARM_THM_ALU_ABS_G3: return "R_ARM_THM_ALU_ABS_G3";
+	case R_ARM_IRELATIVE: return "R_ARM_IRELATIVE";
+	case R_ARM_RXPC25: return "R_ARM_RXPC25";
+	case R_ARM_RSBREL32: return "R_ARM_RSBREL32";
+	case R_ARM_THM_RPC22: return "R_ARM_THM_RPC22";
+	case R_ARM_RREL32: return "R_ARM_RREL32";
+	case R_ARM_RABS32: return "R_ARM_RABS32";
+	case R_ARM_RPC24: return "R_ARM_RPC24";
+	case R_ARM_RBASE: return "R_ARM_RBASE";
+	default: return "Unknown ARM relocation";
+	}
 }
 
 
@@ -514,140 +512,44 @@ static const char* GetRelocationString(PeArmRelocationType rel)
 
 static bool IsELFDataRelocation(ElfArmRelocationType reloc)
 {
-	map<ElfArmRelocationType, bool> isDataMap =
+	switch (reloc)
 	{
-		{R_ARM_NONE, false},
-		{R_ARM_PC24, false},
-		{R_ARM_ABS32, true},
-		{R_ARM_REL32, true},
-		{R_ARM_LDR_PC_G0, false},
-		{R_ARM_ABS16, true},
-		{R_ARM_ABS12, false},
-		{R_ARM_THM_ABS5, false},
-		{R_ARM_ABS8, true},
-		{R_ARM_SBREL32, true},
-		{R_ARM_THM_CALL, false},
-		{R_ARM_THM_PC8, false},
-		{R_ARM_BREL_ADJ, true},
-		{R_ARM_TLS_DESC, true},
-		{R_ARM_THM_SWI8, false},
-		{R_ARM_XPC25, false},
-		{R_ARM_THM_XPC22, false},
-		{R_ARM_TLS_DTPMOD32, true},
-		{R_ARM_TLS_DTPOFF32, true},
-		{R_ARM_TLS_TPOFF32, true},
-		{R_ARM_COPY, true},
-		{R_ARM_GLOB_DAT, true},
-		{R_ARM_JUMP_SLOT, true},
-		{R_ARM_RELATIVE, true},
-		{R_ARM_GOTOFF32, true},
-		{R_ARM_BASE_PREL, true},
-		{R_ARM_GOT_BREL, true},
-		{R_ARM_PLT32, false},
-		{R_ARM_CALL, false},
-		{R_ARM_JUMP24, false},
-		{R_ARM_THM_JUMP24, false},
-		{R_ARM_BASE_ABS, true},
-		{R_ARM_ALU_PCREL_7_0, false},
-		{R_ARM_ALU_PCREL_15_8, false},
-		{R_ARM_ALU_PCREL_23_15, false},
-		{R_ARM_LDR_SBREL_11_0_NC, false},
-		{R_ARM_ALU_SBREL_19_12_NC, false},
-		{R_ARM_ALU_SBREL_27_20_CK, false},
-		{R_ARM_TARGET1, false},
-		{R_ARM_SBREL31, true},
-		{R_ARM_V4BX, false},
-		{R_ARM_TARGET2, false},
-		{R_ARM_PREL31, true},
-		{R_ARM_MOVW_ABS_NC, false},
-		{R_ARM_MOVT_ABS, false},
-		{R_ARM_MOVW_PREL_NC, false},
-		{R_ARM_MOVT_PREL, false},
-		{R_ARM_THM_MOVW_ABS_NC, false},
-		{R_ARM_THM_MOVT_ABS, false},
-		{R_ARM_THM_MOVW_PREL_NC, false},
-		{R_ARM_THM_MOVT_PREL, false},
-		{R_ARM_THM_JUMP19, false},
-		{R_ARM_THM_JUMP6, false},
-		{R_ARM_THM_ALU_PREL_11_0, false},
-		{R_ARM_THM_PC12, false},
-		{R_ARM_ABS32_NOI, true},
-		{R_ARM_REL32_NOI, true},
-		{R_ARM_ALU_PC_G0_NC, false},
-		{R_ARM_ALU_PC_G0, false},
-		{R_ARM_ALU_PC_G1_NC, false},
-		{R_ARM_ALU_PC_G1, false},
-		{R_ARM_ALU_PC_G2, false},
-		{R_ARM_LDR_PC_G1, false},
-		{R_ARM_LDR_PC_G2, false},
-		{R_ARM_LDRS_PC_G0, false},
-		{R_ARM_LDRS_PC_G1, false},
-		{R_ARM_LDRS_PC_G2, false},
-		{R_ARM_LDC_PC_G0, false},
-		{R_ARM_LDC_PC_G1, false},
-		{R_ARM_LDC_PC_G2, false},
-		{R_ARM_ALU_SB_G0_NC, false},
-		{R_ARM_ALU_SB_G0, false},
-		{R_ARM_ALU_SB_G1_NC, false},
-		{R_ARM_ALU_SB_G1, false},
-		{R_ARM_ALU_SB_G2, false},
-		{R_ARM_LDR_SB_G0, false},
-		{R_ARM_LDR_SB_G1, false},
-		{R_ARM_LDR_SB_G2, false},
-		{R_ARM_LDRS_SB_G0, false},
-		{R_ARM_LDRS_SB_G1, false},
-		{R_ARM_LDRS_SB_G2, false},
-		{R_ARM_LDC_SB_G0, false},
-		{R_ARM_LDC_SB_G1, false},
-		{R_ARM_LDC_SB_G2, false},
-		{R_ARM_MOVW_BREL_NC, false},
-		{R_ARM_MOVT_BREL, false},
-		{R_ARM_MOVW_BREL, false},
-		{R_ARM_THM_MOVW_BREL_NC, false},
-		{R_ARM_THM_MOVT_BREL, false},
-		{R_ARM_THM_MOVW_BREL, false},
-		{R_ARM_TLS_GOTDESC, true},
-		{R_ARM_TLS_CALL, false},
-		{R_ARM_TLS_DESCSEQ, false},
-		{R_ARM_THM_TLS_CALL, false},
-		{R_ARM_PLT32_ABS, true},
-		{R_ARM_GOT_ABS, true},
-		{R_ARM_GOT_PREL, true},
-		{R_ARM_GOT_BREL12, false},
-		{R_ARM_GOTOFF12, false},
-		{R_ARM_GOTRELAX, false},
-		{R_ARM_GNU_VTENTRY, true},
-		{R_ARM_GNU_VTINHERIT, true},
-		{R_ARM_THM_JUMP11, false},
-		{R_ARM_THM_JUMP8, false},
-		{R_ARM_TLS_GD32, true},
-		{R_ARM_TLS_LDM32, true},
-		{R_ARM_TLS_LDO32, true},
-		{R_ARM_TLS_IE32, true},
-		{R_ARM_TLS_LE32, false},
-		{R_ARM_TLS_LDO12, false},
-		{R_ARM_TLS_LE12, false},
-		{R_ARM_TLS_IE12GP, false},
-		{R_ARM_ME_TOO, false},
-		{R_ARM_THM_TLS_DESCSEQ16, false},
-		{R_ARM_THM_TLS_DESCSEQ32, false},
-		{R_ARM_THM_GOT_BREL12, false},
-		{R_ARM_THM_ALU_ABS_G0_NC, false},
-		{R_ARM_THM_ALU_ABS_G1_NC, false},
-		{R_ARM_THM_ALU_ABS_G2_NC, false},
-		{R_ARM_THM_ALU_ABS_G3, false},
-		{R_ARM_IRELATIVE, false},
-		{R_ARM_RXPC25, false},
-		{R_ARM_RSBREL32, false},
-		{R_ARM_THM_RPC22, false},
-		{R_ARM_RREL32, false},
-		{R_ARM_RABS32, false},
-		{R_ARM_RPC24, false},
-		{R_ARM_RBASE, false}
-	};
-	if (!isDataMap.count(reloc))
+	case R_ARM_ABS32:
+	case R_ARM_REL32:
+	case R_ARM_ABS16:
+	case R_ARM_ABS8:
+	case R_ARM_SBREL32:
+	case R_ARM_BREL_ADJ:
+	case R_ARM_TLS_DESC:
+	case R_ARM_TLS_DTPMOD32:
+	case R_ARM_TLS_DTPOFF32:
+	case R_ARM_TLS_TPOFF32:
+	case R_ARM_COPY:
+	case R_ARM_GLOB_DAT:
+	case R_ARM_JUMP_SLOT:
+	case R_ARM_RELATIVE:
+	case R_ARM_GOTOFF32:
+	case R_ARM_BASE_PREL:
+	case R_ARM_GOT_BREL:
+	case R_ARM_BASE_ABS:
+	case R_ARM_SBREL31:
+	case R_ARM_PREL31:
+	case R_ARM_ABS32_NOI:
+	case R_ARM_REL32_NOI:
+	case R_ARM_TLS_GOTDESC:
+	case R_ARM_PLT32_ABS:
+	case R_ARM_GOT_ABS:
+	case R_ARM_GOT_PREL:
+	case R_ARM_GNU_VTENTRY:
+	case R_ARM_GNU_VTINHERIT:
+	case R_ARM_TLS_GD32:
+	case R_ARM_TLS_LDM32:
+	case R_ARM_TLS_LDO32:
+	case R_ARM_TLS_IE32:
+		return true;
+	default:
 		return false;
-	return isDataMap.at(reloc);
+	}
 }
 
 static BNRegisterInfo RegisterInfo(uint32_t fullWidthReg, size_t offset, size_t size, bool zeroExtend = false)

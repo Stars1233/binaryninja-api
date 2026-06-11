@@ -615,6 +615,7 @@ bool ElfView::Init()
 	Elf64SectionHeader symbolTableSection;
 
 	BeginBulkAddSegments();
+	GetParentView()->BeginBulkAddSegments();
 	uint64_t segmentStart = 0;
 	for (size_t i = 1; i < m_elfSections.size(); i++)
 	{
@@ -736,6 +737,7 @@ bool ElfView::Init()
 		}
 	}
 
+	GetParentView()->EndBulkAddSegments();
 	EndBulkAddSegments();
 	// Apply architecture and platform
 	if (!m_arch)

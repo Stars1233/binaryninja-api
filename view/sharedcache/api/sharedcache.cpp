@@ -111,6 +111,18 @@ CacheSymbol SymbolFromApi(BNSharedCacheSymbol apiSymbol)
 	return symbol;
 }
 
+CacheString StringFromApi(const BNSharedCacheString& apiString)
+{
+	CacheString string;
+	string.type = apiString.stringType;
+	string.address = apiString.address;
+	string.rawLength = static_cast<uint32_t>(apiString.rawLength);
+	string.text = apiString.text;
+	string.regionStart = apiString.regionStart;
+	string.imageStart = apiString.imageStart;
+	return string;
+}
+
 std::string SharedCacheAPI::GetRegionTypeAsString(const BNSharedCacheRegionType &type)
 {
 	switch (type)
@@ -358,4 +370,78 @@ std::vector<CacheSymbol> SharedCacheController::GetSymbols() const
 		result.emplace_back(SymbolFromApi(symbols[i]));
 	BNSharedCacheFreeSymbolList(symbols, count);
 	return result;
+}
+
+CacheStringScanner::CacheStringScanner(BNSharedCacheStringScanner* scanner) : m_object(scanner) {}
+
+
+CacheStringScanner::~CacheStringScanner()
+{
+	if (m_object)
+		BNFreeSharedCacheStringScanner(m_object);
+}
+
+
+CacheStringScanner::CacheStringScanner(CacheStringScanner&& other) noexcept : m_object(other.m_object)
+{
+	other.m_object = nullptr;
+}
+
+
+CacheStringScanner& CacheStringScanner::operator=(CacheStringScanner&& other) noexcept
+{
+	if (this != &other)
+	{
+		if (m_object)
+			BNFreeSharedCacheStringScanner(m_object);
+		m_object = other.m_object;
+		other.m_object = nullptr;
+	}
+	return *this;
+}
+
+
+bool CacheStringScanner::Start()
+{
+	return BNSharedCacheStringScannerStart(m_object);
+}
+
+
+bool CacheStringScanner::IsComplete() const
+{
+	return BNSharedCacheStringScannerIsComplete(m_object);
+}
+
+
+std::pair<uint64_t, uint64_t> CacheStringScanner::GetProgress() const
+{
+	uint64_t current = 0;
+	uint64_t total = 0;
+	BNSharedCacheStringScannerGetProgress(m_object, &current, &total);
+	return {current, total};
+}
+
+
+uint64_t CacheStringScanner::GetStringCount() const
+{
+	return BNSharedCacheStringScannerGetStringCount(m_object);
+}
+
+
+std::vector<CacheString> CacheStringScanner::TakeStrings(uint64_t maxCount)
+{
+	size_t count;
+	BNSharedCacheString* strings = BNSharedCacheStringScannerTakeStrings(m_object, maxCount, &count);
+	std::vector<CacheString> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+		result.emplace_back(StringFromApi(strings[i]));
+	BNSharedCacheFreeStringList(strings, count);
+	return result;
+}
+
+
+std::unique_ptr<CacheStringScanner> SharedCacheController::CreateStringScanner() const
+{
+	return std::make_unique<CacheStringScanner>(BNSharedCacheControllerCreateStringScanner(m_object));
 }

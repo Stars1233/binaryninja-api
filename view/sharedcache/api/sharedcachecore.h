@@ -61,10 +61,19 @@ extern "C"
 		GlobalBinding = 2,
 		WeakBinding = 3,
 	};
+
+	enum BNStringType : uint8_t
+	{
+		AsciiString = 0,
+		Utf16String = 1,
+		Utf32String = 2,
+		Utf8String = 3,
+	};
 #endif
 
 	typedef struct BNBinaryView BNBinaryView;
 	typedef struct BNSharedCacheController BNSharedCacheController;
+	typedef struct BNSharedCacheStringScanner BNSharedCacheStringScanner;
 
 	typedef enum BNSharedCacheEntryType {
 		SharedCacheEntryTypePrimary,
@@ -119,6 +128,18 @@ extern "C"
 		char* name;
 	} BNSharedCacheSymbol;
 
+	typedef struct BNSharedCacheString {
+		BNStringType stringType;
+		uint64_t address;
+		// Length of the string in the cache, in bytes.
+		size_t rawLength;
+		// UTF-8 display text, truncated.
+		char* text;
+		uint64_t regionStart;
+		// NOTE: If not associated with an image this will be zero.
+		uint64_t imageStart;
+	} BNSharedCacheString;
+
 	SHAREDCACHE_FFI_API BNSharedCacheController* BNGetSharedCacheController(BNBinaryView* data);
 
 	SHAREDCACHE_FFI_API BNSharedCacheController* BNNewSharedCacheControllerReference(BNSharedCacheController* controller);
@@ -165,6 +186,22 @@ extern "C"
 
 	SHAREDCACHE_FFI_API void BNSharedCacheFreeEntry(BNSharedCacheEntry entry);
 	SHAREDCACHE_FFI_API void BNSharedCacheFreeEntryList(BNSharedCacheEntry* entries, size_t count);
+
+	SHAREDCACHE_FFI_API BNSharedCacheStringScanner* BNSharedCacheControllerCreateStringScanner(
+		BNSharedCacheController* controller);
+	SHAREDCACHE_FFI_API void BNFreeSharedCacheStringScanner(BNSharedCacheStringScanner* scanner);
+	SHAREDCACHE_FFI_API bool BNSharedCacheStringScannerStart(BNSharedCacheStringScanner* scanner);
+	SHAREDCACHE_FFI_API bool BNSharedCacheStringScannerIsComplete(BNSharedCacheStringScanner* scanner);
+	SHAREDCACHE_FFI_API void BNSharedCacheStringScannerGetProgress(
+		BNSharedCacheStringScanner* scanner, uint64_t* current, uint64_t* total);
+
+	SHAREDCACHE_FFI_API uint64_t BNSharedCacheStringScannerGetStringCount(BNSharedCacheStringScanner* scanner);
+	// Removes and returns up to maxCount of the queued scan results.
+	SHAREDCACHE_FFI_API BNSharedCacheString* BNSharedCacheStringScannerTakeStrings(
+		BNSharedCacheStringScanner* scanner, uint64_t maxCount, size_t* count);
+
+	SHAREDCACHE_FFI_API void BNSharedCacheFreeString(BNSharedCacheString string);
+	SHAREDCACHE_FFI_API void BNSharedCacheFreeStringList(BNSharedCacheString* strings, size_t count);
 
 
 #ifdef __cplusplus

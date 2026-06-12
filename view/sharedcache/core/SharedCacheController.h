@@ -1,8 +1,10 @@
 #pragma once
 
+#include <memory>
 #include <regex>
 #include <shared_mutex>
 
+#include "CacheStringScanner.h"
 #include "SharedCache.h"
 #include "refcountobject.h"
 #include "ffi_global.h"
@@ -66,5 +68,7 @@ namespace BinaryNinja::DSC {
 
 		// Re-run the ObjC processor for loaded images to restore Objective-C metadata.
 		void ProcessObjCForLoadedImages(BinaryView& view);
+
+		std::unique_ptr<CacheStringScanner> CreateStringScanner();
 	};
 }  // namespace BinaryNinja::DSC

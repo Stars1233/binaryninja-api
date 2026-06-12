@@ -289,7 +289,7 @@ void SharedCacheController::LoadMetadata(const Metadata& metadata)
 	{
 		const auto loadedRegions = controllerMeta["loadedRegions"]->GetUnsignedIntegerList();
 		for (const auto& region : loadedRegions)
-			m_loadedImages.insert(region);
+			m_loadedRegions.insert(region);
 	}
 }
 
@@ -315,4 +315,9 @@ void SharedCacheController::ProcessObjCForLoadedImages(BinaryView& view)
 			m_logger->LogErrorForExceptionF(e, "Failed to restore ObjC metadata for image at {:#x}: {}", headerAddress, e.what());
 		}
 	}
+}
+
+std::unique_ptr<CacheStringScanner> SharedCacheController::CreateStringScanner()
+{
+	return std::make_unique<CacheStringScanner>(m_cache, m_regionFilter, m_logger);
 }

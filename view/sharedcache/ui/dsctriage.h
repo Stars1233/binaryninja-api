@@ -8,7 +8,9 @@
 #include <binaryninjaapi.h>
 #include <progresstask.h>
 #include <sharedcacheapi.h>
+#include <memory>
 #include "filter.h"
+#include "stringstable.h"
 #include "symboltable.h"
 #include "ui/fontsettings.h"
 #include "uicontext.h"
@@ -192,6 +194,11 @@ class DSCTriageView : public QWidget, public View, public UIContextNotification
 
 	SymbolTableView* m_symbolTable;
 
+	StringsTableView* m_stringsTable;
+	TriageTablePanel* m_stringsPanel;
+	QTimer* m_stringsPollTimer;
+	std::unique_ptr<SharedCacheAPI::CacheStringScanner> m_stringScanner;
+
 	FilterableTableView* m_regionTable;
 
 	FilterableTableView* m_mappingTable;
@@ -212,11 +219,22 @@ public:
 	void OnAfterOpenFile(UIContext* context, FileContext* file, ViewFrame* frame) override;
 	void RefreshData();
 
+protected:
+	void showEvent(QShowEvent* event) override;
+	void hideEvent(QHideEvent* event) override;
+
 private:
-	void loadImagesWithAddr(const std::vector<uint64_t>& addresses, bool includeDependencies = false);
+	void loadImagesWithAddr(const std::vector<uint64_t>& addresses, bool includeDependencies = false,
+		std::optional<uint64_t> navigateTo = std::nullopt);
 	void setImageLoaded(uint64_t imageHeaderAddr);
+	void navigateToAddress(uint64_t address);
 	QWidget* initImageTable();
 	void initSymbolTable();
+	void initStringsTab();
+	bool startStringScan();
+	void pollStringScan();
+	void promptToLoadImage(const std::string& imageName, uint64_t address, uint64_t navigateTo);
+	void loadStringRegion(const SharedCacheAPI::CacheString& string, std::optional<uint64_t> navigateTo);
 	void initCacheInfoTables();
 };
 

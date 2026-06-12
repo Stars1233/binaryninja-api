@@ -15,7 +15,8 @@ class CacheRegion:
     name: str
     start: int
     size: int
-    image_start: int
+    # Header address of the owning image, or None if the region is not part of an image.
+    image_start: Optional[int]
     # TODO: Might want to make this use the BN segment flag enum?
     flags: sccore.SegmentFlagEnum
 
@@ -56,7 +57,7 @@ def region_from_api(region: sccore.BNSharedCacheRegion) -> CacheRegion:
         name=region.name,
         start=region.vmAddress,
         size=region.size,
-        image_start=region.imageStart,
+        image_start=region.imageStart or None,
         flags=region.flags
     )
 
@@ -66,7 +67,7 @@ def region_to_api(region: CacheRegion) -> sccore.BNSharedCacheRegion:
         _name=BNAllocString(region.name),
         vmAddress=region.start,
         size=region.size,
-        imageStart=region.image_start,
+        imageStart=region.image_start or 0,
         flags=region.flags
     )
 
@@ -91,6 +92,72 @@ def image_to_api(image: CacheImage) -> sccore.BNSharedCacheImage:
         regionStartCount=len(region_start_array),
         regionStarts=core_region_starts
     )
+
+@dataclasses.dataclass
+class CacheString:
+    string_type: sccore.StringTypeEnum
+    address: int
+    raw_length: int
+    text: str
+    region_start: int
+    # Header address of the owning image, or None if the string is not part of an image.
+    image_start: Optional[int]
+
+    def __str__(self):
+        return repr(self)
+
+    def __repr__(self):
+        return f"<CacheString 0x{self.address:x}: {self.text!r}>"
+
+
+def string_from_api(string: sccore.BNSharedCacheString) -> CacheString:
+    return CacheString(
+        string_type=string.stringType,
+        address=string.address,
+        raw_length=string.rawLength,
+        text=string.text,
+        region_start=string.regionStart,
+        image_start=string.imageStart or None
+    )
+
+
+class CacheStringScanner:
+    def __init__(self, handle: sccore.BNSharedCacheStringScannerHandle):
+        self.handle = handle
+
+    def __del__(self):
+        if self.handle is not None:
+            sccore.BNFreeSharedCacheStringScanner(self.handle)
+
+    def start(self) -> bool:
+        return sccore.BNSharedCacheStringScannerStart(self.handle)
+
+    @property
+    def is_complete(self) -> bool:
+        return sccore.BNSharedCacheStringScannerIsComplete(self.handle)
+
+    @property
+    def progress(self) -> (int, int):
+        current = ctypes.c_ulonglong()
+        total = ctypes.c_ulonglong()
+        sccore.BNSharedCacheStringScannerGetProgress(self.handle, current, total)
+        return current.value, total.value
+
+    @property
+    def string_count(self) -> int:
+        return sccore.BNSharedCacheStringScannerGetStringCount(self.handle)
+
+    def take_strings(self, max_count: int = 0xffffffffffffffff) -> [CacheString]:
+        count = ctypes.c_ulonglong()
+        value = sccore.BNSharedCacheStringScannerTakeStrings(self.handle, max_count, count)
+        if value is None:
+            return []
+        result = []
+        for i in range(count.value):
+            result.append(string_from_api(value[i]))
+        sccore.BNSharedCacheFreeStringList(value, count)
+        return result
+
 
 def symbol_from_api(symbol: sccore.BNSharedCacheSymbol) -> CacheSymbol:
     return CacheSymbol(
@@ -290,6 +357,9 @@ class SharedCacheController:
             result.append(symbol_from_api(value[i]))
         sccore.BNSharedCacheFreeSymbolList(value, count)
         return result
+
+    def create_string_scanner(self) -> CacheStringScanner:
+        return CacheStringScanner(sccore.BNSharedCacheControllerCreateStringScanner(self.handle))
 
 
 def _get_shared_cache(instance: binaryninja.PythonScriptingInstance):

@@ -30,14 +30,14 @@ pub extern "C" fn CorePluginInit() -> bool {
     // standardized one that is compatible with TI's compiler
     let default = calling_convention::ConventionBuilder::new(arch)
         .is_eligible_for_heuristics(true)
-        .int_arg_registers(&["r15", "r14", "r13", "r12"])
-        .return_int_reg("r15")
-        .return_hi_int_reg("r14")
+        .int_arg_registers(&["r12", "r13", "r14", "r15"])
+        .return_int_reg("r12")
+        .return_hi_int_reg("r13")
         .register("default");
     calling_convention::ConventionBuilder::new(arch)
         .is_eligible_for_heuristics(true)
-        .return_int_reg("r15")
-        .return_hi_int_reg("r14")
+        .return_int_reg("r12")
+        .return_hi_int_reg("r13")
         .register("stack");
 
     arch.set_default_calling_convention(&default);

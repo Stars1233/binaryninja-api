@@ -348,6 +348,7 @@ extern "C"
 	typedef struct BNLineFormatter BNLineFormatter;
 	typedef struct BNRenderLayer BNRenderLayer;
 	typedef struct BNStringRef BNStringRef;
+	typedef struct BNStringDetector BNStringDetector;
 	typedef struct BNIndirectBranchInfo BNIndirectBranchInfo;
 	typedef struct BNArchitectureAndAddress BNArchitectureAndAddress;
 	typedef struct BNConstantRenderer BNConstantRenderer;
@@ -5717,6 +5718,32 @@ extern "C"
 	BINARYNINJACOREAPI BNStringReference* BNGetStringsInRange(
 	    BNBinaryView* view, uint64_t start, uint64_t len, size_t* count);
 	BINARYNINJACOREAPI void BNFreeStringReferenceList(BNStringReference* strings);
+
+	typedef struct BNStringDetectionParameters
+	{
+		size_t minStringLength;
+		bool utf8Enabled;
+		bool utf16Enabled;
+		bool utf32Enabled;
+		// Unicode block names as accepted by the "analysis.unicode.blocks" setting.
+		const char* const* unicodeBlockNames;
+		size_t unicodeBlockNameCount;
+	} BNStringDetectionParameters;
+
+	// A compiled string detector. Immutable once created, so a single instance may be shared
+	// across threads. Free with BNFreeStringDetector.
+	BINARYNINJACOREAPI BNStringDetector* BNCreateStringDetector(const BNStringDetectionParameters* params);
+	BINARYNINJACOREAPI void BNFreeStringDetector(BNStringDetector* detector);
+
+	// Detects strings starting within the first blockLen bytes of data. Strings may extend up to
+	// dataLen bytes, allowing callers to scan large buffers in chunks with a BN_MAX_STRING_LENGTH
+	// overlap tail. lastFoundString (optional, in/out, zero-initialize before the first call)
+	// carries overlap state across consecutive calls so strings spanning a chunk boundary are not
+	// reported twice. Result addresses are relative to baseAddress. Free the result with
+	// BNFreeStringReferenceList.
+	BINARYNINJACOREAPI BNStringReference* BNStringDetectorDetectStrings(BNStringDetector* detector,
+		const uint8_t* data, size_t dataLen, size_t blockLen, uint64_t baseAddress,
+		BNStringReference* lastFoundString, size_t* count);
 
 	BINARYNINJACOREAPI BNDerivedString* BNGetDerivedStrings(BNBinaryView* view, size_t* count);
 	BINARYNINJACOREAPI BNReferenceSource* BNGetDerivedStringCodeReferences(

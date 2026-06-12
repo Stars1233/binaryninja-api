@@ -5508,6 +5508,63 @@ namespace BinaryNinja {
 		static DerivedString FromAPIObject(BNDerivedString* str, bool owned);
 	};
 
+	/*! Parameters controlling raw string detection, as used by the core strings analysis.
+
+		\see StringDetector
+	*/
+	struct StringDetectionParameters
+	{
+		size_t minStringLength = 4;
+		bool utf8Enabled = true;
+		bool utf16Enabled = true;
+		bool utf32Enabled = true;
+		std::vector<std::string> unicodeBlockNames;
+
+		/*! Builds parameters from the standard string-analysis settings:
+			"analysis.limits.minStringLength" and "analysis.unicode.{blocks,utf8,utf16,utf32}".
+
+			\param settings Settings instance to query, e.g. \c Settings::Instance()
+			\param view Optional view for view-scoped setting values
+			\return Parameters reflecting the given settings
+		*/
+		static StringDetectionParameters FromSettings(Ref<Settings> settings, Ref<BinaryView> view = nullptr);
+	};
+
+	/*! A compiled string detector using the same detection logic as the core strings analysis.
+
+		The detector is immutable once constructed, so a single instance may be shared across threads.
+	*/
+	class StringDetector
+	{
+		BNStringDetector* m_object;
+
+	public:
+		explicit StringDetector(const StringDetectionParameters& params);
+		~StringDetector();
+		StringDetector(const StringDetector&) = delete;
+		StringDetector& operator=(const StringDetector&) = delete;
+		StringDetector(StringDetector&& other) noexcept;
+		StringDetector& operator=(StringDetector&& other) noexcept;
+
+		/*! Detects strings in a raw data buffer.
+
+			Strings must start within the first \c blockLen bytes of \c data but may extend up to
+			\c dataLen bytes, allowing large buffers to be scanned in chunks with a
+			\c BN_MAX_STRING_LENGTH overlap tail. \c lastFoundString (optional, in/out,
+			zero-initialized before the first call) carries overlap state across consecutive chunk
+			calls so strings spanning a chunk boundary are not reported twice.
+
+			\param data Buffer to scan
+			\param dataLen Total number of valid bytes in \c data
+			\param blockLen Number of bytes within which strings may start
+			\param baseAddress Address reported for offset 0 of \c data
+			\param lastFoundString Optional cross-chunk overlap state
+			\return The strings found, with addresses relative to \c baseAddress
+		*/
+		std::vector<BNStringReference> DetectStrings(const void* data, size_t dataLen, size_t blockLen,
+			uint64_t baseAddress, BNStringReference* lastFoundString = nullptr) const;
+	};
+
 	struct QualifiedNameAndType;
 	struct PossibleValueSet;
 	class Metadata;

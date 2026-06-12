@@ -4050,6 +4050,74 @@ vector<BNStringReference> BinaryView::GetStrings(uint64_t start, uint64_t len)
 }
 
 
+StringDetectionParameters StringDetectionParameters::FromSettings(Ref<Settings> settings, Ref<BinaryView> view)
+{
+	StringDetectionParameters params;
+	params.minStringLength = settings->Get<uint64_t>("analysis.limits.minStringLength", view);
+	params.utf8Enabled = settings->Get<bool>("analysis.unicode.utf8", view);
+	params.utf16Enabled = settings->Get<bool>("analysis.unicode.utf16", view);
+	params.utf32Enabled = settings->Get<bool>("analysis.unicode.utf32", view);
+	params.unicodeBlockNames = settings->Get<vector<string>>("analysis.unicode.blocks", view);
+	return params;
+}
+
+
+StringDetector::StringDetector(const StringDetectionParameters& params)
+{
+	BNStringDetectionParameters apiParams;
+	apiParams.minStringLength = params.minStringLength;
+	apiParams.utf8Enabled = params.utf8Enabled;
+	apiParams.utf16Enabled = params.utf16Enabled;
+	apiParams.utf32Enabled = params.utf32Enabled;
+	vector<const char*> blockNames;
+	blockNames.reserve(params.unicodeBlockNames.size());
+	for (const auto& name : params.unicodeBlockNames)
+		blockNames.push_back(name.c_str());
+	apiParams.unicodeBlockNames = blockNames.data();
+	apiParams.unicodeBlockNameCount = blockNames.size();
+	m_object = BNCreateStringDetector(&apiParams);
+}
+
+
+StringDetector::~StringDetector()
+{
+	if (m_object)
+		BNFreeStringDetector(m_object);
+}
+
+
+StringDetector::StringDetector(StringDetector&& other) noexcept : m_object(other.m_object)
+{
+	other.m_object = nullptr;
+}
+
+
+StringDetector& StringDetector::operator=(StringDetector&& other) noexcept
+{
+	if (this != &other)
+	{
+		if (m_object)
+			BNFreeStringDetector(m_object);
+		m_object = other.m_object;
+		other.m_object = nullptr;
+	}
+	return *this;
+}
+
+
+vector<BNStringReference> StringDetector::DetectStrings(const void* data, size_t dataLen, size_t blockLen,
+	uint64_t baseAddress, BNStringReference* lastFoundString) const
+{
+	size_t count = 0;
+	BNStringReference* strings = BNStringDetectorDetectStrings(m_object, static_cast<const uint8_t*>(data),
+		dataLen, blockLen, baseAddress, lastFoundString, &count);
+	vector<BNStringReference> result;
+	result.insert(result.end(), strings, strings + count);
+	BNFreeStringReferenceList(strings);
+	return result;
+}
+
+
 vector<DerivedString> BinaryView::GetDerivedStrings()
 {
 	size_t count;

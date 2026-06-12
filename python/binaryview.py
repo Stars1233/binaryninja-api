@@ -32,7 +32,7 @@ import os
 import uuid
 from typing import Callable, Generator, Optional, Union, Tuple, List, Sequence, Mapping, Any, \
 	Iterator, Iterable, KeysView, ItemsView, ValuesView, Dict, overload
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import IntFlag
 
 import collections
@@ -524,6 +524,133 @@ class StringReference:
 	@property
 	def view(self) -> 'BinaryView':
 		return self._view
+
+
+@dataclass
+class StringDetectionParameters:
+	"""Parameters controlling raw string detection, as used by the core strings analysis."""
+	min_string_length: int = 4
+	utf8_enabled: bool = True
+	utf16_enabled: bool = True
+	utf32_enabled: bool = True
+	unicode_block_names: List[str] = field(default_factory=list)
+
+	@classmethod
+	def from_settings(
+	    cls, settings_obj: Optional['settings.Settings'] = None, view: Optional['BinaryView'] = None
+	) -> 'StringDetectionParameters':
+		"""
+		``from_settings`` builds parameters from the standard string-analysis settings:
+		``analysis.limits.minStringLength`` and ``analysis.unicode.{blocks,utf8,utf16,utf32}``.
+		"""
+		if settings_obj is None:
+			settings_obj = settings.Settings()
+		return cls(
+		    min_string_length=settings_obj.get_integer("analysis.limits.minStringLength", view),
+		    utf8_enabled=settings_obj.get_bool("analysis.unicode.utf8", view),
+		    utf16_enabled=settings_obj.get_bool("analysis.unicode.utf16", view),
+		    utf32_enabled=settings_obj.get_bool("analysis.unicode.utf32", view),
+		    unicode_block_names=settings_obj.get_string_list("analysis.unicode.blocks", view)
+		)
+
+
+@dataclass(frozen=True)
+class DetectedString:
+	"""A string detected by :py:class:`StringDetector`. ``start`` is relative to the ``base_address``
+	passed to the detector, and ``length`` is in bytes."""
+	type: StringType
+	start: int
+	length: int
+
+
+class StringDetector:
+	"""A reusable string detector using the same detection logic as the core strings analysis. Unlike
+	:py:meth:`BinaryView.get_strings`, the data scanned does not need to be part of a BinaryView.
+
+	The detector is immutable once constructed, so a single instance may be shared across threads.
+
+	:param parameters: Detection parameters; defaults to the current global settings
+	"""
+
+	def __init__(self, parameters: Optional[StringDetectionParameters] = None):
+		if parameters is None:
+			parameters = StringDetectionParameters.from_settings()
+
+		params = core.BNStringDetectionParameters()
+		params.minStringLength = parameters.min_string_length
+		params.utf8Enabled = parameters.utf8_enabled
+		params.utf16Enabled = parameters.utf16_enabled
+		params.utf32Enabled = parameters.utf32_enabled
+		block_names = (ctypes.c_char_p * len(parameters.unicode_block_names))()
+		for i, name in enumerate(parameters.unicode_block_names):
+			block_names[i] = core.cstr(name)
+		params.unicodeBlockNames = ctypes.cast(block_names, ctypes.POINTER(ctypes.c_char_p))
+		params.unicodeBlockNameCount = len(parameters.unicode_block_names)
+
+		self.handle = core.BNCreateStringDetector(params)
+		assert self.handle is not None, "core.BNCreateStringDetector returned None"
+
+	def __del__(self):
+		if core is not None:
+			core.BNFreeStringDetector(self.handle)
+
+	def detect_strings(
+	    self, data: bytes, block_len: Optional[int] = None, base_address: int = 0,
+	    last_found: Optional[DetectedString] = None
+	) -> List[DetectedString]:
+		"""
+		``detect_strings`` detects strings in a raw data buffer.
+
+		Strings must start within the first ``block_len`` bytes of ``data`` but may extend to the end
+		of ``data``, allowing a large buffer to be scanned in chunks with a ``BN_MAX_STRING_LENGTH``
+		overlap tail. When scanning consecutive chunks, pass the last string detected so far as
+		``last_found`` so a string spanning a chunk boundary is not reported twice.
+
+		:param data: Buffer to scan
+		:param block_len: Number of bytes within which strings may start; defaults to ``len(data)``
+		:param base_address: Address reported for offset 0 of ``data``
+		:param last_found: Cross-chunk overlap state, the last string detected in a prior chunk
+		:return: The strings detected, with addresses relative to ``base_address``
+		"""
+		if block_len is None:
+			block_len = len(data)
+
+		last_ref = None
+		if last_found is not None:
+			last_ref = core.BNStringReference()
+			last_ref.type = last_found.type
+			last_ref.start = last_found.start
+			last_ref.length = last_found.length
+
+		buf = (ctypes.c_ubyte * len(data)).from_buffer_copy(data)
+		count = ctypes.c_ulonglong()
+		strings = core.BNStringDetectorDetectStrings(
+		    self.handle, buf, len(data), block_len, base_address, last_ref, count
+		)
+		assert strings is not None, "core.BNStringDetectorDetectStrings returned None"
+		result = []
+		try:
+			for i in range(count.value):
+				result.append(DetectedString(StringType(strings[i].type), strings[i].start, strings[i].length))
+		finally:
+			core.BNFreeStringReferenceList(strings)
+		return result
+
+
+def detect_strings_in_block(
+    data: bytes, base_address: int = 0, parameters: Optional[StringDetectionParameters] = None
+) -> List[DetectedString]:
+	"""
+	``detect_strings_in_block`` detects strings in a raw data buffer using the same detection logic
+	as the core strings analysis. It is a one-shot convenience over :py:class:`StringDetector`; build
+	a :py:class:`StringDetector` directly to reuse it across buffers or to scan in chunks.
+
+	:param data: Buffer to scan
+	:param base_address: Address reported for offset 0 of ``data``
+	:param parameters: Detection parameters; defaults to the current global settings
+	:return: The strings detected
+	"""
+	return StringDetector(parameters).detect_strings(data, base_address=base_address)
 
 
 class StringRef:

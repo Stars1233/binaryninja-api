@@ -79,6 +79,7 @@ pub mod section;
 pub mod segment;
 pub mod settings;
 pub mod string;
+pub mod string_detection;
 pub mod symbol;
 pub mod tags;
 pub mod template_simplifier;

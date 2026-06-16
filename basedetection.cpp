@@ -46,9 +46,47 @@ bool BaseAddressDetection::DetectBaseAddress(BaseAddressDetectionSettings& setti
         settings.UpperBoundary,
         settings.POIAnalysis,
         settings.MaxPointersPerCluster,
+        settings.AnalysisMode,
     };
 
     return BNDetectBaseAddress(m_object, &bnSettings);
+}
+
+
+bool BaseAddressDetection::DetectBaseAddressWithInstructionAnalysis(BaseAddressDetectionInstructionAnalysisSettings& settings)
+{
+    BNBaseAddressDetectionCommonSettings commonSettings = {
+        settings.Architecture.c_str(),
+        settings.MinStrlen,
+        settings.LowerBoundary,
+        settings.UpperBoundary,
+    };
+    BNBaseAddressDetectionInstructionAnalysisSettings bnSettings = {
+        commonSettings,
+        settings.Analysis.c_str(),
+        settings.Alignment,
+        settings.POIAnalysis,
+        settings.MaxPointersPerCluster,
+    };
+
+    return BNDetectBaseAddressWithInstructionAnalysis(m_object, &bnSettings);
+}
+
+
+bool BaseAddressDetection::DetectBaseAddressWithSampling(BaseAddressDetectionSamplingSettings& settings)
+{
+    BNBaseAddressDetectionCommonSettings commonSettings = {
+        settings.Architecture.c_str(),
+        settings.MinStrlen,
+        settings.LowerBoundary,
+        settings.UpperBoundary,
+    };
+    BNBaseAddressDetectionSamplingSettings bnSettings = {
+        commonSettings,
+        settings.Alignment,
+    };
+
+    return BNDetectBaseAddressWithSampling(m_object, &bnSettings);
 }
 
 

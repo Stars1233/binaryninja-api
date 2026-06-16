@@ -22003,6 +22003,28 @@ namespace BinaryNinja {
 		uint64_t UpperBoundary;
 		BNBaseAddressDetectionPOISetting POIAnalysis;
 		uint32_t MaxPointersPerCluster;
+		BNBaseAddressDetectionAnalysisMode AnalysisMode = InstructionAnalysisBaseAddressDetection;
+	};
+
+	struct BaseAddressDetectionCommonSettings
+	{
+		std::string Architecture;
+		uint32_t MinStrlen;
+		uint64_t LowerBoundary;
+		uint64_t UpperBoundary;
+	};
+
+	struct BaseAddressDetectionInstructionAnalysisSettings : BaseAddressDetectionCommonSettings
+	{
+		std::string Analysis;
+		uint32_t Alignment;
+		BNBaseAddressDetectionPOISetting POIAnalysis;
+		uint32_t MaxPointersPerCluster;
+	};
+
+	struct BaseAddressDetectionSamplingSettings : BaseAddressDetectionCommonSettings
+	{
+		uint32_t Alignment = 0x1000;
 	};
 
 	/*!
@@ -22022,6 +22044,20 @@ namespace BinaryNinja {
 			\return true on success, false otherwise
 		 */
 		bool DetectBaseAddress(BaseAddressDetectionSettings& settings);
+
+		/*! Analyze program using instruction analysis, identify pointers and points-of-interest, and detect candidate base addresses
+
+			\param settings Base address detection instruction analysis settings
+			\return true on success, false otherwise
+		 */
+		bool DetectBaseAddressWithInstructionAnalysis(BaseAddressDetectionInstructionAnalysisSettings& settings);
+
+		/*! Sample raw binary contents and detect candidate base addresses
+
+			\param settings Base address detection sampling settings
+			\return true on success, false otherwise
+		 */
+		bool DetectBaseAddressWithSampling(BaseAddressDetectionSamplingSettings& settings);
 
 		/*! Get the top 10 candidate base addresses and thier scores
 

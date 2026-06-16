@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 175
+#define BN_CURRENT_CORE_ABI_VERSION 176
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 175
+#define BN_MINIMUM_CORE_ABI_VERSION 176
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -3791,6 +3791,12 @@ extern "C"
 		POIAnalysisAll,
 	};
 
+	BN_ENUM(uint8_t, BNBaseAddressDetectionAnalysisMode)
+	{
+		InstructionAnalysisBaseAddressDetection = 0,
+		SamplingBaseAddressDetection = 1,
+	};
+
 	BN_ENUM(uint8_t, BNBaseAddressDetectionPOIType)
 	{
 		POIString,
@@ -3807,6 +3813,29 @@ extern "C"
 		HighConfidence,
 	};
 
+	typedef struct BNBaseAddressDetectionCommonSettings
+	{
+		const char* Architecture;
+		uint32_t MinStrlen;
+		uint64_t LowerBoundary;
+		uint64_t UpperBoundary;
+	} BNBaseAddressDetectionCommonSettings;
+
+	typedef struct BNBaseAddressDetectionInstructionAnalysisSettings
+	{
+		BNBaseAddressDetectionCommonSettings Common;
+		const char* Analysis;
+		uint32_t Alignment;
+		BNBaseAddressDetectionPOISetting POIAnalysis;
+		uint32_t MaxPointersPerCluster;
+	} BNBaseAddressDetectionInstructionAnalysisSettings;
+
+	typedef struct BNBaseAddressDetectionSamplingSettings
+	{
+		BNBaseAddressDetectionCommonSettings Common;
+		uint32_t Alignment;
+	} BNBaseAddressDetectionSamplingSettings;
+
 	typedef struct BNBaseAddressDetectionSettings
 	{
 		const char* Architecture;
@@ -3817,6 +3846,7 @@ extern "C"
 		uint64_t UpperBoundary;
 		BNBaseAddressDetectionPOISetting POIAnalysis;
 		uint32_t MaxPointersPerCluster;
+		BNBaseAddressDetectionAnalysisMode AnalysisMode;
 	} BNBaseAddressDetectionSettings;
 
 	typedef struct BNBaseAddressDetectionReason
@@ -8768,6 +8798,8 @@ extern "C"
 	// Base Address Detection
 	BINARYNINJACOREAPI BNBaseAddressDetection* BNCreateBaseAddressDetection(BNBinaryView *view);
 	BINARYNINJACOREAPI bool BNDetectBaseAddress(BNBaseAddressDetection* bad, BNBaseAddressDetectionSettings* settings);
+	BINARYNINJACOREAPI bool BNDetectBaseAddressWithInstructionAnalysis(BNBaseAddressDetection* bad, BNBaseAddressDetectionInstructionAnalysisSettings* settings);
+	BINARYNINJACOREAPI bool BNDetectBaseAddressWithSampling(BNBaseAddressDetection* bad, BNBaseAddressDetectionSamplingSettings* settings);
 	BINARYNINJACOREAPI size_t BNGetBaseAddressDetectionScores(BNBaseAddressDetection* bad, BNBaseAddressDetectionScore* scores, size_t count,
 		BNBaseAddressDetectionConfidence* confidence, uint64_t* lastTestedBaseAddress);
 	BINARYNINJACOREAPI BNBaseAddressDetectionReason* BNGetBaseAddressDetectionReasons(BNBaseAddressDetection* bad,

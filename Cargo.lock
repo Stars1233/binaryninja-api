@@ -1295,6 +1295,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "idb_import-static"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "binaryninja",
+ "binaryninjacore-sys",
+ "idb-rs",
+ "serde",
+ "serde_json",
+ "tracing",
+]
+
+[[package]]
 name = "ident_case"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

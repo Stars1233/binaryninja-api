@@ -63,8 +63,16 @@ fn plugin_init() -> Result<(), ()> {
     Ok(())
 }
 
+#[cfg(not(feature = "demo"))]
 #[allow(non_snake_case)]
 #[no_mangle]
 pub extern "C" fn CorePluginInit() -> bool {
+    plugin_init().is_ok()
+}
+
+#[cfg(feature = "demo")]
+#[allow(non_snake_case)]
+#[no_mangle]
+pub extern "C" fn IdbImportPluginInit() -> bool {
     plugin_init().is_ok()
 }

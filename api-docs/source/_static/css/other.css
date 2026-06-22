@@ -14,3 +14,47 @@
 .colon {
     display: none !important;
 }
+
+/* Desktop only; mobile keeps the theme's slide-in nav and top-bar hamburger. */
+@media screen and (min-width: 769px) {
+	/* Toggled by js/sidebar_toggle.js; reuses the theme's off-screen nav. */
+	#bn-sidebar-toggle {
+		position: fixed;
+		top: 12px;
+		left: 312px;
+		z-index: 10000;
+		width: 36px;
+		height: 36px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		border: none;
+		background: #fff;
+		color: #111;
+		font-size: 18px;
+		cursor: pointer;
+		opacity: 0.85;
+	}
+
+	#bn-sidebar-toggle:hover {
+		opacity: 1;
+	}
+
+	html.bn-sidebar-collapsed #bn-sidebar-toggle {
+		left: 12px;
+	}
+
+	html.bn-sidebar-collapsed .wy-nav-side {
+		left: -300px;
+	}
+
+	html.bn-sidebar-collapsed .wy-nav-content-wrap {
+		margin-left: 0;
+	}
+}
+
+@media screen and (max-width: 768px) {
+	#bn-sidebar-toggle {
+		display: none;
+	}
+}

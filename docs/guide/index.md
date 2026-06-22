@@ -190,7 +190,7 @@ This option is the only one bound to a hotkey by default, and it is intended to 
 
 "Save As" Will prompt to save the analysis database or just the file contents.
 
-    - If you choose to save an analysis database, you will be prompted for a file name, and a new database containing only a single new snapshot will be created.
+    - If you choose to save an analysis database, you will be prompted for a file name. The new `.bndb` is written from scratch containing only the current state, so earlier entries in the [History](#history) browser and the ability to undo prior changes are not carried over. This makes "Save As" a quick way to produce a clean, smaller database, and it is typically faster than trimming an existing one via ["Save Analysis Database With Options"](#5-save-analysis-database-with-options).
     - If you choose to save the file contents only, you will be prompted for a file name to which to save the current contents of the binary view, including any modifications.
 
 ### 3. Save All
@@ -206,6 +206,9 @@ This option is the only one bound to a hotkey by default, and it is intended to 
 This menu allows for saving a `.bndb` without additional undo information, or by cleaning up some internal snapshot information to decrease the file size.
 
 ![save with options](../img/save-with-options.png "Save With Options"){ width="600" }
+
+!!! note "Tip"
+    If you just want a smaller database with prior history removed, ["Save As"](#2-save-as) is usually faster, since it writes a fresh database rather than cleaning up the existing one in place.
 
 ## New Files
 

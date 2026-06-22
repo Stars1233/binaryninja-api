@@ -39,6 +39,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [xxHash] ([xxHash License] - 2-clause BSD)
     - [botan] ([botan license] - 2-clause BSD)
     - [fmt] ([fmt license] - MIT)
+    - [ConvertUTF] ([ConvertUTF license] - Unicode License) - UTF conversion routines from Unicode, Inc. (LLVM's maintained copy)
     - [dtl] ([dtl license] - BSD)
     - [JSON for Modern C++] ([JSON for Modern C++ license] - MIT)
     - [zstd] ([zstd license] - BSD)
@@ -171,6 +172,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [JSON for Modern C++ license]: https://github.com/nlohmann/json/blob/develop/LICENSE.MIT
 [zstd]: https://github.com/facebook/zstd/
 [zstd license]: https://github.com/facebook/zstd/blob/dev/LICENSE
+[ConvertUTF]: https://github.com/llvm/llvm-project/blob/main/llvm/lib/Support/ConvertUTF.cpp
+[ConvertUTF license]: https://www.unicode.org/license.txt
 [zstd-rs]: https://github.com/gyscos/zstd-rs
 [zstd-rs license]: https://github.com/gyscos/zstd-rs/blob/main/LICENSE
 [deprecation]: https://github.com/briancurtin/deprecation

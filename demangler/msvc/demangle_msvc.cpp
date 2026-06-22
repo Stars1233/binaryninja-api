@@ -17,6 +17,7 @@
 
 #include "demangle_msvc.h"
 #include "unicode.h"
+#include "base/unicode.h"
 #include <limits>
 #include <memory>
 #include <ranges>
@@ -1466,7 +1467,7 @@ DemangledTypeNode Demangle::DemangleString(NameList& symbolName)
 	if (isWideChar)
 	{
 		MSVC_TRACE("{}: Wide string '{}'", __FUNCTION__, m_reader.GetRaw());
-		_STD_STRING utf8name;
+		_STD_VECTOR<uint8_t> chars;
 		literalPrefix = "L";
 		// Track the last wide char so we can detect missing null terminator.
 		bool lastWideCharWasNull = false;
@@ -1479,8 +1480,8 @@ DemangledTypeNode Demangle::DemangleString(NameList& symbolName)
 			lastWideCharWasNull = (chs[0] == 0) && (chs[1] == 0);
 			wcharCount++;
 
-			// TODO: This is actually UCS2 but we don't have an easy decoder for that
-			utf8name += Unicode::UTF16ToUTF8(&chs[0], 2);
+			chars.push_back(chs[0]);
+			chars.push_back(chs[1]);
 		}
 		m_reader.Consume();
 
@@ -1489,6 +1490,11 @@ DemangledTypeNode Demangle::DemangleString(NameList& symbolName)
 		// fit in the mangling and was truncated. Matches LLVM's demangler.
 		if (wcharCount == 0 || !lastWideCharWasNull)
 			truncated = true;
+
+		size_t payloadBytes = chars.size();
+		if (lastWideCharWasNull)
+			payloadBytes -= 2;
+		auto utf8name = bn::base::UTF16ToUTF8<_STD_STRING>({chars.data(), payloadBytes});
 
 		name = Unicode::ToEscapedString(Unicode::GetBlocksForNames({}), false, utf8name.data(), utf8name.size());
 		type = DemangledTypeNode::ArrayType(DemangledTypeNode::WideCharType(2), length / 2);
@@ -1531,11 +1537,7 @@ DemangledTypeNode Demangle::DemangleString(NameList& symbolName)
 		if ((payloadBytes % 4 == 0) && (length % 4 == 0) && numNulls > length * 2 / 3)
 		{
 			MSVC_TRACE("{}: Looks like UTF32 '{}'", __FUNCTION__, m_reader.GetRaw());
-			_STD_STRING utf8name;
-			for (size_t i = 0; i < payloadBytes; i += 4)
-			{
-				utf8name += Unicode::UTF32ToUTF8(chars.data() + i);
-			}
+			auto utf8name = bn::base::UTF32ToUTF8<_STD_STRING>({chars.data(), payloadBytes});
 			name = Unicode::ToEscapedString(Unicode::GetBlocksForNames({}), false, utf8name.data(), utf8name.size());
 			literalPrefix = "U";
 			type = DemangledTypeNode::ArrayType(DemangledTypeNode::WideCharType(4), length / 4);
@@ -1543,11 +1545,7 @@ DemangledTypeNode Demangle::DemangleString(NameList& symbolName)
 		else if ((payloadBytes % 2 == 0) && (length % 2 == 0) && numNulls > length / 3)
 		{
 			MSVC_TRACE("{}: Looks like UTF16 '{}'", __FUNCTION__, m_reader.GetRaw());
-			_STD_STRING utf8name;
-			for (size_t i = 0; i < payloadBytes; i += 2)
-			{
-				utf8name += Unicode::UTF16ToUTF8(chars.data() + i, 2);
-			}
+			auto utf8name = bn::base::UTF16ToUTF8<_STD_STRING>({chars.data(), payloadBytes});
 			name = Unicode::ToEscapedString(Unicode::GetBlocksForNames({}), false, utf8name.data(), utf8name.size());
 			literalPrefix = "L";
 			type = DemangledTypeNode::ArrayType(DemangledTypeNode::WideCharType(2), length / 2);

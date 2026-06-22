@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 
-file(GLOB BN_BASE_SOURCES CONFIGURE_DEPENDS *.cpp *.h)
+file(GLOB BN_BASE_SOURCES CONFIGURE_DEPENDS *.cpp *.h unicode/*.h unicode/*.cpp)
 
 add_library(binaryninjabase OBJECT ${BN_BASE_SOURCES})
 set_target_properties(binaryninjabase PROPERTIES LINKER_LANGUAGE CXX)

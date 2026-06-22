@@ -8810,8 +8810,6 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeBaseAddressDetection(BNBaseAddressDetection* bad);
 
 	// Unicode
-	BINARYNINJACOREAPI char* BNUnicodeUTF16ToUTF8(const uint8_t* utf16, const size_t len);
-	BINARYNINJACOREAPI char* BNUnicodeUTF32ToUTF8(const uint8_t* utf32);
 	BINARYNINJACOREAPI bool BNUnicodeGetBlockRange(const char* name, uint32_t* rangeStart, uint32_t* rangeEnd);
 	BINARYNINJACOREAPI void BNUnicodeGetBlocksForNames(const char* const* names, size_t nameCount, uint32_t*** starts, uint32_t*** ends, size_t** blockListCounts, size_t* blockCount);
 	BINARYNINJACOREAPI void BNFreeUnicodeBlockList(uint32_t** starts, uint32_t** ends, size_t* blockCounts, size_t blockListCounts);

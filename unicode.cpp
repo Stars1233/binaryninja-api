@@ -19,24 +19,20 @@
 // IN THE SOFTWARE.
 
 #include "binaryninjaapi.h"
+
+#include "base/unicode.h"
 #include "ffi.h"
 
 
 std::string BinaryNinja::Unicode::UTF16ToUTF8(const uint8_t* utf16, const size_t len)
 {
-	char* value = BNUnicodeUTF16ToUTF8(utf16, len);
-	std::string result(value);
-	BNFreeString(value);
-	return result;
+	return bn::base::UTF16ToUTF8<std::string>({utf16, len});
 }
 
 
 std::string BinaryNinja::Unicode::UTF32ToUTF8(const uint8_t* utf32)
 {
-	char* value = BNUnicodeUTF32ToUTF8(utf32);
-	std::string result(value);
-	BNFreeString(value);
-	return result;
+	return bn::base::UTF32ToUTF8<std::string>({utf32, 4});
 }
 
 

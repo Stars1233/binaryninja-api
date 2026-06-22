@@ -7,12 +7,14 @@ site_url: 'https://docs.binary.ninja/'
 repo_url: 'https://binary.ninja/'
 repo_name: 'binary.ninja'
 use_directory_urls: false
+exclude_docs: |
+  overrides/
 extra_css: ['docs.css', 'github.min.css', 'juxtapose.min.css']
 extra_javascript: ['highlight.min.js', 'cpp.min.js', 'python.min.js', 'juxtapose.min.js', 'tabsync.js']
 
 theme:
     name: material
-    custom_dir: overrides
+    custom_dir: docs/overrides
     favicon: 'img/favicon.ico'
     font: false
     highlightjs: false

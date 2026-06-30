@@ -30,7 +30,7 @@ struct GenericException : public ExceptionWithStackTrace
 #define RAPIDJSON_NO_SIZETYPEDEFINE
 namespace rapidjson { typedef ::std::size_t SizeType; }
 
-#include "rapidjson/error/error.h"
+#include "rapidjson/error/error.h"  // IWYU pragma: export
 struct ParseException : public ExceptionWithStackTrace, public rapidjson::ParseResult
 {
 	ParseException(rapidjson::ParseErrorCode code, const char* msg, size_t offset) :
@@ -38,12 +38,15 @@ struct ParseException : public ExceptionWithStackTrace, public rapidjson::ParseR
 	{}
 };
 
+// IWYU pragma: begin_exports
 #include "rapidjson/error/en.h"
 #include "rapidjson/rapidjson.h"
 #include "rapidjson/document.h"
+#include "rapidjson/schema.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
 #include "rapidjson/prettywriter.h"
+// IWYU pragma: end_exports
 
 
 
